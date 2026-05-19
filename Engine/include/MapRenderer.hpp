@@ -4,7 +4,7 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <string>
-
+#include <Tile.hpp>
 
 class ENGINE_API MapRenderer : public sf::Drawable, public sf::Transformable {
 private:
@@ -15,5 +15,5 @@ private:
 public:
 	MapRenderer();
 
-	bool load(const std::string& tilesetPath, sf::Vector2u tileSize, const std::vector<int>& tiles, unsigned int width, unsigned int height);
+	bool load(const std::string& tilesetPath, sf::Vector2u tileSize, const std::vector<Tile>& tiles, unsigned int width, unsigned int height);
 };

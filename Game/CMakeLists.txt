@@ -1,10 +1,8 @@
-# Grab your game source files
-file(GLOB_RECURSE GAME_SOURCES "src/*.cpp")
+# Grab your game source files 
+file(GLOB_RECURSE GAME_SOURCES CONFIGURE_DEPENDS "src/*.cpp")
 
-# Define the executable
 add_executable(Game ${GAME_SOURCES})
 
-# Include any game-specific headers
 target_include_directories(Game PRIVATE include)
 
 # Link the Engine library and the required SFML modules
@@ -18,4 +16,8 @@ add_custom_command(TARGET Game POST_BUILD
     $<TARGET_FILE:sfml-graphics>
     $<TARGET_FILE:tgui>
     $<TARGET_FILE_DIR:Game>
+
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${CMAKE_SOURCE_DIR}/Art"
+    "$<TARGET_FILE_DIR:Game>/Art"
 )

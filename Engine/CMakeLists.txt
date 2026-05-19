@@ -1,8 +1,8 @@
-# Grab all source and header files in the current dir
-file(GLOB_RECURSE ENGINE_SOURCES "src/*.cpp")
-file(GLOB_RECURSE ENGINE_HEADERS "include/*.hpp")
+# Grab all source and header files in the current dir 
+file(GLOB_RECURSE ENGINE_SOURCES CONFIGURE_DEPENDS "src/*.cpp")
+file(GLOB_RECURSE ENGINE_HEADERS CONFIGURE_DEPENDS "include/*.hpp")
 
-add_library(Engine SHARED ${ENGINE_SOURCES} ${ENGINE_HEADERS} "src/main.cpp" "src/Unit.cpp" "src/MapRenderer.cpp")
+add_library(Engine SHARED ${ENGINE_SOURCES} ${ENGINE_HEADERS})
 
 target_compile_definitions(Engine PRIVATE ENGINE_BUILD_DLL)
 
