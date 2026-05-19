@@ -5,6 +5,14 @@
 #include <SFML/System/Vector2.hpp>
 #include <vector>
 
+enum class MoveDirection {
+	Up,
+	Down,
+	Left,
+	Right
+};
+
+
 class ENGINE_API Unit
 {
 protected:
@@ -17,7 +25,11 @@ protected:
 
 	std::vector<sf::Vector2i> path;
 	sf::Vector2f position = sf::Vector2f(0,0);
+
+	MoveDirection currentDirection = MoveDirection::Right;
 	float currentSpeed = 0.0f;
+	bool directionReset = true; // Flag to reset direction only on the first update after path change
+	float startSpeed = 30.0f;
 	float tileSize = 32;
 public:
 	Unit(const std::string& name, const std::string& imagePath, int health, int damage, int moveSpeed)
@@ -33,12 +45,16 @@ public:
 	int heal(int healAmount);
 
 	// Constant methods
-	std::string getImagePath() const;
-	std::string getName() const;
-	int getHealth() const;
 	void dealDamage(Unit& target) const;
 
+	// Getters
 	sf::Vector2f getPosition() const { return position; }
+	std::string getName() const { return name; }
+	int getHealth() const { return health; }
+	float getMoveSpeed() const { return moveSpeed; }
+	std::string getImagePath() const { return imagePath; }
+
+	// Setters
 	void setPosition(sf::Vector2f pos) { position = pos; }
-	int getMoveSpeed() const { return moveSpeed; }
+
 };
