@@ -10,4 +10,4 @@ target_compile_definitions(Engine PRIVATE ENGINE_BUILD_DLL)
 target_include_directories(Engine PUBLIC include)
 
 # Link SFML 3 targets to the Engine
-target_link_libraries(Engine PRIVATE SFML::Graphics SFML::Window SFML::System)
+target_link_libraries(Engine PUBLIC SFML::Graphics SFML::Window SFML::System TGUI::TGUI)

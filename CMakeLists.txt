@@ -25,6 +25,7 @@ FetchContent_Declare(
 set(TGUI_BACKEND SFML_GRAPHICS CACHE STRING "TGUI backend" FORCE)
 
 FetchContent_MakeAvailable(TGUI)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 # Include your sub-projects
 add_subdirectory(Engine)

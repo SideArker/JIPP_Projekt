@@ -6,7 +6,7 @@
 #include <string>
 #include <Tile.hpp>
 
-class ENGINE_API MapRenderer : public sf::Drawable, public sf::Transformable {
+class MapRenderer : public sf::Drawable, public sf::Transformable {
 private:
 	sf::VertexArray m_vertices;
 	sf::Texture m_tileset;

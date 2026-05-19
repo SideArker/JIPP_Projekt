@@ -17,8 +17,8 @@ protected:
 
 	std::vector<sf::Vector2i> path;
 	sf::Vector2f position = sf::Vector2f(0,0);
+	float currentSpeed = 0.0f;
 	float tileSize = 32;
-
 public:
 	Unit(const std::string& name, const std::string& imagePath, int health, int damage, int moveSpeed)
 		: name(name), imagePath(imagePath), health(health), damage(damage), moveSpeed(moveSpeed) {}

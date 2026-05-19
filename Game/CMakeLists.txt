@@ -10,14 +10,13 @@ target_link_libraries(Game PRIVATE Engine SFML::Graphics SFML::Window SFML::Syst
 
 add_custom_command(TARGET Game POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    $<TARGET_FILE:Engine>
-    $<TARGET_FILE:sfml-system>
-    $<TARGET_FILE:sfml-window>
-    $<TARGET_FILE:sfml-graphics>
-    $<TARGET_FILE:tgui>
-    $<TARGET_FILE_DIR:Game>
+        $<TARGET_FILE:sfml-system>
+        $<TARGET_FILE:sfml-window>
+        $<TARGET_FILE:sfml-graphics>
+        $<TARGET_FILE:tgui>
+        $<TARGET_FILE_DIR:Game>
 
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CMAKE_SOURCE_DIR}/Art"
-    "$<TARGET_FILE_DIR:Game>/Art"
+        "${CMAKE_SOURCE_DIR}/Art"
+        "$<TARGET_FILE_DIR:Game>/Art"
 )

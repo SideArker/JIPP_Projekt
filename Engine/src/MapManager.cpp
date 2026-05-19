@@ -1,10 +1,26 @@
 #include "MapManager.hpp"
+#include "SelectionController.hpp"
 #include <queue>
 #include <unordered_map>
 #include <cmath>
 #include <algorithm>
 
+struct Node {
+    sf::Vector2i pos;
+    int gCost = 0;
+    int hCost = 0;
+    int fCost = 0;
+    sf::Vector2i parent;
+
+    bool operator>(const Node& other) const {
+        if (fCost == other.fCost) return hCost > other.hCost;
+        return fCost > other.fCost;
+    }
+};
+
 MapManager::MapManager() : mapWidth(0), mapHeight(0) {}
+
+MapManager::~MapManager() = default;
 
 bool MapManager::loadMap(const std::string& tileset, sf::Vector2u tileSize, const std::vector<Tile>& tiles, unsigned int w, unsigned int h) {
     this->tileSize = tileSize;
@@ -22,6 +38,14 @@ void MapManager::spawnUnit(std::shared_ptr<Unit> unit, int gridX, int gridY) {
     units.push_back(unit);
 }
 
+void MapManager::setupInput(sf::RenderWindow& window) {
+    selectionController = std::make_unique<SelectionController>(window, *this);
+}
+
+void MapManager::handleEvent(const sf::Event& event) {
+    if (selectionController) selectionController->handleEvent(event);
+}
+
 void MapManager::update(float deltaTime) {
     for (auto& unit : units) {
         unit->update(deltaTime);
@@ -30,6 +54,7 @@ void MapManager::update(float deltaTime) {
 
 void MapManager::draw(sf::RenderTarget& target) {
     target.draw(renderer);
+    if (selectionController) selectionController->drawOverlays(target);
     for (const auto& unit : units) {
         const std::string& imagePath = unit->getImagePath();
         if (textureCache.find(imagePath) == textureCache.end()) {
@@ -41,20 +66,8 @@ void MapManager::draw(sf::RenderTarget& target) {
     }
 }
 
-void MapManager::drawOverlays(sf::RenderTarget& target, const std::vector<sf::Vector2i>& reachable, const std::vector<sf::Vector2i>& path) const {
-    sf::RectangleShape overlay(sf::Vector2f(static_cast<float>(tileSize.x), static_cast<float>(tileSize.y)));
-
-    overlay.setFillColor(sf::Color(0, 200, 0, 80));
-    for (const auto& pos : reachable) {
-        overlay.setPosition(sf::Vector2f(pos.x * static_cast<float>(tileSize.x), pos.y * static_cast<float>(tileSize.y)));
-        target.draw(overlay);
-    }
-
-    overlay.setFillColor(sf::Color(100, 255, 100, 160));
-    for (const auto& pos : path) {
-        overlay.setPosition(sf::Vector2f(pos.x * static_cast<float>(tileSize.x), pos.y * static_cast<float>(tileSize.y)));
-        target.draw(overlay);
-    }
+void MapManager::drawUI() {
+    if (selectionController) selectionController->drawGui();
 }
 
 sf::Vector2u MapManager::getTileSize() const { return tileSize; }
