@@ -53,6 +53,7 @@ public:
 	int getHealth() const { return health; }
 	float getMoveSpeed() const { return moveSpeed; }
 	std::string getImagePath() const { return imagePath; }
+	MoveDirection getMoveDirection() const { return currentDirection; }
 
 	// Setters
 	void setPosition(sf::Vector2f pos) { position = pos; }

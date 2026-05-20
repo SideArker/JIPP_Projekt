@@ -61,7 +61,25 @@ void MapManager::draw(sf::RenderTarget& target) {
             textureCache[imagePath].loadFromFile(imagePath);
         }
         sf::Sprite unitSprite(textureCache[imagePath]);
-        unitSprite.setPosition(unit->getPosition());
+
+        // First column (x=0), row determined by direction, each frame is 32x32
+        int row = 0;
+        bool flipX = false;
+        switch (unit->getMoveDirection()) {
+            case MoveDirection::Left:  row = 0; break;
+            case MoveDirection::Right: row = 0; flipX = true; break;
+            case MoveDirection::Down:  row = 1; break;
+            case MoveDirection::Up:    row = 2; break;
+        }
+        unitSprite.setTextureRect(sf::IntRect({ 0, row * 32 }, { 32, 32 }));
+
+        if (flipX) {
+            unitSprite.setScale({ -1.f, 1.f });
+            unitSprite.setPosition({ unit->getPosition().x + 32.f, unit->getPosition().y });
+        } else {
+            unitSprite.setPosition(unit->getPosition());
+        }
+
         target.draw(unitSprite);
     }
 }

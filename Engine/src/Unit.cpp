@@ -3,7 +3,7 @@
 
 static const char* const MoveDirectionNames[] = { "Up", "Down", "Left", "Right" };
 
-MoveDirection getMoveDirection(sf::Vector2f& direction)
+MoveDirection castMoveDirection(sf::Vector2f& direction)
 {
     if (std::abs(direction.x) > std::abs(direction.y)) {
         return direction.x > 0 ? MoveDirection::Right : MoveDirection::Left;
@@ -33,7 +33,7 @@ void Unit::update(float deltaTime) {
 
     // Compare only first time for each new path point
     if (directionReset) {
-        currentDirection = getMoveDirection(direction);
+        currentDirection = castMoveDirection(direction);
         std::cout << MoveDirectionNames[static_cast<int>(currentDirection)] << std::endl;
 		directionReset = false;
     }
@@ -45,9 +45,27 @@ void Unit::update(float deltaTime) {
 	}
 
     float maxSpeed = (moveSpeed * tileSize) * 1.05f;
+    float deceleration = 350.0f;
 
-	currentSpeed += acceleration * deltaTime;
-	if (currentSpeed > maxSpeed) currentSpeed = maxSpeed;
+    // Total remaining distance: current segment + all further segments
+    float remainingDistance = distance;
+    for (size_t i = 1; i < path.size(); ++i) {
+        sf::Vector2f from(path[i - 1].x * tileSize, path[i - 1].y * tileSize);
+        sf::Vector2f to(path[i].x * tileSize, path[i].y * tileSize);
+        sf::Vector2f seg = to - from;
+        remainingDistance += std::sqrt(seg.x * seg.x + seg.y * seg.y);
+    }
+
+    // Braking distance needed to decelerate from current speed to startSpeed
+    float brakingDistance = (currentSpeed * currentSpeed - startSpeed * startSpeed) / (2.0f * deceleration);
+
+    if (remainingDistance <= brakingDistance) {
+        currentSpeed -= deceleration * deltaTime;
+        if (currentSpeed < startSpeed) currentSpeed = startSpeed;
+    } else {
+        currentSpeed += acceleration * deltaTime;
+        if (currentSpeed > maxSpeed) currentSpeed = maxSpeed;
+    }
 
     float moveStep = currentSpeed * deltaTime;
 

@@ -22,7 +22,7 @@ int main() {
         return -1;
     }
 
-    auto player = std::make_shared<Unit>("Tank", "Art/Unit-Base.png", 20, 5, 5);
+    auto player = std::make_shared<Unit>("Tank", "Art/tank-Shoot.png", 20, 5, 5);
     mapManager.spawnUnit(player, 1, 1);
     mapManager.setupInput(window);
 
