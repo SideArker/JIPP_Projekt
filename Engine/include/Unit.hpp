@@ -2,14 +2,31 @@
 
 #include "EngineAPI.hpp"
 #include <string>
-#include <SFML/System/Vector2.hpp>
+#include <SFML/Graphics.hpp>
 #include <vector>
+#include <bitset>
 
 enum class MoveDirection {
 	Up,
 	Down,
 	Left,
 	Right
+};
+
+enum class Team {
+	Ally,
+	Enemy,
+	Neutral
+};
+
+enum class UnitFlag {
+	DamageMultToInfantry,
+	Capture,
+	CanFly,
+	IsArmored,
+
+	// Always keep this last!
+	Count
 };
 
 
@@ -19,6 +36,9 @@ protected:
 	std::string name;
 	std::string description;
 	std::string imagePath;
+	sf::Texture texture;
+	Team team = Team::Neutral;
+	std::bitset<static_cast<std::size_t>(UnitFlag::Count)> flags;
 	int health;
 	int damage;
 	int moveSpeed; // In spaces
@@ -32,8 +52,7 @@ protected:
 	float startSpeed = 30.0f;
 	float tileSize = 32;
 public:
-	Unit(const std::string& name, const std::string& imagePath, int health, int damage, int moveSpeed)
-		: name(name), imagePath(imagePath), health(health), damage(damage), moveSpeed(moveSpeed) {}
+	Unit(const std::string& name, const std::string& artPath, const std::string& maskPath, sf::Color teamColor, int health, int damage, int moveSpeed);
 
 	virtual ~Unit() = default;
 
@@ -47,15 +66,23 @@ public:
 	// Constant methods
 	void dealDamage(Unit& target) const;
 
+	// Flag methods
+	void addFlag(UnitFlag flag) { flags.set(static_cast<std::size_t>(flag)); }
+	void removeFlag(UnitFlag flag) { flags.reset(static_cast<std::size_t>(flag)); }
+	bool hasFlag(UnitFlag flag) const { return flags.test(static_cast<std::size_t>(flag)); }
+
 	// Getters
 	sf::Vector2f getPosition() const { return position; }
 	std::string getName() const { return name; }
 	int getHealth() const { return health; }
 	float getMoveSpeed() const { return moveSpeed; }
 	std::string getImagePath() const { return imagePath; }
+	const sf::Texture& getTexture() const { return texture; }
 	MoveDirection getMoveDirection() const { return currentDirection; }
+	Team getTeam() const { return team; }
 
 	// Setters
 	void setPosition(sf::Vector2f pos) { position = pos; }
+	void setTeam(Team t) { team = t; }
 
 };

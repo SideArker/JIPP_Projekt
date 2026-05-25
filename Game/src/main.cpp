@@ -33,9 +33,9 @@ int main() {
     if (!mapManager.loadMap("Art/tileset.png", sf::Vector2u(32, 32), level, 16, 16)) {
         return -1;
     }
-
-    auto player = std::make_shared<Unit>("Tank", "Art/tank-Shoot.png", 20, 5, 5);
-    mapManager.spawnUnit(player, 0,0);
+    sf::Color teamColor(50, 255, 50);
+    auto player = std::make_shared<Unit>("Tank", "Art/tank-shoot-grayscale.png", "Art/tank-shoot-grayscale-mask.png", teamColor, 20, 5, 5);
+    mapManager.spawnUnit(player, 5,5);
     mapManager.setupInput(window);
 
     sf::Clock clock;

@@ -5,7 +5,6 @@
 #include <Unit.hpp>
 #include <memory>
 #include <vector>
-#include <map>
 
 class SelectionController;
 
@@ -14,7 +13,6 @@ private:
 	MapRenderer renderer;
 	std::vector<std::shared_ptr<Unit>> units;
 	std::vector<Tile> mapData;
-	std::map<std::string, sf::Texture> textureCache;
 	std::unique_ptr<SelectionController> selectionController;
 	sf::Vector2u tileSize;
 	unsigned int mapWidth;

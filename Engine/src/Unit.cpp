@@ -1,5 +1,16 @@
 #include "Unit.hpp"
+#include "TextureManager.hpp"
 #include <iostream>
+#include <stdexcept>
+
+Unit::Unit(const std::string& name, const std::string& artPath, const std::string& maskPath, sf::Color teamColor, int health, int damage, int moveSpeed)
+    : name(name), imagePath(artPath), health(health), damage(damage), moveSpeed(moveSpeed)
+{
+    sf::Image image = TextureManager::recolorSpriteMasked(artPath, maskPath, teamColor);
+    if (!texture.loadFromImage(image)) {
+        throw std::runtime_error("Failed to load unit texture: " + artPath);
+    }
+}
 
 static const char* const MoveDirectionNames[] = { "Up", "Down", "Left", "Right" };
 

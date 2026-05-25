@@ -56,11 +56,7 @@ void MapManager::draw(sf::RenderTarget& target) {
     target.draw(renderer);
     if (selectionController) selectionController->drawOverlays(target);
     for (const auto& unit : units) {
-        const std::string& imagePath = unit->getImagePath();
-        if (textureCache.find(imagePath) == textureCache.end()) {
-            textureCache[imagePath].loadFromFile(imagePath);
-        }
-        sf::Sprite unitSprite(textureCache[imagePath]);
+        sf::Sprite unitSprite(unit->getTexture());
 
         // First column (x=0), row determined by direction, each frame is 32x32
         int row = 0;
