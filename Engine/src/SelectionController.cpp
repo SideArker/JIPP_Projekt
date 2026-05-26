@@ -6,7 +6,14 @@
 
 SelectionController::SelectionController(sf::RenderWindow& window, MapManager& mapManager)
     : gui(window), mapManager(mapManager), selectedUnit(nullptr) {
-
+    try {
+		if (!m_walkOverlayTexture.loadFromFile("Art/Map_Walk_Overlay.png")) {
+			throw std::runtime_error("Failed to load walk overlay texture");
+		}
+	}
+    catch (const std::exception& e) {
+        std::cerr << "Error loading walk overlay texture: " << e.what() << std::endl;
+    }
     const sf::Vector2u tileSize = mapManager.getTileSize();
     const unsigned int mapW = mapManager.getMapWidth();
     const unsigned int mapH = mapManager.getMapHeight();
@@ -87,10 +94,10 @@ void SelectionController::drawOverlays(sf::RenderTarget& target) const {
     const sf::Vector2u tileSize = mapManager.getTileSize();
     sf::RectangleShape overlay(sf::Vector2f(static_cast<float>(tileSize.x), static_cast<float>(tileSize.y)));
 
-    overlay.setFillColor(sf::Color(0, 200, 0, 80));
+    sf::Sprite walkSprite(m_walkOverlayTexture);
     for (const auto& pos : reachableTiles) {
-        overlay.setPosition(sf::Vector2f(pos.x * static_cast<float>(tileSize.x), pos.y * static_cast<float>(tileSize.y)));
-        target.draw(overlay);
+        walkSprite.setPosition(sf::Vector2f(pos.x * static_cast<float>(tileSize.x), pos.y * static_cast<float>(tileSize.y)));
+        target.draw(walkSprite);
     }
 
     overlay.setFillColor(sf::Color(100, 255, 100, 160));

@@ -11,28 +11,18 @@ int main() {
     sf::View view(sf::FloatRect({ 0.f, 0.f }, { 800.f, 500.f }));
     window.setView(view);
 
-    std::vector<Tile> level = {
-        // Row 0: Open water
-        {7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},
-        {7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},
-        {7, false},{7, false},{7, false},{7, false},{7, false},{5, false},{5, false},{5, false},{5, false},{5, false},{5, false},{7, false},{7, false},{7, false},{7, false},{7, false},
-        {7, false},{7, false},{7, false},{7, false},{5, false},{1, true}, {1, true}, {2, true}, {1, true}, {1, true}, {1, true}, {6, false},{7, false},{7, false},{7, false},{7, false},
-        {7, false},{7, false},{7, false},{7, false},{1, true}, {1, true}, {1, true}, {1, true}, {3, false},{1, true}, {1, true}, {6, false},{7, false},{7, false},{7, false},{7, false},
-        {7, false},{7, false},{7, false},{1, true}, {1, true}, {1, true}, {2, true}, {1, true}, {1, true}, {1, true}, {1, true}, {6, false},{7, false},{7, false},{7, false},{7, false},
-        {7, false},{7, false},{7, false},{1, true}, {1, true}, {3, false},{1, true}, {1, true}, {1, true}, {1, true}, {1, true}, {1, true}, {6, false},{7, false},{7, false},{7, false},
-        {7, false},{7, false},{7, false},{1, true}, {1, true}, {1, true}, {1, true}, {2, true}, {1, true}, {1, true}, {1, true}, {1, true}, {6, false},{7, false},{7, false},{7, false},
-        {7, false},{7, false},{7, false},{1, true}, {2, true}, {1, true}, {1, true}, {1, true}, {1, true}, {3, false},{1, true}, {6, false},{7, false},{7, false},{7, false},{7, false},
-        {7, false},{7, false},{7, false},{7, false},{1, true}, {1, true}, {1, true}, {1, true}, {1, true}, {1, true}, {1, true}, {6, false},{7, false},{7, false},{7, false},{7, false},
-        {7, false},{7, false},{7, false},{7, false},{7, false},{1, true}, {1, true}, {2, true}, {1, true}, {1, true}, {6, false},{7, false},{7, false},{7, false},{7, false},{7, false},
-        {7, false},{7, false},{7, false},{7, false},{7, false},{4, false},{4, false},{4, false},{4, false},{4, false},{4, false},{7, false},{7, false},{7, false},{7, false},{7, false},
-        {7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},
-        {7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},
-        {7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},
-        {7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false},{7, false}
-    };
+std::vector<Tile> level = {
+    {18, true},  {19, true},  {19, true},  {19, true},  {19, true},  {19, true},  {19, true},  {9, true},
+    {13, false}, {2, true},   {3, true},   {17, false}, {7, false},  {17, false}, {3, true},   {5, false},
+    {13, false}, {2, true},   {7, false},  {7, false},  {17, false}, {7, false},  {7, false},  {5, false},
+    {13, false}, {2, true},   {3, true},   {12, true},  {2, true},   {2, true},   {4, true},   {5, false},
+    {13, false}, {10, true},  {10, true},  {11, true},  {10, true},  {10, true},  {16, true},  {5, false},
+    {13, false}, {2, true},   {2, true},   {2, true},   {2, true},   {2, true},   {2, true},   {5, false},
+    {14, false}, {15, false}, {15, false}, {15, false}, {15, false}, {15, false}, {15, false}, {8, false}
+};
     MapManager mapManager;
 
-    if (!mapManager.loadMap("Art/map.png", sf::Vector2u(32, 32), level, 16, 16)) {
+    if (!mapManager.loadMap("Art/map.png", sf::Vector2u(32, 32), level, 8, 7)) {
         return -1;
     }
 

@@ -22,4 +22,5 @@ private:
     std::shared_ptr<Unit> selectedUnit;
     std::vector<sf::Vector2i> reachableTiles;
     std::vector<sf::Vector2i> previewPath;
+    sf::Texture m_walkOverlayTexture;
 };
