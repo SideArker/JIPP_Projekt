@@ -3,6 +3,8 @@
 #include <memory>
 #include "MapManager.hpp"
 #include "Unit.hpp"
+#include "AnimationManager.hpp"
+#include "TextureManager.hpp"
 
 int main() {
     sf::RenderWindow window(sf::VideoMode({ 1280, 720 }), "Map Renderer", sf::State::Windowed);
@@ -30,12 +32,24 @@ int main() {
     };
     MapManager mapManager;
 
-    if (!mapManager.loadMap("Art/tileset.png", sf::Vector2u(32, 32), level, 16, 16)) {
+    if (!mapManager.loadMap("Art/map.png", sf::Vector2u(32, 32), level, 16, 16)) {
         return -1;
     }
+
+    AnimationSet tankAnimSet;
+    tankAnimSet
+        .addClip("move_left",  AnimationClip{ { sf::IntRect({0,  0}, {32, 32}) }, 0.1f, true, false })
+        .addClip("move_right", AnimationClip{ { sf::IntRect({0,  0}, {32, 32}) }, 0.1f, true, true  })
+        .addClip("move_down",  AnimationClip{ { sf::IntRect({0, 32}, {32, 32}) }, 0.1f, true, false })
+        .addClip("move_up",    AnimationClip{ { sf::IntRect({0, 64}, {32, 32}) }, 0.1f, true, false });
+    AnimationManager::registerSet("Tank", std::move(tankAnimSet));
+
     sf::Color teamColor(50, 255, 50);
-    auto player = std::make_shared<Unit>("Tank", "Art/tank-shoot-grayscale.png", "Art/tank-shoot-grayscale-mask.png", teamColor, 20, 5, 5);
-    mapManager.spawnUnit(player, 5,5);
+    const sf::Texture& tankTex = TextureManager::getTexture("Art/tank-shoot-grayscale.png", "Art/tank-shoot-grayscale-mask.png", teamColor);
+    const AnimationSet& tankAnim = *AnimationManager::getSet("Tank");
+
+    auto player = std::make_shared<Unit>("Tank", tankTex, tankAnim, 20, 5, 5);
+    mapManager.spawnUnit(player, 5, 5);
     mapManager.setupInput(window);
 
     sf::Clock clock;
@@ -58,5 +72,6 @@ int main() {
         window.display();
     }
 
+    TextureManager::clearCache();
     return 0;
 }

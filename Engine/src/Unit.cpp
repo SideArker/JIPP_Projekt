@@ -1,18 +1,21 @@
 #include "Unit.hpp"
-#include "TextureManager.hpp"
-#include <iostream>
-#include <stdexcept>
+#include <cmath>
 
-Unit::Unit(const std::string& name, const std::string& artPath, const std::string& maskPath, sf::Color teamColor, int health, int damage, int moveSpeed)
-    : name(name), imagePath(artPath), health(health), damage(damage), moveSpeed(moveSpeed)
-{
-    sf::Image image = TextureManager::recolorSpriteMasked(artPath, maskPath, teamColor);
-    if (!texture.loadFromImage(image)) {
-        throw std::runtime_error("Failed to load unit texture: " + artPath);
+static std::string clipNameForDirection(MoveDirection dir) {
+    switch (dir) {
+        case MoveDirection::Left:  return "move_left";
+        case MoveDirection::Right: return "move_right";
+        case MoveDirection::Down:  return "move_down";
+        case MoveDirection::Up:    return "move_up";
     }
+    return "idle";
 }
 
-static const char* const MoveDirectionNames[] = { "Up", "Down", "Left", "Right" };
+Unit::Unit(const std::string& name, const sf::Texture& texture, const AnimationSet& animSet, int health, int damage, int moveSpeed)
+    : name(name), texture(&texture), animSet(&animSet), health(health), damage(damage), moveSpeed(moveSpeed)
+{
+    animState.play(clipNameForDirection(currentDirection), *this->animSet);
+}
 
 MoveDirection castMoveDirection(sf::Vector2f& direction)
 {
@@ -33,6 +36,8 @@ void Unit::move(const std::vector<sf::Vector2i>& newPath) {
 void Unit::update(float deltaTime) {
     if (path.empty()) {
         currentSpeed = 0.0f;
+        animState.play("idle", *animSet);
+        animState.update(deltaTime);
         return;
     }
     float acceleration = 350.0f;
@@ -42,11 +47,10 @@ void Unit::update(float deltaTime) {
 
     sf::Vector2f direction = targetPixel - position;
 
-    // Compare only first time for each new path point
     if (directionReset) {
         currentDirection = castMoveDirection(direction);
-        std::cout << MoveDirectionNames[static_cast<int>(currentDirection)] << std::endl;
-		directionReset = false;
+        directionReset = false;
+        animState.play(clipNameForDirection(currentDirection), *animSet);
     }
 
     float distance = std::sqrt(direction.x * direction.x + direction.y * direction.y);
@@ -83,10 +87,12 @@ void Unit::update(float deltaTime) {
     if (distance <= moveStep) {
         position = targetPixel;
         path.erase(path.begin());
-		directionReset = true; // Reset direction for the next path point
+		directionReset = true;
     }
     else {
         sf::Vector2f normalizedDir = direction / distance;
         position += normalizedDir * moveStep;
     }
+
+    animState.update(deltaTime);
 }

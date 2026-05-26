@@ -1,8 +1,24 @@
 #include "TextureManager.hpp"
-#include <iostream>
 #include <algorithm>
 #include <stdexcept>
 #include <cstdint>
+
+std::map<TextureManager::CacheKey, sf::Texture> TextureManager::cache;
+
+const sf::Texture& TextureManager::getTexture(const std::string& artPath, const std::string& maskPath, sf::Color teamColor) {
+    std::uint32_t packed = (static_cast<std::uint32_t>(teamColor.r) << 24) |
+                           (static_cast<std::uint32_t>(teamColor.g) << 16) |
+                           (static_cast<std::uint32_t>(teamColor.b) <<  8) |
+                            static_cast<std::uint32_t>(teamColor.a);
+    CacheKey key{ artPath, maskPath, packed };
+    auto [it, inserted] = cache.try_emplace(key);
+    if (inserted) {
+        sf::Image image = recolorSpriteMasked(artPath, maskPath, teamColor);
+        if (!it->second.loadFromImage(image))
+            throw std::runtime_error("Failed to load texture: " + artPath);
+    }
+    return it->second;
+}
 
 sf::Image TextureManager::recolorSpriteMasked(const std::string& artPath, const std::string& maskPath, sf::Color targetColor) {
 	sf::Image baseImage, maskImage;
@@ -68,4 +84,8 @@ sf::Image TextureManager::recolorSpriteMasked(const std::string& artPath, const 
 		}
 	}
 	return resultImage;
+}
+
+void TextureManager::clearCache() {
+	cache.clear();
 }
