@@ -79,7 +79,14 @@ public:
 	bool shouldFlipX() const { return animState.shouldFlipX(); }
 	MoveDirection getMoveDirection() const { return currentDirection; }
 	Team getTeam() const { return team; }
+	int getDamage() const { return damage; }
+	uint8_t getFlags() const { return static_cast<uint8_t>(flags.to_ulong()); }
+	sf::Vector2i getGridPosition(sf::Vector2u tileSize) const;
 
 	void setPosition(sf::Vector2f pos) { position = pos; }
 	void setTeam(Team t) { team = t; }
+	void setHealth(int h) { health = h; }
+	void setDamage(int d) { damage = d; }
+	void setMoveSpeed(int s) { moveSpeed = s; }
+	void setFlags(uint8_t f) { flags = std::bitset<static_cast<std::size_t>(UnitFlag::Count)>(f); }
 };

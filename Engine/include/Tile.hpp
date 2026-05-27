@@ -1,3 +1,5 @@
+#pragma once
+
 #include "EngineAPI.hpp"
 class ENGINE_API Tile {
 private:
