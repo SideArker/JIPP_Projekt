@@ -36,6 +36,8 @@ class ENGINE_API Unit
 protected:
 	std::string name;
 	std::string description;
+	std::string artPath;
+	std::string maskPath;
 	const sf::Texture* texture;
 	const AnimationSet* animSet;
 	AnimationState animState;
@@ -54,7 +56,7 @@ protected:
 	float startSpeed = 30.0f;
 	float tileSize = 32;
 public:
-	Unit(const std::string& name, const sf::Texture& texture, const AnimationSet& animSet, int health, int damage, int moveSpeed);
+	Unit(const std::string& name, const std::string& artPath, const std::string& maskPath, const AnimationSet& animSet, Team team, int health, int damage, int moveSpeed);
 
 	virtual ~Unit() = default;
 
@@ -84,7 +86,7 @@ public:
 	sf::Vector2i getGridPosition(sf::Vector2u tileSize) const;
 
 	void setPosition(sf::Vector2f pos) { position = pos; }
-	void setTeam(Team t) { team = t; }
+	void setTeam(Team t);
 	void setHealth(int h) { health = h; }
 	void setDamage(int d) { damage = d; }
 	void setMoveSpeed(int s) { moveSpeed = s; }

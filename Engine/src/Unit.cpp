@@ -1,4 +1,6 @@
 #include "Unit.hpp"
+#include "TextureManager.hpp"
+#include "TeamRegistry.hpp"
 #include <cmath>
 
 static std::string clipNameForDirection(MoveDirection dir) {
@@ -11,10 +13,20 @@ static std::string clipNameForDirection(MoveDirection dir) {
     return "idle";
 }
 
-Unit::Unit(const std::string& name, const sf::Texture& texture, const AnimationSet& animSet, int health, int damage, int moveSpeed)
-    : name(name), texture(&texture), animSet(&animSet), health(health), damage(damage), moveSpeed(moveSpeed)
+Unit::Unit(const std::string& name, const std::string& artPath, const std::string& maskPath,
+           const AnimationSet& animSet, Team team,
+           int health, int damage, int moveSpeed)
+    : name(name), artPath(artPath), maskPath(maskPath),
+      animSet(&animSet), team(team),
+      health(health), damage(damage), moveSpeed(moveSpeed)
 {
+    texture = &TextureManager::getTexture(artPath, maskPath, TeamRegistry::getColor(team));
     animState.play(clipNameForDirection(currentDirection), *this->animSet);
+}
+
+void Unit::setTeam(Team t) {
+    team = t;
+    texture = &TextureManager::getTexture(artPath, maskPath, TeamRegistry::getColor(t));
 }
 
 MoveDirection castMoveDirection(sf::Vector2f& direction)

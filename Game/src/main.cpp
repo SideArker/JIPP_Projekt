@@ -4,11 +4,12 @@
 #include <optional>
 #include "MapManager.hpp"
 #include "Unit.hpp"
-#include "AnimationManager.hpp"
-#include "TextureManager.hpp"
 #include "FileManager.hpp"
 #include "MapFile.hpp"
 #include "UnitRegistry.hpp"
+#include "GameContent.hpp"
+#include "TextureManager.hpp"
+
 
 static constexpr const char* LEVEL1_PATH = "levels/level1.map";
 
@@ -27,7 +28,7 @@ static void createDefaultLevel1() {
         {13, false}, {2, true},   {2, true},   {2, true},   {2, true},   {2, true},   {2, true},   {5, false},
         {14, false}, {15, false}, {15, false}, {15, false}, {15, false}, {15, false}, {15, false}, {8, false}
     };
-    map.spawns = { { "Tank", 5, 5, Team::Ally }, {"Enemy_Tank", 5, 4, Team::Enemy }};
+    map.spawns = { { "Tank", 5, 5, Team::Ally },{ "Tank", 3, 3, Team::Ally },  {"Tank", 5, 4, Team::Enemy }};
     FileManager::saveMap(map, LEVEL1_PATH);
 }
 
@@ -36,32 +37,8 @@ int main() {
     sf::View view(sf::FloatRect({ 0.f, 0.f }, { 800.f, 500.f }));
     window.setView(view);
 
-    AnimationSet tankAnimSet;
-    tankAnimSet
-        .addClip("move_left",  AnimationClip{ { sf::IntRect({0,  0}, {32, 32}) }, 0.1f, true, false })
-        .addClip("move_right", AnimationClip{ { sf::IntRect({0,  0}, {32, 32}) }, 0.1f, true, true  })
-        .addClip("move_down",  AnimationClip{ { sf::IntRect({0, 32}, {32, 32}) }, 0.1f, true, false })
-        .addClip("move_up",    AnimationClip{ { sf::IntRect({0, 64}, {32, 32}) }, 0.1f, true, false });
-    AnimationManager::registerSet("Tank", std::move(tankAnimSet));
-
-    sf::Color teamColor(50, 255, 50);
-    sf::Color enemyColor(255, 7, 58);
-    const sf::Texture& tankTex  = TextureManager::getTexture("Art/tank-shoot-grayscale.png", "Art/tank-shoot-grayscale-mask.png", teamColor);
-    const sf::Texture& enemyTankTex = TextureManager::getTexture("Art/tank-shoot-grayscale.png", "Art/tank-shoot-grayscale-mask.png", enemyColor);
-
-    const AnimationSet& tankAnim = *AnimationManager::getSet("Tank");
-
-    UnitRegistry::registerType("Tank", [&](Team team) {
-        auto unit = std::make_shared<Unit>("Tank", tankTex, tankAnim, 20, 5, 5);
-        unit->setTeam(team);
-        return unit;
-    });
-
-    UnitRegistry::registerType("Enemy_Tank", [&](Team team) {
-        auto unit = std::make_shared<Unit>("Enemy_Tank", enemyTankTex, tankAnim, 20, 5, 5);
-        unit->setTeam(team);
-        return unit;
-        });
+    TextureManager textures;
+    GameContent::init();
 
     if (!std::filesystem::exists(LEVEL1_PATH))
         createDefaultLevel1();
