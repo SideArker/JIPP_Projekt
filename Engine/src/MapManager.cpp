@@ -1,5 +1,8 @@
 #include "MapManager.hpp"
 #include "SelectionController.hpp"
+#include "FileManager.hpp"
+#include "MapFile.hpp"
+#include "UnitRegistry.hpp"
 #include <queue>
 #include <unordered_map>
 #include <cmath>
@@ -23,6 +26,7 @@ MapManager::MapManager() : mapWidth(0), mapHeight(0) {}
 MapManager::~MapManager() = default;
 
 bool MapManager::loadMap(const std::string& tileset, sf::Vector2u tileSize, const std::vector<Tile>& tiles, unsigned int w, unsigned int h) {
+    this->tilesetPath = tileset;
     this->tileSize = tileSize;
     mapData = tiles;
     mapWidth = w;
@@ -186,4 +190,83 @@ std::vector<sf::Vector2i> MapManager::findPath(sf::Vector2i start, sf::Vector2i 
         }
     }
     return path;
+}
+
+bool MapManager::loadFromFile(const std::string& mapPath) {
+    MapFile mapFile;
+    if (!FileManager::loadMap(mapPath, mapFile)) return false;
+
+    units.clear();
+    selectionController.reset();
+    currentMapPath = mapPath;
+
+    if (!loadMap(mapFile.tilesetPath, mapFile.tileSize, mapFile.tiles, mapFile.width, mapFile.height))
+        return false;
+
+    for (const auto& spawn : mapFile.spawns) {
+        auto unit = UnitRegistry::create(spawn.typeName, spawn.team);
+        if (unit) spawnUnit(unit, spawn.gridX, spawn.gridY);
+    }
+    return true;
+}
+
+bool MapManager::saveToFile(const std::string& mapPath) const {
+    MapFile mapFile;
+    mapFile.tilesetPath = tilesetPath;
+    mapFile.tileSize    = tileSize;
+    mapFile.width       = mapWidth;
+    mapFile.height      = mapHeight;
+    mapFile.tiles       = mapData;
+
+    for (const auto& unit : units) {
+        auto gridPos = unit->getGridPosition(tileSize);
+        mapFile.spawns.push_back({ unit->getName(), gridPos.x, gridPos.y, unit->getTeam() });
+    }
+    return FileManager::saveMap(mapFile, mapPath);
+}
+
+GameState MapManager::captureGameState() const {
+    GameState state;
+    state.mapFilePath = currentMapPath;
+
+    for (const auto& unit : units) {
+        auto gridPos = unit->getGridPosition(tileSize);
+        state.units.push_back({
+            unit->getName(),
+            gridPos.x,
+            gridPos.y,
+            unit->getHealth(),
+            unit->getDamage(),
+            static_cast<int>(unit->getMoveSpeed()),
+            unit->getTeam(),
+            unit->getFlags()
+        });
+    }
+    return state;
+}
+
+bool MapManager::restoreGameState(const std::string& savePath) {
+    GameState state;
+    if (!FileManager::loadGame(savePath, state)) return false;
+
+    MapFile mapFile;
+    if (!FileManager::loadMap(state.mapFilePath, mapFile)) return false;
+
+    units.clear();
+    selectionController.reset();
+    currentMapPath = state.mapFilePath;
+
+    if (!loadMap(mapFile.tilesetPath, mapFile.tileSize, mapFile.tiles, mapFile.width, mapFile.height))
+        return false;
+
+    for (const auto& unitData : state.units) {
+        auto unit = UnitRegistry::create(unitData.typeName, unitData.team);
+        if (!unit) continue;
+        unit->setHealth(unitData.health);
+        unit->setDamage(unitData.damage);
+        unit->setMoveSpeed(unitData.moveSpeed);
+        unit->setFlags(unitData.flags);
+        spawnUnit(unit, unitData.gridX, unitData.gridY);
+    }
+    return true;
 }

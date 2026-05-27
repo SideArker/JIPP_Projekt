@@ -1,30 +1,40 @@
 #include <SFML/Graphics.hpp>
-#include <optional>
+#include <filesystem>
 #include <memory>
+#include <optional>
 #include "MapManager.hpp"
 #include "Unit.hpp"
 #include "AnimationManager.hpp"
 #include "TextureManager.hpp"
+#include "FileManager.hpp"
+#include "MapFile.hpp"
+#include "UnitRegistry.hpp"
+
+static constexpr const char* LEVEL1_PATH = "levels/level1.map";
+
+static void createDefaultLevel1() {
+    MapFile map;
+    map.tilesetPath = "Art/map.png";
+    map.tileSize    = { 32, 32 };
+    map.width       = 8;
+    map.height      = 7;
+    map.tiles = {
+        {18, true},  {19, true},  {19, true},  {19, true},  {19, true},  {19, true},  {19, true},  {9, true},
+        {13, false}, {2, true},   {3, true},   {17, false}, {7, false},  {17, false}, {3, true},   {5, false},
+        {13, false}, {2, true},   {7, false},  {7, false},  {17, false}, {7, false},  {7, false},  {5, false},
+        {13, false}, {2, true},   {3, true},   {12, true},  {2, true},   {2, true},   {4, true},   {5, false},
+        {13, false}, {10, true},  {10, true},  {11, true},  {10, true},  {10, true},  {16, true},  {5, false},
+        {13, false}, {2, true},   {2, true},   {2, true},   {2, true},   {2, true},   {2, true},   {5, false},
+        {14, false}, {15, false}, {15, false}, {15, false}, {15, false}, {15, false}, {15, false}, {8, false}
+    };
+    map.spawns = { { "Tank", 5, 5, Team::Ally } };
+    FileManager::saveMap(map, LEVEL1_PATH);
+}
 
 int main() {
     sf::RenderWindow window(sf::VideoMode({ 1280, 720 }), "Map Renderer", sf::State::Windowed);
     sf::View view(sf::FloatRect({ 0.f, 0.f }, { 800.f, 500.f }));
     window.setView(view);
-
-std::vector<Tile> level = {
-    {18, true},  {19, true},  {19, true},  {19, true},  {19, true},  {19, true},  {19, true},  {9, true},
-    {13, false}, {2, true},   {3, true},   {17, false}, {7, false},  {17, false}, {3, true},   {5, false},
-    {13, false}, {2, true},   {7, false},  {7, false},  {17, false}, {7, false},  {7, false},  {5, false},
-    {13, false}, {2, true},   {3, true},   {12, true},  {2, true},   {2, true},   {4, true},   {5, false},
-    {13, false}, {10, true},  {10, true},  {11, true},  {10, true},  {10, true},  {16, true},  {5, false},
-    {13, false}, {2, true},   {2, true},   {2, true},   {2, true},   {2, true},   {2, true},   {5, false},
-    {14, false}, {15, false}, {15, false}, {15, false}, {15, false}, {15, false}, {15, false}, {8, false}
-};
-    MapManager mapManager;
-
-    if (!mapManager.loadMap("Art/map.png", sf::Vector2u(32, 32), level, 8, 7)) {
-        return -1;
-    }
 
     AnimationSet tankAnimSet;
     tankAnimSet
@@ -35,20 +45,27 @@ std::vector<Tile> level = {
     AnimationManager::registerSet("Tank", std::move(tankAnimSet));
 
     sf::Color teamColor(50, 255, 50);
-    const sf::Texture& tankTex = TextureManager::getTexture("Art/tank-shoot-grayscale.png", "Art/tank-shoot-grayscale-mask.png", teamColor);
+    const sf::Texture& tankTex  = TextureManager::getTexture("Art/tank-shoot-grayscale.png", "Art/tank-shoot-grayscale-mask.png", teamColor);
     const AnimationSet& tankAnim = *AnimationManager::getSet("Tank");
 
-    auto player = std::make_shared<Unit>("Tank", tankTex, tankAnim, 20, 5, 5);
-    mapManager.spawnUnit(player, 5, 5);
+    UnitRegistry::registerType("Tank", [&](Team team) {
+        auto unit = std::make_shared<Unit>("Tank", tankTex, tankAnim, 20, 5, 5);
+        unit->setTeam(team);
+        return unit;
+    });
+
+    if (!std::filesystem::exists(LEVEL1_PATH))
+        createDefaultLevel1();
+
+    MapManager mapManager;
+    if (!mapManager.loadFromFile(LEVEL1_PATH)) return -1;
     mapManager.setupInput(window);
 
     sf::Clock clock;
 
     while (window.isOpen()) {
         while (const std::optional event = window.pollEvent()) {
-            if (event->is<sf::Event::Closed>()) {
-                window.close();
-            }
+            if (event->is<sf::Event::Closed>()) window.close();
             mapManager.handleEvent(*event);
         }
 

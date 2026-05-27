@@ -96,3 +96,24 @@ void Unit::update(float deltaTime) {
 
     animState.update(deltaTime);
 }
+
+sf::Vector2i Unit::getGridPosition(sf::Vector2u ts) const {
+    return {
+        static_cast<int>(std::round(position.x / static_cast<float>(ts.x))),
+        static_cast<int>(std::round(position.y / static_cast<float>(ts.y)))
+    };
+}
+
+int Unit::takeDamage(int damage) {
+    health = std::max(0, health - damage);
+    return health;
+}
+
+int Unit::heal(int amount) {
+    health += amount;
+    return health;
+}
+
+void Unit::dealDamage(Unit& target) const {
+    target.takeDamage(damage);
+}

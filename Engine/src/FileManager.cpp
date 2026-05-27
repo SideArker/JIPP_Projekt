@@ -1,0 +1,184 @@
+#include "FileManager.hpp"
+#include <cstdint>
+#include <cstring>
+#include <ctime>
+#include <filesystem>
+#include <fstream>
+
+static constexpr uint32_t FILE_VERSION  = 1;
+static constexpr char     MAP_MAGIC[4]  = { 'J', 'M', 'A', 'P' };
+static constexpr char     SAVE_MAGIC[4] = { 'J', 'S', 'A', 'V' };
+
+template<typename T>
+static void writeVal(std::ostream& out, const T& val) {
+    out.write(reinterpret_cast<const char*>(&val), sizeof(T));
+}
+
+template<typename T>
+static bool readVal(std::istream& in, T& val) {
+    in.read(reinterpret_cast<char*>(&val), sizeof(T));
+    return in.good();
+}
+
+static void writeString(std::ostream& out, const std::string& str) {
+    auto len = static_cast<uint16_t>(str.size());
+    writeVal(out, len);
+    out.write(str.data(), len);
+}
+
+static bool readString(std::istream& in, std::string& out) {
+    uint16_t len;
+    if (!readVal(in, len)) return false;
+    out.resize(len);
+    in.read(out.data(), len);
+    return in.good();
+}
+
+static bool validateMagic(std::istream& in, const char* expected) {
+    char magic[4];
+    in.read(magic, 4);
+    return in.good() && std::memcmp(magic, expected, 4) == 0;
+}
+
+static void writeMapBlock(std::ostream& out, const MapFile& map) {
+    writeString(out, map.tilesetPath);
+    writeVal(out, map.tileSize.x);
+    writeVal(out, map.tileSize.y);
+    writeVal(out, map.width);
+    writeVal(out, map.height);
+
+    writeVal(out, static_cast<uint32_t>(map.tiles.size()));
+    for (const auto& tile : map.tiles) {
+        writeVal(out, static_cast<int32_t>(tile.getArtId()));
+        writeVal(out, static_cast<uint8_t>(tile.isWalkable() ? 1 : 0));
+    }
+
+    writeVal(out, static_cast<uint32_t>(map.spawns.size()));
+    for (const auto& spawn : map.spawns) {
+        writeString(out, spawn.typeName);
+        writeVal(out, static_cast<int32_t>(spawn.gridX));
+        writeVal(out, static_cast<int32_t>(spawn.gridY));
+        writeVal(out, static_cast<uint8_t>(spawn.team));
+    }
+}
+
+static bool readMapBlock(std::istream& in, MapFile& map) {
+    if (!readString(in, map.tilesetPath)) return false;
+    if (!readVal(in, map.tileSize.x))     return false;
+    if (!readVal(in, map.tileSize.y))     return false;
+    if (!readVal(in, map.width))          return false;
+    if (!readVal(in, map.height))         return false;
+
+    uint32_t tileCount;
+    if (!readVal(in, tileCount)) return false;
+    map.tiles.reserve(tileCount);
+    for (uint32_t i = 0; i < tileCount; ++i) {
+        int32_t artId;
+        uint8_t walkable;
+        if (!readVal(in, artId) || !readVal(in, walkable)) return false;
+        map.tiles.emplace_back(static_cast<int>(artId), walkable != 0);
+    }
+
+    uint32_t spawnCount;
+    if (!readVal(in, spawnCount)) return false;
+    map.spawns.resize(spawnCount);
+    for (auto& spawn : map.spawns) {
+        if (!readString(in, spawn.typeName)) return false;
+        int32_t gridX, gridY;
+        uint8_t team;
+        if (!readVal(in, gridX) || !readVal(in, gridY) || !readVal(in, team)) return false;
+        spawn.gridX = gridX;
+        spawn.gridY = gridY;
+        spawn.team  = static_cast<Team>(team);
+    }
+    return true;
+}
+
+static void ensureParentExists(const std::string& path) {
+    std::filesystem::path p(path);
+    if (p.has_parent_path())
+        std::filesystem::create_directories(p.parent_path());
+}
+
+bool FileManager::saveMap(const MapFile& map, const std::string& path) {
+    ensureParentExists(path);
+    std::ofstream out(path, std::ios::binary);
+    if (!out) return false;
+
+    out.write(MAP_MAGIC, 4);
+    writeVal(out, FILE_VERSION);
+    writeMapBlock(out, map);
+    return out.good();
+}
+
+bool FileManager::loadMap(const std::string& path, MapFile& out) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in) return false;
+
+    if (!validateMagic(in, MAP_MAGIC)) return false;
+
+    uint32_t version;
+    if (!readVal(in, version) || version != FILE_VERSION) return false;
+
+    return readMapBlock(in, out);
+}
+
+bool FileManager::saveGame(const GameState& state, const std::string& path) {
+    ensureParentExists(path);
+    std::ofstream out(path, std::ios::binary);
+    if (!out) return false;
+
+    out.write(SAVE_MAGIC, 4);
+    writeVal(out, FILE_VERSION);
+    writeVal(out, static_cast<uint32_t>(std::time(nullptr)));
+    writeString(out, state.mapFilePath);
+
+    writeVal(out, static_cast<uint32_t>(state.units.size()));
+    for (const auto& unit : state.units) {
+        writeString(out, unit.typeName);
+        writeVal(out, static_cast<int32_t>(unit.gridX));
+        writeVal(out, static_cast<int32_t>(unit.gridY));
+        writeVal(out, static_cast<int32_t>(unit.health));
+        writeVal(out, static_cast<int32_t>(unit.damage));
+        writeVal(out, static_cast<int32_t>(unit.moveSpeed));
+        writeVal(out, static_cast<uint8_t>(unit.team));
+        writeVal(out, unit.flags);
+    }
+    return out.good();
+}
+
+bool FileManager::loadGame(const std::string& path, GameState& out) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in) return false;
+
+    if (!validateMagic(in, SAVE_MAGIC)) return false;
+
+    uint32_t version;
+    if (!readVal(in, version) || version != FILE_VERSION) return false;
+
+    uint32_t timestamp;
+    if (!readVal(in, timestamp))          return false;
+    if (!readString(in, out.mapFilePath)) return false;
+
+    uint32_t unitCount;
+    if (!readVal(in, unitCount)) return false;
+    out.units.resize(unitCount);
+
+    for (auto& unit : out.units) {
+        if (!readString(in, unit.typeName)) return false;
+        int32_t gridX, gridY, health, damage, moveSpeed;
+        uint8_t team, flags;
+        if (!readVal(in, gridX)     || !readVal(in, gridY))     return false;
+        if (!readVal(in, health)    || !readVal(in, damage))     return false;
+        if (!readVal(in, moveSpeed) || !readVal(in, team))       return false;
+        if (!readVal(in, flags))                                 return false;
+        unit.gridX     = gridX;
+        unit.gridY     = gridY;
+        unit.health    = health;
+        unit.damage    = damage;
+        unit.moveSpeed = moveSpeed;
+        unit.team      = static_cast<Team>(team);
+        unit.flags     = flags;
+    }
+    return true;
+}

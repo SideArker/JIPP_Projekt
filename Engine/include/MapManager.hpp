@@ -2,8 +2,10 @@
 
 #include "MapRenderer.hpp"
 #include "EngineAPI.hpp"
+#include "GameState.hpp"
 #include <Unit.hpp>
 #include <memory>
+#include <string>
 #include <vector>
 
 class SelectionController;
@@ -17,10 +19,17 @@ private:
 	sf::Vector2u tileSize;
 	unsigned int mapWidth;
 	unsigned int mapHeight;
+	std::string  tilesetPath;
+	std::string  currentMapPath;
 
 public:
 	MapManager();
 	~MapManager();
+
+	bool loadFromFile(const std::string& mapPath);
+	bool saveToFile(const std::string& mapPath) const;
+	GameState captureGameState() const;
+	bool restoreGameState(const std::string& savePath);
 
 	bool loadMap(const std::string& tileset, sf::Vector2u tileSize, const std::vector<Tile>& tiles, unsigned int w, unsigned int h);
 	void spawnUnit(std::shared_ptr<Unit> unit, int gridX, int gridY);
