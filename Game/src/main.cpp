@@ -28,13 +28,13 @@ static void createDefaultLevel1() {
         {13, false}, {2, true},   {2, true},   {2, true},   {2, true},   {2, true},   {2, true},   {5, false},
         {14, false}, {15, false}, {15, false}, {15, false}, {15, false}, {15, false}, {15, false}, {8, false}
     };
-    map.spawns = { { "Tank", 5, 5, Team::Ally },{ "Tank", 3, 3, Team::Ally },  {"Tank", 5, 4, Team::Enemy }};
+    map.spawns = { { "Tank", 5, 5, Team::Ally },{ "Tank", 3, 3, Team::Ally }, {"Tank", 5, 4, Team::Enemy }};
     FileManager::saveMap(map, LEVEL1_PATH);
 }
 
 int main() {
     sf::RenderWindow window(sf::VideoMode({ 1280, 720 }), "Map Renderer", sf::State::Windowed);
-    sf::View view(sf::FloatRect({ 0.f, 0.f }, { 800.f, 500.f }));
+    sf::View view(sf::FloatRect({ 0.f, 0.f }, { 400.f, 300.f }));
     window.setView(view);
 
     TextureManager textures;

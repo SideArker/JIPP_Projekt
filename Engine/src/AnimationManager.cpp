@@ -2,14 +2,17 @@
 
 std::unordered_map<std::string, AnimationSet> AnimationManager::sets;
 
-void AnimationState::play(const std::string& name, const AnimationSet& set) {
-    if (name == currentClipName) return;
+void AnimationState::play(const std::string& name, const AnimationSet& set, std::function<void()> onFinished) {
+    // Allow non-looping clips to restart; skip only if the same looping clip is already playing
+    if (name == currentClipName && (currentClip && currentClip->loop)) return;
     const AnimationClip* clip = set.getClip(name);
     if (!clip) return;
     currentClipName = name;
     currentClip = clip;
     currentFrame = 0;
     elapsed = 0.0f;
+    m_finished = false;
+    m_onFinished = std::move(onFinished);
 }
 
 void AnimationState::update(float deltaTime) {
@@ -19,7 +22,18 @@ void AnimationState::update(float deltaTime) {
         elapsed -= currentClip->frameTime;
         ++currentFrame;
         if (currentFrame >= static_cast<int>(currentClip->frames.size())) {
-            currentFrame = currentClip->loop ? 0 : static_cast<int>(currentClip->frames.size()) - 1;
+            if (currentClip->loop) {
+                currentFrame = 0;
+            } else {
+                currentFrame = static_cast<int>(currentClip->frames.size()) - 1;
+                m_finished = true;
+                if (m_onFinished) {
+                    // Move out before calling to prevent re-entry if callback calls play()
+                    auto cb = std::move(m_onFinished);
+                    cb();
+                }
+                return;
+            }
         }
     }
 }

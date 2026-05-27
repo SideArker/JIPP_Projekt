@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <functional>
 
 struct AnimationClip {
 	// Which pixels get cut out of the texture for each frame
@@ -34,11 +35,14 @@ private:
     const AnimationClip* currentClip = nullptr;
     int currentFrame = 0;
     float elapsed = 0.0f;
+    bool m_finished = false;
+    std::function<void()> m_onFinished;
 public:
-    void play(const std::string& name, const AnimationSet& set);
+    void play(const std::string& name, const AnimationSet& set, std::function<void()> onFinished = {});
     void update(float deltaTime);
     sf::IntRect getCurrentRect() const;
     bool shouldFlipX() const;
+    bool isFinished() const { return m_finished; }
 };
 
 class ENGINE_API AnimationManager {

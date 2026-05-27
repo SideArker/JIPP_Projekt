@@ -13,6 +13,16 @@ static std::string clipNameForDirection(MoveDirection dir) {
     return "idle";
 }
 
+static std::string shootClipName(MoveDirection dir) {
+    switch (dir) {
+        case MoveDirection::Left:  return "shoot_left";
+        case MoveDirection::Right: return "shoot_right";
+        case MoveDirection::Down:  return "shoot_down";
+        case MoveDirection::Up:    return "shoot_up";
+    }
+    return "idle";
+}
+
 Unit::Unit(const std::string& name, const std::string& artPath, const std::string& maskPath,
            const AnimationSet& animSet, Team team,
            int health, int damage, int moveSpeed)
@@ -47,6 +57,21 @@ void Unit::move(const std::vector<sf::Vector2i>& newPath) {
 
 void Unit::update(float deltaTime) {
     if (path.empty()) {
+        // Activate shoot animation once the unit has finished moving
+        if (m_shootPending) {
+            m_shootPending = false;
+            m_isShooting = true;
+            currentDirection = m_pendingShootDir;
+            const std::string clip = shootClipName(m_pendingShootDir);
+            if (!animSet->getClip(clip))
+                m_isShooting = false;
+            else
+                animState.play(clip, *animSet, [this]() { m_isShooting = false; });
+        }
+        if (m_isShooting) {
+            animState.update(deltaTime);
+            return;
+        }
         currentSpeed = 0.0f;
         animState.play("idle", *animSet);
         animState.update(deltaTime);
@@ -118,6 +143,7 @@ sf::Vector2i Unit::getGridPosition(sf::Vector2u ts) const {
 
 int Unit::takeDamage(int damage) {
     health = std::max(0, health - damage);
+    if (onDamaged) onDamaged(position);
     return health;
 }
 
@@ -126,6 +152,8 @@ int Unit::heal(int amount) {
     return health;
 }
 
-void Unit::dealDamage(Unit& target) const {
+void Unit::dealDamage(Unit& target, MoveDirection shootDir) {
+    m_pendingShootDir = shootDir;
+    m_shootPending = true;
     target.takeDamage(damage);
 }

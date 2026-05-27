@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <bitset>
+#include <functional>
 
 enum class MoveDirection {
 	Up,
@@ -55,6 +56,9 @@ protected:
 	bool directionReset = true;
 	float startSpeed = 30.0f;
 	float tileSize = 32;
+	bool m_isShooting = false;
+	bool m_shootPending = false;
+	MoveDirection m_pendingShootDir = MoveDirection::Right;
 public:
 	Unit(const std::string& name, const std::string& artPath, const std::string& maskPath, const AnimationSet& animSet, Team team, int health, int damage, int moveSpeed);
 
@@ -66,7 +70,8 @@ public:
 	int takeDamage(int damage);
 	int heal(int healAmount);
 
-	void dealDamage(Unit& target) const;
+	void dealDamage(Unit& target, MoveDirection shootDir);
+	bool isActing() const { return !path.empty() || m_isShooting || m_shootPending; }
 
 	void addFlag(UnitFlag flag) { flags.set(static_cast<std::size_t>(flag)); }
 	void removeFlag(UnitFlag flag) { flags.reset(static_cast<std::size_t>(flag)); }
@@ -91,4 +96,6 @@ public:
 	void setDamage(int d) { damage = d; }
 	void setMoveSpeed(int s) { moveSpeed = s; }
 	void setFlags(uint8_t f) { flags = std::bitset<static_cast<std::size_t>(UnitFlag::Count)>(f); }
+
+	std::function<void(sf::Vector2f)> onDamaged;
 };

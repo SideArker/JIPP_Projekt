@@ -39,6 +39,7 @@ void MapManager::spawnUnit(std::shared_ptr<Unit> unit, int gridX, int gridY) {
         static_cast<float>(gridX * tileSize.x),
         static_cast<float>(gridY * tileSize.y)
     ));
+    unit->onDamaged = [this](sf::Vector2f pos) { spawnHitEffect(pos); };
     units.push_back(unit);
 }
 
@@ -51,9 +52,17 @@ void MapManager::handleEvent(const sf::Event& event) {
 }
 
 void MapManager::update(float deltaTime) {
-    for (auto& unit : units) {
+    for (auto& unit : units)
         unit->update(deltaTime);
+    for (auto& e : m_effects) {
+        e.animState.update(deltaTime);
+        e.sprite.setTextureRect(e.animState.getCurrentRect());
     }
+    m_effects.erase(
+        std::remove_if(m_effects.begin(), m_effects.end(),
+            [](const Effect& e) { return e.animState.isFinished(); }),
+        m_effects.end()
+    );
 }
 
 void MapManager::draw(sf::RenderTarget& target) {
@@ -71,6 +80,7 @@ void MapManager::draw(sf::RenderTarget& target) {
         }
         target.draw(unitSprite);
     }
+    for (const auto& e : m_effects) target.draw(e.sprite);
 }
 
 void MapManager::drawUI() {
@@ -80,6 +90,27 @@ void MapManager::drawUI() {
 sf::Vector2u MapManager::getTileSize() const { return tileSize; }
 unsigned int MapManager::getMapWidth() const { return mapWidth; }
 unsigned int MapManager::getMapHeight() const { return mapHeight; }
+
+bool MapManager::isAnyUnitActing() const {
+    return std::any_of(units.begin(), units.end(),
+        [](const std::shared_ptr<Unit>& u) { return u->isActing(); });
+}
+
+void MapManager::spawnHitEffect(sf::Vector2f position) {
+    const AnimationSet* set = AnimationManager::getSet("hitEffect");
+    if (!set) return;
+    if (!m_hitEffectLoaded) {
+        if (!m_hitEffectTexture.loadFromFile("Art/hitEffect.png"))
+            return;
+        m_hitEffectLoaded = true;
+    }
+    Effect e{ sf::Sprite(m_hitEffectTexture) };
+    e.animSet = set;
+    e.animState.play("hit", *set);
+    e.sprite.setTextureRect(e.animState.getCurrentRect());
+    e.sprite.setPosition(position);
+    m_effects.push_back(std::move(e));
+}
 
 std::shared_ptr<Unit> MapManager::getUnitAtTile(sf::Vector2i gridPos) const {
     for (const auto& unit : units) {

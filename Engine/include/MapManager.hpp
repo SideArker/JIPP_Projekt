@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MapRenderer.hpp"
+#include "AnimationManager.hpp"
 #include "EngineAPI.hpp"
 #include "GameState.hpp"
 #include <Unit.hpp>
@@ -9,6 +10,12 @@
 #include <vector>
 
 class SelectionController;
+
+struct Effect {
+	sf::Sprite sprite;
+	AnimationState animState;
+	const AnimationSet* animSet = nullptr;
+};
 
 class ENGINE_API MapManager {
 private:
@@ -21,6 +28,9 @@ private:
 	unsigned int mapHeight;
 	std::string  tilesetPath;
 	std::string  currentMapPath;
+	sf::Texture m_hitEffectTexture;
+	bool m_hitEffectLoaded = false;
+	std::vector<Effect> m_effects;
 
 public:
 	MapManager();
@@ -38,6 +48,8 @@ public:
 	void update(float deltaTime);
 	void draw(sf::RenderTarget& target);
 	void drawUI();
+	bool isAnyUnitActing() const;
+	void spawnHitEffect(sf::Vector2f position);
 	std::vector<sf::Vector2i> findPath(sf::Vector2i start, sf::Vector2i goal, Team movingTeam);
 	std::vector<sf::Vector2i> getReachableTiles(sf::Vector2i from, int moveRange, Team movingTeam) const;
 	std::shared_ptr<Unit> getUnitAtTile(sf::Vector2i gridPos) const;

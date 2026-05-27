@@ -39,7 +39,7 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
             const sf::Vector2i gridPos(tx, ty);
 
             btn->onMouseEnter([this, &mapManager, gridPos, tileSize]() {
-                if (!selectedUnit) return;
+                if (mapManager.isAnyUnitActing() || !selectedUnit) return;
 
                 sf::Vector2i unitGrid(
                     static_cast<int>(std::round(selectedUnit->getPosition().x / static_cast<float>(tileSize.x))),
@@ -88,11 +88,24 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
             });
 
             btn->onClick([this, &mapManager, gridPos, tileSize]() {
+                if (mapManager.isAnyUnitActing()) return;
+
                 if (hoveredEnemyUnit && selectedUnit) {
+                    sf::Vector2i attackerGrid(
+                        static_cast<int>(std::round(selectedUnit->getPosition().x / static_cast<float>(tileSize.x))),
+                        static_cast<int>(std::round(selectedUnit->getPosition().y / static_cast<float>(tileSize.y)))
+                    );
+                    sf::Vector2i attackerEnd = previewPath.empty() ? attackerGrid : previewPath.back();
+                    int dx = gridPos.x - attackerEnd.x;
+                    int dy = gridPos.y - attackerEnd.y;
+                    MoveDirection shootDir = (std::abs(dx) >= std::abs(dy))
+                        ? (dx >= 0 ? MoveDirection::Right : MoveDirection::Left)
+                        : (dy >= 0 ? MoveDirection::Down : MoveDirection::Up);
+
                     if (!previewPath.empty()) {
                         selectedUnit->move(previewPath);
                     }
-                    selectedUnit->dealDamage(*hoveredEnemyUnit);
+                    selectedUnit->dealDamage(*hoveredEnemyUnit, shootDir);
                     selectedUnit = nullptr;
                     reachableTiles.clear();
                     previewPath.clear();
