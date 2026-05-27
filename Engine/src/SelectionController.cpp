@@ -38,35 +38,79 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
 
             const sf::Vector2i gridPos(tx, ty);
 
-            btn->onMouseEnter([this, &mapManager,  gridPos, tileSize]() {
+            btn->onMouseEnter([this, &mapManager, gridPos, tileSize]() {
                 if (!selectedUnit) return;
+
+                sf::Vector2i unitGrid(
+                    static_cast<int>(std::round(selectedUnit->getPosition().x / static_cast<float>(tileSize.x))),
+                    static_cast<int>(std::round(selectedUnit->getPosition().y / static_cast<float>(tileSize.y)))
+                );
+
+                // Check for enemy unit on this tile
+                auto unitAtTile = mapManager.getUnitAtTile(gridPos);
+                if (unitAtTile && unitAtTile != selectedUnit && unitAtTile->getTeam() != selectedUnit->getTeam()) {
+                    hoveredEnemyUnit = unitAtTile;
+                    previewPath.clear();
+
+                    // Already adjacent
+                    int dx = std::abs(gridPos.x - unitGrid.x);
+                    int dy = std::abs(gridPos.y - unitGrid.y);
+                    if (dx + dy == 1) return;
+
+                    // Find the shortest path to any reachable tile adjacent to the enemy
+                    const std::vector<sf::Vector2i> dirs = { {0,-1},{0,1},{-1,0},{1,0} };
+                    std::vector<sf::Vector2i> bestPath;
+                    for (const auto& dir : dirs) {
+                        sf::Vector2i adj = gridPos + dir;
+                        if (std::find(reachableTiles.begin(), reachableTiles.end(), adj) == reachableTiles.end()) continue;
+                        auto path = mapManager.findPath(unitGrid, adj, selectedUnit->getTeam());
+                        if (!path.empty() && (bestPath.empty() || path.size() < bestPath.size())) {
+                            bestPath = path;
+                        }
+                    }
+                    previewPath = bestPath;
+                    return;
+                }
+
+                hoveredEnemyUnit = nullptr;
+
                 bool isReachable = std::find(reachableTiles.begin(), reachableTiles.end(), gridPos) != reachableTiles.end();
                 if (!isReachable) {
                     previewPath.clear();
                     return;
                 }
-                sf::Vector2i unitGrid(
-                    static_cast<int>(std::round(selectedUnit->getPosition().x / static_cast<float>(tileSize.x))),
-                    static_cast<int>(std::round(selectedUnit->getPosition().y / static_cast<float>(tileSize.y)))
-                );
-                previewPath = mapManager.findPath(unitGrid, gridPos);
-                
+                previewPath = mapManager.findPath(unitGrid, gridPos, selectedUnit->getTeam());
             });
 
             btn->onMouseLeave([this]() {
                 previewPath.clear();
+                hoveredEnemyUnit = nullptr;
             });
 
             btn->onClick([this, &mapManager, gridPos, tileSize]() {
+                if (hoveredEnemyUnit && selectedUnit) {
+                    if (!previewPath.empty()) {
+                        selectedUnit->move(previewPath);
+                    }
+                    selectedUnit->dealDamage(*hoveredEnemyUnit);
+                    selectedUnit = nullptr;
+                    reachableTiles.clear();
+                    previewPath.clear();
+                    hoveredEnemyUnit = nullptr;
+                    return;
+                }
+
                 auto unitAtTile = mapManager.getUnitAtTile(gridPos);
                 if (unitAtTile) {
+                    if (unitAtTile->getTeam() == Team::Enemy) return;
                     selectedUnit = unitAtTile;
                     sf::Vector2i unitGrid(
                         static_cast<int>(std::round(unitAtTile->getPosition().x / static_cast<float>(tileSize.x))),
                         static_cast<int>(std::round(unitAtTile->getPosition().y / static_cast<float>(tileSize.y)))
                     );
-                    reachableTiles = mapManager.getReachableTiles(unitGrid, unitAtTile->getMoveSpeed());
+                    reachableTiles = mapManager.getReachableTiles(unitGrid, unitAtTile->getMoveSpeed(), unitAtTile->getTeam());
                     previewPath.clear();
+                    hoveredEnemyUnit = nullptr;
                     return;
                 }
 
@@ -103,6 +147,17 @@ void SelectionController::drawOverlays(sf::RenderTarget& target) const {
     overlay.setFillColor(sf::Color(100, 255, 100, 160));
     for (const auto& pos : previewPath) {
         overlay.setPosition(sf::Vector2f(pos.x * static_cast<float>(tileSize.x), pos.y * static_cast<float>(tileSize.y)));
+        target.draw(overlay);
+    }
+
+    // Red highlight on the enemy tile being targeted
+    if (hoveredEnemyUnit) {
+        sf::Vector2i enemyGrid(
+            static_cast<int>(std::round(hoveredEnemyUnit->getPosition().x / static_cast<float>(tileSize.x))),
+            static_cast<int>(std::round(hoveredEnemyUnit->getPosition().y / static_cast<float>(tileSize.y)))
+        );
+        overlay.setFillColor(sf::Color(255, 50, 50, 160));
+        overlay.setPosition(sf::Vector2f(enemyGrid.x * static_cast<float>(tileSize.x), enemyGrid.y * static_cast<float>(tileSize.y)));
         target.draw(overlay);
     }
 }

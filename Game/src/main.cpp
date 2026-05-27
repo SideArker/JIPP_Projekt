@@ -27,7 +27,7 @@ static void createDefaultLevel1() {
         {13, false}, {2, true},   {2, true},   {2, true},   {2, true},   {2, true},   {2, true},   {5, false},
         {14, false}, {15, false}, {15, false}, {15, false}, {15, false}, {15, false}, {15, false}, {8, false}
     };
-    map.spawns = { { "Tank", 5, 5, Team::Ally } };
+    map.spawns = { { "Tank", 5, 5, Team::Ally }, {"Enemy_Tank", 5, 4, Team::Enemy }};
     FileManager::saveMap(map, LEVEL1_PATH);
 }
 
@@ -45,7 +45,10 @@ int main() {
     AnimationManager::registerSet("Tank", std::move(tankAnimSet));
 
     sf::Color teamColor(50, 255, 50);
+    sf::Color enemyColor(255, 7, 58);
     const sf::Texture& tankTex  = TextureManager::getTexture("Art/tank-shoot-grayscale.png", "Art/tank-shoot-grayscale-mask.png", teamColor);
+    const sf::Texture& enemyTankTex = TextureManager::getTexture("Art/tank-shoot-grayscale.png", "Art/tank-shoot-grayscale-mask.png", enemyColor);
+
     const AnimationSet& tankAnim = *AnimationManager::getSet("Tank");
 
     UnitRegistry::registerType("Tank", [&](Team team) {
@@ -53,6 +56,12 @@ int main() {
         unit->setTeam(team);
         return unit;
     });
+
+    UnitRegistry::registerType("Enemy_Tank", [&](Team team) {
+        auto unit = std::make_shared<Unit>("Enemy_Tank", enemyTankTex, tankAnim, 20, 5, 5);
+        unit->setTeam(team);
+        return unit;
+        });
 
     if (!std::filesystem::exists(LEVEL1_PATH))
         createDefaultLevel1();

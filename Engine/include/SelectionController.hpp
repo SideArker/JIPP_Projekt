@@ -20,6 +20,7 @@ private:
     tgui::Gui gui;
     MapManager& mapManager;
     std::shared_ptr<Unit> selectedUnit;
+    std::shared_ptr<Unit> hoveredEnemyUnit;
     std::vector<sf::Vector2i> reachableTiles;
     std::vector<sf::Vector2i> previewPath;
     sf::Texture m_walkOverlayTexture;

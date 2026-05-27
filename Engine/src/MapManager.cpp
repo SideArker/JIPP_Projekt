@@ -94,7 +94,7 @@ std::shared_ptr<Unit> MapManager::getUnitAtTile(sf::Vector2i gridPos) const {
     return nullptr;
 }
 
-std::vector<sf::Vector2i> MapManager::getReachableTiles(sf::Vector2i from, int moveRange) const {
+std::vector<sf::Vector2i> MapManager::getReachableTiles(sf::Vector2i from, int moveRange, Team movingTeam) const {
     std::vector<sf::Vector2i> reachable;
     std::unordered_map<int, int> visited;
     std::queue<std::pair<sf::Vector2i, int>> bfsQueue;
@@ -120,6 +120,8 @@ std::vector<sf::Vector2i> MapManager::getReachableTiles(sf::Vector2i from, int m
                 next.x >= static_cast<int>(mapWidth) ||
                 next.y >= static_cast<int>(mapHeight)) continue;
             if (!mapData[next.x + next.y * static_cast<int>(mapWidth)].isWalkable()) continue;
+            auto occupant = getUnitAtTile(next);
+            if (occupant != nullptr && occupant->getTeam() != movingTeam) continue;
             int key = next.x + next.y * static_cast<int>(mapWidth);
             if (visited.find(key) == visited.end()) {
                 visited[key] = steps + 1;
@@ -134,7 +136,7 @@ static int getManhattanDistance(sf::Vector2i a, sf::Vector2i b) {
     return std::abs(a.x - b.x) + std::abs(a.y - b.y);
 }
 
-std::vector<sf::Vector2i> MapManager::findPath(sf::Vector2i start, sf::Vector2i goal) {
+std::vector<sf::Vector2i> MapManager::findPath(sf::Vector2i start, sf::Vector2i goal, Team movingTeam) {
     std::vector<sf::Vector2i> path;
     auto isValid = [&](int x, int y) {
         if (x < 0 || x >= static_cast<int>(mapWidth) || y < 0 || y >= static_cast<int>(mapHeight)) return false;
@@ -173,6 +175,8 @@ std::vector<sf::Vector2i> MapManager::findPath(sf::Vector2i start, sf::Vector2i 
         for (const auto& dir : directions) {
             sf::Vector2i neighborPos = current.pos + dir;
             if (!isValid(neighborPos.x, neighborPos.y)) continue;
+            auto occupant = getUnitAtTile(neighborPos);
+            if (occupant != nullptr && occupant->getTeam() != movingTeam) continue;
 
             int newGCost = current.gCost + 10;
             int neighborKey = neighborPos.x + neighborPos.y * static_cast<int>(mapWidth);

@@ -38,8 +38,8 @@ public:
 	void update(float deltaTime);
 	void draw(sf::RenderTarget& target);
 	void drawUI();
-	std::vector<sf::Vector2i> findPath(sf::Vector2i start, sf::Vector2i goal);
-	std::vector<sf::Vector2i> getReachableTiles(sf::Vector2i from, int moveRange) const;
+	std::vector<sf::Vector2i> findPath(sf::Vector2i start, sf::Vector2i goal, Team movingTeam);
+	std::vector<sf::Vector2i> getReachableTiles(sf::Vector2i from, int moveRange, Team movingTeam) const;
 	std::shared_ptr<Unit> getUnitAtTile(sf::Vector2i gridPos) const;
 	sf::Vector2u getTileSize() const;
 	unsigned int getMapWidth() const;
