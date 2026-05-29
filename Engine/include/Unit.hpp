@@ -3,6 +3,7 @@
 #include "EngineAPI.hpp"
 #include "AnimationManager.hpp"
 #include <SFML/Graphics.hpp>
+#include <memory>
 #include <string>
 #include <vector>
 #include <bitset>
@@ -45,6 +46,7 @@ protected:
 	Team team = Team::Neutral;
 	std::bitset<static_cast<std::size_t>(UnitFlag::Count)> flags;
 	int health;
+	int maxHealth;
 	int damage;
 	int moveSpeed;
 
@@ -59,6 +61,8 @@ protected:
 	bool m_isShooting = false;
 	bool m_shootPending = false;
 	MoveDirection m_pendingShootDir = MoveDirection::Right;
+	bool m_isDead = false;
+	std::weak_ptr<Unit> m_pendingTarget;
 public:
 	Unit(const std::string& name, const std::string& artPath, const std::string& maskPath, const AnimationSet& animSet, Team team, int health, int damage, int moveSpeed);
 
@@ -70,8 +74,8 @@ public:
 	int takeDamage(int damage);
 	int heal(int healAmount);
 
-	void dealDamage(Unit& target, MoveDirection shootDir);
-	bool isActing() const { return !path.empty() || m_isShooting || m_shootPending; }
+	void dealDamage(std::shared_ptr<Unit> target, MoveDirection shootDir);
+	bool isActing() const { return !m_isDead && (!path.empty() || m_isShooting || m_shootPending); }
 
 	void addFlag(UnitFlag flag) { flags.set(static_cast<std::size_t>(flag)); }
 	void removeFlag(UnitFlag flag) { flags.reset(static_cast<std::size_t>(flag)); }
@@ -80,6 +84,8 @@ public:
 	sf::Vector2f getPosition() const { return position; }
 	std::string getName() const { return name; }
 	int getHealth() const { return health; }
+	int getMaxHealth() const { return maxHealth; }
+
 	float getMoveSpeed() const { return moveSpeed; }
 	const sf::Texture& getTexture() const { return *texture; }
 	sf::IntRect getCurrentRect() const { return animState.getCurrentRect(); }
@@ -97,5 +103,8 @@ public:
 	void setMoveSpeed(int s) { moveSpeed = s; }
 	void setFlags(uint8_t f) { flags = std::bitset<static_cast<std::size_t>(UnitFlag::Count)>(f); }
 
-	std::function<void(sf::Vector2f)> onDamaged;
+	bool isDead() const { return m_isDead; }
+
+	std::function<void(sf::Vector2f, int health)> onDamaged;	
+	std::function<void(std::shared_ptr<Unit>, int)> onAttackStart;
 };

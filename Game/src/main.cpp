@@ -15,7 +15,7 @@ static constexpr const char* LEVEL1_PATH = "levels/level1.map";
 
 static void createDefaultLevel1() {
     MapFile map;
-    map.tilesetPath = "Art/map.png";
+    map.tilesetPath = "Art/Map/map.png";
     map.tileSize    = { 32, 32 };
     map.width       = 8;
     map.height      = 7;

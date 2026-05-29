@@ -28,7 +28,7 @@ Unit::Unit(const std::string& name, const std::string& artPath, const std::strin
            int health, int damage, int moveSpeed)
     : name(name), artPath(artPath), maskPath(maskPath),
       animSet(&animSet), team(team),
-      health(health), damage(damage), moveSpeed(moveSpeed)
+    health(health), maxHealth(health), damage(damage), moveSpeed(moveSpeed)
 {
     texture = &TextureManager::getTexture(artPath, maskPath, TeamRegistry::getColor(team));
     animState.play(clipNameForDirection(currentDirection), *this->animSet);
@@ -61,6 +61,14 @@ void Unit::update(float deltaTime) {
         if (m_shootPending) {
             m_shootPending = false;
             m_isShooting = true;
+            auto target = m_pendingTarget.lock();
+            if (target && !target->isDead()) {
+                if (onAttackStart)
+                    onAttackStart(target, damage);
+                else
+                    target->takeDamage(damage);
+            }
+            m_pendingTarget.reset();
             currentDirection = m_pendingShootDir;
             const std::string clip = shootClipName(m_pendingShootDir);
             if (!animSet->getClip(clip))
@@ -143,7 +151,8 @@ sf::Vector2i Unit::getGridPosition(sf::Vector2u ts) const {
 
 int Unit::takeDamage(int damage) {
     health = std::max(0, health - damage);
-    if (onDamaged) onDamaged(position);
+    onDamaged(position, health);
+
     return health;
 }
 
@@ -152,8 +161,8 @@ int Unit::heal(int amount) {
     return health;
 }
 
-void Unit::dealDamage(Unit& target, MoveDirection shootDir) {
+void Unit::dealDamage(std::shared_ptr<Unit> target, MoveDirection shootDir) {
     m_pendingShootDir = shootDir;
+    m_pendingTarget = target;
     m_shootPending = true;
-    target.takeDamage(damage);
 }

@@ -1,7 +1,8 @@
 #include "GameContent.hpp"
 #include "TeamRegistry.hpp"
+#include "AnimationManager.hpp"
 #include "units/Tank.hpp"
-#include "effects/HitEffect.hpp"
+#include "effects/Effects.hpp"
 #include <SFML/Graphics.hpp>
 
 void GameContent::init() {
@@ -10,5 +11,7 @@ void GameContent::init() {
     TeamRegistry::setColor(Team::Neutral, sf::Color(200, 200, 200));
 
     registerTank();
-    registerHitEffect();
+   
+
+    registerEffects();
 }

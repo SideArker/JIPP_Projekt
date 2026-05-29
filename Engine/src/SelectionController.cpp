@@ -4,10 +4,27 @@
 #include <algorithm>
 #include <cmath>
 
+static sf::Vector2i computeApproachDir(sf::Vector2f localPos, float btnW, float btnH) {
+    float rx = localPos.x / btnW;
+    float ry = localPos.y / btnH;
+
+    // Centre deadzone: show the easiest (shortest) attack path
+    const float deadzone = 0.28f;
+    if (rx > deadzone && rx < 1.f - deadzone && ry > deadzone && ry < 1.f - deadzone)
+        return {0, 0};
+
+    // Outer area divided by diagonal lines into 4 quadrants.
+    // Corners are assigned to the nearest cardinal direction.
+    if (ry < rx && ry < 1.f - rx) return { 0, -1 };  // top
+    if (ry > rx && ry > 1.f - rx) return { 0,  1 };  // bottom
+    if (rx <= ry && rx <= 1.f - ry) return {-1,  0 }; // left
+    return { 1,  0 };                                   // right
+}
+
 SelectionController::SelectionController(sf::RenderWindow& window, MapManager& mapManager)
     : gui(window), mapManager(mapManager), selectedUnit(nullptr) {
     try {
-		if (!m_walkOverlayTexture.loadFromFile("Art/Map_Walk_Overlay.png")) {
+		if (!m_walkOverlayTexture.loadFromFile("Art/Effects/Map_Walk_Overlay.png")) {
 			throw std::runtime_error("Failed to load walk overlay texture");
 		}
 	}
@@ -20,6 +37,8 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
     const sf::View view = window.getView();
     const float scaleX = static_cast<float>(window.getSize().x) / view.getSize().x;
     const float scaleY = static_cast<float>(window.getSize().y) / view.getSize().y;
+    m_scaleX = scaleX;
+    m_scaleY = scaleY;
 
     for (unsigned int ty = 0; ty < mapH; ++ty) {
         for (unsigned int tx = 0; tx < mapW; ++tx) {
@@ -50,25 +69,8 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                 auto unitAtTile = mapManager.getUnitAtTile(gridPos);
                 if (unitAtTile && unitAtTile != selectedUnit && unitAtTile->getTeam() != selectedUnit->getTeam()) {
                     hoveredEnemyUnit = unitAtTile;
-                    previewPath.clear();
-
-                    // Already adjacent
-                    int dx = std::abs(gridPos.x - unitGrid.x);
-                    int dy = std::abs(gridPos.y - unitGrid.y);
-                    if (dx + dy == 1) return;
-
-                    // Find the shortest path to any reachable tile adjacent to the enemy
-                    const std::vector<sf::Vector2i> dirs = { {0,-1},{0,1},{-1,0},{1,0} };
-                    std::vector<sf::Vector2i> bestPath;
-                    for (const auto& dir : dirs) {
-                        sf::Vector2i adj = gridPos + dir;
-                        if (std::find(reachableTiles.begin(), reachableTiles.end(), adj) == reachableTiles.end()) continue;
-                        auto path = mapManager.findPath(unitGrid, adj, selectedUnit->getTeam());
-                        if (!path.empty() && (bestPath.empty() || path.size() < bestPath.size())) {
-                            bestPath = path;
-                        }
-                    }
-                    previewPath = bestPath;
+                    m_preferredApproachDir = {0, 0};
+                    updateAttackPath(gridPos, unitGrid, {0, 0});
                     return;
                 }
 
@@ -85,6 +87,7 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
             btn->onMouseLeave([this]() {
                 previewPath.clear();
                 hoveredEnemyUnit = nullptr;
+                m_preferredApproachDir = {0, 0};
             });
 
             btn->onClick([this, &mapManager, gridPos, tileSize]() {
@@ -105,7 +108,7 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                     if (!previewPath.empty()) {
                         selectedUnit->move(previewPath);
                     }
-                    selectedUnit->dealDamage(*hoveredEnemyUnit, shootDir);
+                    selectedUnit->dealDamage(hoveredEnemyUnit, shootDir);
                     selectedUnit = nullptr;
                     reachableTiles.clear();
                     previewPath.clear();
@@ -144,6 +147,36 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
 }
 
 void SelectionController::handleEvent(const sf::Event& event) {
+    if (auto* mm = event.getIf<sf::Event::MouseMoved>()) {
+        if (hoveredEnemyUnit && selectedUnit && !mapManager.isAnyUnitActing()) {
+            const sf::Vector2u tileSize = mapManager.getTileSize();
+            float scaledW = tileSize.x * m_scaleX;
+            float scaledH = tileSize.y * m_scaleY;
+
+            sf::Vector2i enemyGrid(
+                static_cast<int>(std::round(hoveredEnemyUnit->getPosition().x / static_cast<float>(tileSize.x))),
+                static_cast<int>(std::round(hoveredEnemyUnit->getPosition().y / static_cast<float>(tileSize.y)))
+            );
+
+            int tileX = static_cast<int>(mm->position.x / scaledW);
+            int tileY = static_cast<int>(mm->position.y / scaledH);
+
+            if (tileX == enemyGrid.x && tileY == enemyGrid.y) {
+                float localX = mm->position.x - tileX * scaledW;
+                float localY = mm->position.y - tileY * scaledH;
+
+                sf::Vector2i newDir = computeApproachDir({localX, localY}, scaledW, scaledH);
+                if (newDir != m_preferredApproachDir) {
+                    m_preferredApproachDir = newDir;
+                    sf::Vector2i unitGrid(
+                        static_cast<int>(std::round(selectedUnit->getPosition().x / static_cast<float>(tileSize.x))),
+                        static_cast<int>(std::round(selectedUnit->getPosition().y / static_cast<float>(tileSize.y)))
+                    );
+                    updateAttackPath(enemyGrid, unitGrid, m_preferredApproachDir);
+                }
+            }
+        }
+    }
     gui.handleEvent(event);
 }
 
@@ -177,4 +210,38 @@ void SelectionController::drawOverlays(sf::RenderTarget& target) const {
 
 void SelectionController::drawGui() {
     gui.draw();
+}
+
+void SelectionController::updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i unitGrid, sf::Vector2i preferredDir) {
+    previewPath.clear();
+
+    const std::vector<sf::Vector2i> dirs = { {0,-1},{0,1},{-1,0},{1,0} };
+
+    if (preferredDir != sf::Vector2i{0, 0}) {
+        sf::Vector2i preferred = enemyGrid + preferredDir;
+        if (preferred == unitGrid) return;
+        if (std::find(reachableTiles.begin(), reachableTiles.end(), preferred) != reachableTiles.end()) {
+            auto path = mapManager.findPath(unitGrid, preferred, selectedUnit->getTeam());
+            if (!path.empty()) {
+                previewPath = path;
+                return;
+            }
+        }
+    } else {
+        int dx = std::abs(enemyGrid.x - unitGrid.x);
+        int dy = std::abs(enemyGrid.y - unitGrid.y);
+        if (dx + dy == 1) return;
+    }
+
+    std::vector<sf::Vector2i> bestPath;
+    for (const auto& dir : dirs) {
+        sf::Vector2i adj = enemyGrid + dir;
+        if (adj == unitGrid) continue;
+        if (std::find(reachableTiles.begin(), reachableTiles.end(), adj) == reachableTiles.end()) continue;
+        auto path = mapManager.findPath(unitGrid, adj, selectedUnit->getTeam());
+        if (!path.empty() && (bestPath.empty() || path.size() < bestPath.size())) {
+            bestPath = path;
+        }
+    }
+    previewPath = bestPath;
 }

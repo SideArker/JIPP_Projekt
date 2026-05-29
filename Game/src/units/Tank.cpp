@@ -23,8 +23,8 @@ void registerTank() {
     UnitRegistry::registerType("Tank", [&tankAnim](Team team) {
         return std::make_shared<Unit>(
             "Tank",
-            "Art/tank-shoot-grayscale.png",
-            "Art/tank-shoot-grayscale-mask.png",
+            "Art/Units/Tank/tank.png",
+            "Art/Units/Tank/tank_mask.png",
             tankAnim, team, 20, 5, 5
         );
     });
