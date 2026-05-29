@@ -1,10 +1,17 @@
 #include "effects/Effects.hpp"
 #include "AnimationManager.hpp"
+#include "SoundManager.hpp"
 
 
 void registerEffects() {
 	registerHitEffect();
 	registerExplosionEffect();
+
+    SoundSet effectSounds;
+    effectSounds
+        .addSound("explosion", "Art/Sound/explosion.wav")
+        .addSound("hit",       "Art/Sound/hit_effect.wav");
+    SoundManager::registerSet("Effects", std::move(effectSounds));
 }
 
 void registerHitEffect() {

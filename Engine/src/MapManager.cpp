@@ -3,6 +3,7 @@
 #include "FileManager.hpp"
 #include "MapFile.hpp"
 #include "UnitRegistry.hpp"
+#include "SoundManager.hpp"
 #include <queue>
 #include <unordered_map>
 #include <cmath>
@@ -40,8 +41,10 @@ void MapManager::spawnUnit(std::shared_ptr<Unit> unit, int gridX, int gridY) {
         static_cast<float>(gridY * tileSize.y)
     ));
     auto weakUnit = std::weak_ptr<Unit>(unit);
+    std::string typeName = unit->getName();
 
-    unit->onAttackStart = [this](std::shared_ptr<Unit> target, int dmg) {
+    unit->onAttackStart = [this, typeName](std::shared_ptr<Unit> target, int dmg) {
+        SoundManager::play(typeName, "shoot");
         spawnHitEffect(target->getPosition());
         m_pendingActions.push_back({ m_attackDamageDelay, [target, dmg]() {
             if (!target->isDead())
@@ -49,7 +52,8 @@ void MapManager::spawnUnit(std::shared_ptr<Unit> unit, int gridX, int gridY) {
         } });
         };
 
-    unit->onDamaged = [this, weakUnit](sf::Vector2f pos, int health) {
+    unit->onDamaged = [this, weakUnit, typeName](sf::Vector2f pos, int health) {
+        SoundManager::play(typeName, "hit");
         if (health <= 0) {
             auto u = weakUnit.lock();
             if (u)
@@ -120,12 +124,14 @@ void MapManager::draw(sf::RenderTarget& target) {
         }
         target.draw(unitSprite);
 
-        const sf::Texture& overlayTex = (unit->getTeam() == Team::Enemy)
-            ? m_overlayEnemyTexture
-            : m_overlayFriendlyTexture;
-        sf::Sprite overlaySprite(overlayTex);
-        overlaySprite.setPosition(unit->getPosition());
-        target.draw(overlaySprite);
+        if (!isAnyUnitActing()) {
+            const sf::Texture& overlayTex = (unit->getTeam() == Team::Enemy)
+                ? m_overlayEnemyTexture
+                : m_overlayFriendlyTexture;
+            sf::Sprite overlaySprite(overlayTex);
+            overlaySprite.setPosition(unit->getPosition());
+            target.draw(overlaySprite);
+        }
 
 
         if (unit->getHealth() < unit->getMaxHealth()) {
@@ -157,7 +163,9 @@ unsigned int MapManager::getMapHeight() const { return mapHeight; }
 
 bool MapManager::isAnyUnitActing() const {
     return std::any_of(units.begin(), units.end(),
-        [](const std::shared_ptr<Unit>& u) { return u->isActing(); });
+        [](const std::shared_ptr<Unit>& u) { return u->isActing(); })
+        || !m_pendingActions.empty()
+        || !m_effects.empty();
 }
 
 void MapManager::spawnExplosionEffect(sf::Vector2f position, std::shared_ptr<Unit> unit) {

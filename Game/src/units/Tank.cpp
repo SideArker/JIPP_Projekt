@@ -1,5 +1,6 @@
 #include "units/Tank.hpp"
 #include "AnimationManager.hpp"
+#include "SoundManager.hpp"
 #include "UnitRegistry.hpp"
 #include "Unit.hpp"
 #include <SFML/Graphics.hpp>
@@ -17,6 +18,12 @@ void registerTank() {
         .addClip("shoot_down", AnimationClip::fromRow({0, 32}, {32, 32}, 5, 0.1f, false, false))
         .addClip("shoot_up", AnimationClip::fromRow({0, 64}, {32, 32}, 5, 0.1f, false, false));
     AnimationManager::registerSet("Tank", std::move(tankAnimSet));
+
+    SoundSet tankSounds;
+    tankSounds
+        .addSound("shoot", "Art/Sound/tank_shoot.wav")
+        .addSound("hit",   "Art/Sound/tank_hit.wav");
+    SoundManager::registerSet("Tank", std::move(tankSounds));
 
     const AnimationSet& tankAnim = *AnimationManager::getSet("Tank");
 
