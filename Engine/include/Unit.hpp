@@ -88,6 +88,7 @@ public:
 
 	float getMoveSpeed() const { return moveSpeed; }
 	const sf::Texture& getTexture() const { return *texture; }
+	const sf::Texture& getCurrentTexture() const;
 	sf::IntRect getCurrentRect() const { return animState.getCurrentRect(); }
 	bool shouldFlipX() const { return animState.shouldFlipX(); }
 	MoveDirection getMoveDirection() const { return currentDirection; }

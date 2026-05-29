@@ -113,7 +113,7 @@ void MapManager::draw(sf::RenderTarget& target) {
 
     for (const auto& unit : units) {
         if (unit->isDead()) continue;
-        sf::Sprite unitSprite(unit->getTexture());
+        sf::Sprite unitSprite(unit->getCurrentTexture());
         sf::IntRect rect = unit->getCurrentRect();
         unitSprite.setTextureRect(rect);
         if (unit->shouldFlipX()) {

@@ -1,26 +1,21 @@
 #include "Unit.hpp"
 #include "TextureManager.hpp"
 #include "TeamRegistry.hpp"
+#include <iostream>
 #include <cmath>
 
-static std::string clipNameForDirection(MoveDirection dir) {
+static const char* dirSuffix(MoveDirection dir) {
     switch (dir) {
-        case MoveDirection::Left:  return "move_left";
-        case MoveDirection::Right: return "move_right";
-        case MoveDirection::Down:  return "move_down";
-        case MoveDirection::Up:    return "move_up";
+        case MoveDirection::Left:  return "_left";
+        case MoveDirection::Right: return "_right";
+        case MoveDirection::Down:  return "_down";
+        case MoveDirection::Up:    return "_up";
     }
-    return "idle";
+    return "";
 }
 
-static std::string shootClipName(MoveDirection dir) {
-    switch (dir) {
-        case MoveDirection::Left:  return "shoot_left";
-        case MoveDirection::Right: return "shoot_right";
-        case MoveDirection::Down:  return "shoot_down";
-        case MoveDirection::Up:    return "shoot_up";
-    }
-    return "idle";
+static std::string clipName(const std::string& action, MoveDirection dir) {
+    return action + dirSuffix(dir);
 }
 
 Unit::Unit(const std::string& name, const std::string& artPath, const std::string& maskPath,
@@ -31,12 +26,19 @@ Unit::Unit(const std::string& name, const std::string& artPath, const std::strin
     health(health), maxHealth(health), damage(damage), moveSpeed(moveSpeed)
 {
     texture = &TextureManager::getTexture(artPath, maskPath, TeamRegistry::getColor(team));
-    animState.play(clipNameForDirection(currentDirection), *this->animSet);
+    if(team == Team::Ally) animState.play(clipName("idle", currentDirection), *this->animSet);
 }
 
 void Unit::setTeam(Team t) {
     team = t;
     texture = &TextureManager::getTexture(artPath, maskPath, TeamRegistry::getColor(t));
+}
+
+const sf::Texture& Unit::getCurrentTexture() const {
+    const AnimationClip* clip = animState.getCurrentClip();
+    if (clip && !clip->texturePath.empty())
+        return TextureManager::getTexture(clip->texturePath, clip->maskPath, TeamRegistry::getColor(team));
+    return *texture;
 }
 
 MoveDirection castMoveDirection(sf::Vector2f& direction)
@@ -70,7 +72,7 @@ void Unit::update(float deltaTime) {
             }
             m_pendingTarget.reset();
             currentDirection = m_pendingShootDir;
-            const std::string clip = shootClipName(m_pendingShootDir);
+            const std::string clip = clipName("shoot", m_pendingShootDir);
             if (!animSet->getClip(clip))
                 m_isShooting = false;
             else
@@ -81,7 +83,10 @@ void Unit::update(float deltaTime) {
             return;
         }
         currentSpeed = 0.0f;
-        animState.play("idle", *animSet);
+
+        if (team == Team::Ally) {
+            animState.play("idle", *animSet);
+        }
         animState.update(deltaTime);
         return;
     }
@@ -95,7 +100,7 @@ void Unit::update(float deltaTime) {
     if (directionReset) {
         currentDirection = castMoveDirection(direction);
         directionReset = false;
-        animState.play(clipNameForDirection(currentDirection), *animSet);
+        animState.play(clipName("idle", currentDirection), *animSet);
     }
 
     float distance = std::sqrt(direction.x * direction.x + direction.y * direction.y);
@@ -107,7 +112,7 @@ void Unit::update(float deltaTime) {
     float maxSpeed = (moveSpeed * tileSize) * 1.05f;
     float deceleration = 350.0f;
 
-    // Total remaining distance: current segment + all further segments
+    // Total remaining distance current segment + all further segments
     float remainingDistance = distance;
     for (size_t i = 1; i < path.size(); ++i) {
         sf::Vector2f from(path[i - 1].x * tileSize, path[i - 1].y * tileSize);

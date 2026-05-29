@@ -9,6 +9,7 @@
 #include "UnitRegistry.hpp"
 #include "GameContent.hpp"
 #include "TextureManager.hpp"
+#include "SoundManager.hpp"
 
 
 static constexpr const char* LEVEL1_PATH = "levels/level1.map";
@@ -54,6 +55,9 @@ int main() {
             if (event->is<sf::Event::Closed>()) window.close();
             mapManager.handleEvent(*event);
         }
+        SoundManager::registerMusic("AllyTheme", "Art/Sound/AllyTheme.wav");
+		SoundManager::playMusic("AllyTheme");
+
 
         float deltaTime = clock.restart().asSeconds();
         mapManager.update(deltaTime);

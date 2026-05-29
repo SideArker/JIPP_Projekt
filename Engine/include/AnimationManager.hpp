@@ -12,6 +12,8 @@ struct ENGINE_API AnimationClip {
     float frameTime = 0.1f;
     bool loop = true;
     bool flipX = false;
+    std::string texturePath; // empty = use the unit's base texture
+    std::string maskPath;
 
     /// Builds a clip by reading 'count' tiles left-to-right from a spritesheet row.
     /// @param origin     Top-left pixel of the first tile (x, y).
@@ -31,6 +33,32 @@ struct AnimationSet {
 
     AnimationSet& addClip(const std::string& name, AnimationClip clip) {
         clips.emplace(name, std::move(clip));
+        return *this;
+    }
+
+    AnimationSet& addDirectionalClips(
+                                    const std::string& name, 
+                                    AnimationClip leftClip,
+                                    AnimationClip downClip, 
+                                    AnimationClip upClip, 
+                                    AnimationClip rightClip = {},
+                                    const std::string& texturePath = {},
+                                    const std::string& maskPath = {}) {
+
+        if (rightClip.frames.empty()) {
+            rightClip = leftClip;
+            rightClip.flipX = !leftClip.flipX;
+        }
+        if (!texturePath.empty()) {
+            leftClip.texturePath  = texturePath;  leftClip.maskPath  = maskPath;
+            rightClip.texturePath = texturePath;  rightClip.maskPath = maskPath;
+            downClip.texturePath  = texturePath;  downClip.maskPath  = maskPath;
+            upClip.texturePath    = texturePath;  upClip.maskPath    = maskPath;
+        }
+        clips.emplace(name + "_left",  std::move(leftClip));
+        clips.emplace(name + "_right", std::move(rightClip));
+        clips.emplace(name + "_down",  std::move(downClip));
+        clips.emplace(name + "_up",    std::move(upClip));
         return *this;
     }
 
@@ -54,6 +82,7 @@ public:
     sf::IntRect getCurrentRect() const;
     bool shouldFlipX() const;
     bool isFinished() const { return m_finished; }
+    const AnimationClip* getCurrentClip() const { return currentClip; }
 };
 
 class ENGINE_API AnimationManager {
