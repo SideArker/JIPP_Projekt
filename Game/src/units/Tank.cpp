@@ -24,8 +24,7 @@ void registerTank() {
 
     SoundSet tankSounds;
     tankSounds
-        .addSound("shoot", "Art/Sound/tank_shoot.wav")
-        .addSound("hit",   "Art/Sound/tank_hit.wav");
+        .addSound("shoot", "Art/Sound/TankAttack.wav");
     SoundManager::registerSet("Tank", std::move(tankSounds));
 
     const AnimationSet& tankAnim = *AnimationManager::getSet("Tank");

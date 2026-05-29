@@ -9,9 +9,9 @@ void registerEffects() {
 
     SoundSet effectSounds;
     effectSounds
-        .addSound("explosion", "Art/Sound/explosion.wav")
+        .addSound("explosion", "Art/Sound/Explosion.wav")
         .addSound("hit",       "Art/Sound/hit_effect.wav");
-    SoundManager::registerSet("Effects", std::move(effectSounds));
+    SoundManager::registerSet("effects", std::move(effectSounds));
 }
 
 void registerHitEffect() {

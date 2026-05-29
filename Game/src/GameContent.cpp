@@ -3,6 +3,7 @@
 #include "AnimationManager.hpp"
 #include "SoundManager.hpp"
 #include "units/Tank.hpp"
+#include "units/Soldier.hpp"
 #include "effects/Effects.hpp"
 #include <SFML/Graphics.hpp>
 
@@ -12,7 +13,7 @@ void GameContent::init() {
     TeamRegistry::setColor(Team::Neutral, sf::Color(200, 200, 200));
 
     registerTank();
-   
+    registerSoldier();
 
     registerEffects();
 

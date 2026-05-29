@@ -100,7 +100,7 @@ void Unit::update(float deltaTime) {
     if (directionReset) {
         currentDirection = castMoveDirection(direction);
         directionReset = false;
-        animState.play(clipName("idle", currentDirection), *animSet);
+        animState.play(clipName("walk", currentDirection), *animSet);
     }
 
     float distance = std::sqrt(direction.x * direction.x + direction.y * direction.y);

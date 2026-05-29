@@ -29,7 +29,7 @@ static void createDefaultLevel1() {
         {13, false}, {2, true},   {2, true},   {2, true},   {2, true},   {2, true},   {2, true},   {5, false},
         {14, false}, {15, false}, {15, false}, {15, false}, {15, false}, {15, false}, {15, false}, {8, false}
     };
-    map.spawns = { { "Tank", 5, 5, Team::Ally },{ "Tank", 3, 3, Team::Ally }, {"Tank", 5, 4, Team::Enemy }};
+    map.spawns = { { "Tank", 5, 5, Team::Ally },{ "Tank", 3, 3, Team::Ally },{ "Soldier" , 3, 4, Team::Ally }, {"Tank", 5, 4, Team::Enemy }};
     FileManager::saveMap(map, LEVEL1_PATH);
 }
 
@@ -41,8 +41,7 @@ int main() {
     TextureManager textures;
     GameContent::init();
 
-    if (!std::filesystem::exists(LEVEL1_PATH))
-        createDefaultLevel1();
+    createDefaultLevel1();
 
     MapManager mapManager;
     if (!mapManager.loadFromFile(LEVEL1_PATH)) return -1;

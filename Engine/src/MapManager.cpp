@@ -53,7 +53,6 @@ void MapManager::spawnUnit(std::shared_ptr<Unit> unit, int gridX, int gridY) {
         };
 
     unit->onDamaged = [this, weakUnit, typeName](sf::Vector2f pos, int health) {
-        SoundManager::play(typeName, "hit");
         if (health <= 0) {
             auto u = weakUnit.lock();
             if (u)
@@ -182,6 +181,7 @@ void MapManager::spawnExplosionEffect(sf::Vector2f position, std::shared_ptr<Uni
 
     e.animSet = set;
     e.animState.play("explode", *set);
+	SoundManager::play("effects", "explosion");
     e.sprite.setTextureRect(e.animState.getCurrentRect());
     e.sprite.setPosition({ position.x, position.y - 32.f});
     m_effects.push_back(std::move(e));
