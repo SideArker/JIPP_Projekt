@@ -14,6 +14,11 @@ void registerTank() {
             AnimationClip::fromRow({0, 32}, {32, 32}, 2, 1.f, true, false),
             AnimationClip::fromRow({0, 64}, {32, 32}, 2, 1.f, true, false))
 
+        .addDirectionalClips("walk",
+            AnimationClip::fromRow({ 0,  0 }, { 32, 32 }, 2, 1.f, true, false),
+            AnimationClip::fromRow({ 0, 32 }, { 32, 32 }, 2, 1.f, true, false),
+            AnimationClip::fromRow({ 0, 64 }, { 32, 32 }, 2, 1.f, true, false))
+
         .addDirectionalClips("shoot",
             AnimationClip::fromRow({0,  0}, {32, 32}, 5, 0.1f, false, false),
             AnimationClip::fromRow({0, 32}, {32, 32}, 5, 0.1f, false, false),
