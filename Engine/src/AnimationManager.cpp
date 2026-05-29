@@ -2,6 +2,28 @@
 
 std::unordered_map<std::string, AnimationSet> AnimationManager::sets;
 
+AnimationClip AnimationClip::fromRow(sf::Vector2i origin, sf::Vector2i tileSize, int count, float frameTime, bool loop, bool flipX) {
+    AnimationClip clip;
+    clip.frameTime = frameTime;
+    clip.loop = loop;
+    clip.flipX = flipX;
+    clip.frames.reserve(count);
+    for (int i = 0; i < count; ++i)
+        clip.frames.emplace_back(sf::Vector2i{ origin.x + i * tileSize.x, origin.y }, tileSize);
+    return clip;
+}
+
+AnimationClip AnimationClip::fromColumn(sf::Vector2i origin, sf::Vector2i tileSize, int count, float frameTime, bool loop, bool flipX) {
+    AnimationClip clip;
+    clip.frameTime = frameTime;
+    clip.loop = loop;
+    clip.flipX = flipX;
+    clip.frames.reserve(count);
+    for (int i = 0; i < count; ++i)
+        clip.frames.emplace_back(sf::Vector2i{ origin.x, origin.y + i * tileSize.y }, tileSize);
+    return clip;
+}
+
 void AnimationState::play(const std::string& name, const AnimationSet& set, std::function<void()> onFinished) {
     // Allow non-looping clips to restart; skip only if the same looping clip is already playing
     if (name == currentClipName && (currentClip && currentClip->loop)) return;

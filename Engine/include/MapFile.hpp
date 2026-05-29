@@ -3,8 +3,15 @@
 #include "EngineAPI.hpp"
 #include "Tile.hpp"
 #include "Unit.hpp"
+#include <SFML/Graphics/Color.hpp>
 #include <string>
 #include <vector>
+
+struct ENGINE_API TeamData {
+    Team        team  = Team::Neutral;
+    std::string name;
+    sf::Color   color = sf::Color::White;
+};
 
 struct ENGINE_API UnitSpawnData {
     std::string typeName;
@@ -20,4 +27,5 @@ struct ENGINE_API MapFile {
     unsigned int height = 0;
     std::vector<Tile>          tiles;
     std::vector<UnitSpawnData> spawns;
+    std::vector<TeamData>      teams;
 };

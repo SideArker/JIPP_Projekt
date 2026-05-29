@@ -60,9 +60,19 @@ static void writeMapBlock(std::ostream& out, const MapFile& map) {
         writeVal(out, static_cast<int32_t>(spawn.gridY));
         writeVal(out, static_cast<uint8_t>(spawn.team));
     }
+
+    writeVal(out, static_cast<uint32_t>(map.teams.size()));
+    for (const auto& td : map.teams) {
+        writeVal(out, static_cast<uint8_t>(td.team));
+        writeString(out, td.name);
+        writeVal(out, td.color.r);
+        writeVal(out, td.color.g);
+        writeVal(out, td.color.b);
+        writeVal(out, td.color.a);
+    }
 }
 
-static bool readMapBlock(std::istream& in, MapFile& map) {
+static bool readMapBlock(std::istream& in, MapFile& map, uint32_t version) {
     if (!readString(in, map.tilesetPath)) return false;
     if (!readVal(in, map.tileSize.x))     return false;
     if (!readVal(in, map.tileSize.y))     return false;
@@ -91,6 +101,22 @@ static bool readMapBlock(std::istream& in, MapFile& map) {
         spawn.gridY = gridY;
         spawn.team  = static_cast<Team>(team);
     }
+
+    if (version >= 2) {
+        uint32_t teamCount;
+        if (!readVal(in, teamCount)) return false;
+        map.teams.resize(teamCount);
+        for (auto& td : map.teams) {
+            uint8_t teamId;
+            if (!readVal(in, teamId))         return false;
+            td.team = static_cast<Team>(teamId);
+            if (!readString(in, td.name))     return false;
+            if (!readVal(in, td.color.r))     return false;
+            if (!readVal(in, td.color.g))     return false;
+            if (!readVal(in, td.color.b))     return false;
+            if (!readVal(in, td.color.a))     return false;
+        }
+    }
     return true;
 }
 
@@ -118,9 +144,9 @@ bool FileManager::loadMap(const std::string& path, MapFile& out) {
     if (!validateMagic(in, MAP_MAGIC)) return false;
 
     uint32_t version;
-    if (!readVal(in, version) || version != FILE_VERSION) return false;
+    if (!readVal(in, version) || version > FILE_VERSION) return false;
 
-    return readMapBlock(in, out);
+    return readMapBlock(in, out, version);
 }
 
 bool FileManager::saveGame(const GameState& state, const std::string& path) {

@@ -7,12 +7,23 @@
 #include <unordered_map>
 #include <functional>
 
-struct AnimationClip {
-	// Which pixels get cut out of the texture for each frame
+struct ENGINE_API AnimationClip {
     std::vector<sf::IntRect> frames;
     float frameTime = 0.1f;
     bool loop = true;
     bool flipX = false;
+
+    /// Builds a clip by reading 'count' tiles left-to-right from a spritesheet row.
+    /// @param origin     Top-left pixel of the first tile (x, y).
+    /// @param tileSize   Width and height of each tile in pixels (w, h).
+    /// @param count      Number of frames to extract (default 1 for single-frame clips).
+    /// @param frameTime  Seconds each frame is displayed.
+    /// @param loop       Whether the clip loops back to frame 0 after the last frame.
+    /// @param flipX      Whether to mirror the sprite horizontally on render.
+    static AnimationClip fromRow(sf::Vector2i origin, sf::Vector2i tileSize, int count = 1, float frameTime = 0.1f, bool loop = true, bool flipX = false);
+
+    /// Builds a clip by reading 'count' tiles top-to-bottom from a spritesheet column.
+    static AnimationClip fromColumn(sf::Vector2i origin, sf::Vector2i tileSize, int count = 1, float frameTime = 0.1f, bool loop = true, bool flipX = false);
 };
 
 struct AnimationSet {
