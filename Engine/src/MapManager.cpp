@@ -82,7 +82,7 @@ void MapManager::spawnUnit(std::shared_ptr<Unit> unit, int gridX, int gridY) {
 }
 
 void MapManager::setupInput(sf::RenderWindow& window) {
-    selectionController = std::make_unique<SelectionController>(window, *this, m_walkOverlayPath);
+    selectionController = std::make_unique<SelectionController>(window, *this, m_walkOverlayPath, m_moveArrowPath, m_iconsPath);
 }
 
 void MapManager::handleEvent(const sf::Event& event) {
@@ -159,6 +159,14 @@ void MapManager::setUnitRenderCallback(std::function<void(sf::RenderTarget&, con
 
 void MapManager::setWalkOverlayPath(std::string path) {
     m_walkOverlayPath = std::move(path);
+}
+
+void MapManager::setMoveArrowPath(std::string path) {
+    m_moveArrowPath = std::move(path);
+}
+
+void MapManager::setIconsPath(std::string path) {
+    m_iconsPath = std::move(path);
 }
 
 void MapManager::spawnEffect(const std::string& setName, const std::string& clipName, const std::string& texturePath, sf::Vector2f position, float yOffset) {

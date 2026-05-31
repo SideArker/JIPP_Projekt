@@ -39,6 +39,8 @@ private:
 	std::map<std::string, sf::Texture> m_effectTextures;
 	std::function<void(sf::RenderTarget&, const Unit&, bool)> m_unitRenderCallback;
 	std::string m_walkOverlayPath;
+	std::string m_moveArrowPath;
+	std::string m_iconsPath;
 
 	std::vector<Effect> m_effects;
 	std::vector<std::pair<float, std::function<void()>>> m_pendingActions;
@@ -68,6 +70,8 @@ public:
 	void setHitEffect(std::string setName, std::string clipName, std::string texturePath);
 	void setUnitRenderCallback(std::function<void(sf::RenderTarget&, const Unit&, bool)> cb);
 	void setWalkOverlayPath(std::string path);
+	void setMoveArrowPath(std::string path);
+	void setIconsPath(std::string path);
 
 	std::vector<sf::Vector2i> findPath(sf::Vector2i start, sf::Vector2i goal, Team movingTeam);
 	std::vector<sf::Vector2i> getReachableTiles(sf::Vector2i from, int moveRange, Team movingTeam) const;

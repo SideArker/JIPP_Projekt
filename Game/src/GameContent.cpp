@@ -28,6 +28,8 @@ void GameContent::init() {
 
 void GameContent::configure(MapManager& mapManager) {
     mapManager.setWalkOverlayPath("Art/Effects/Map_Walk_Overlay.png");
+    mapManager.setMoveArrowPath("Art/Effects/map_moveArrow.png");
+    mapManager.setIconsPath("Art/Effects/Icons.png");
     mapManager.setHitEffect("hitEffect", "hit", "Art/Effects/hitEffect.png");
     mapManager.setUnitRenderCallback([](sf::RenderTarget& target, const Unit& unit, bool anyActing) {
         static sf::Texture overlayFriendly, overlayEnemy, healthTex;

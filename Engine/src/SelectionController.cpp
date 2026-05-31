@@ -21,11 +21,17 @@ static sf::Vector2i computeApproachDir(sf::Vector2f localPos, float btnW, float 
     return { 1,  0 };                                   // right
 }
 
-SelectionController::SelectionController(sf::RenderWindow& window, MapManager& mapManager, const std::string& walkOverlayPath)
+SelectionController::SelectionController(sf::RenderWindow& window, MapManager& mapManager, const std::string& walkOverlayPath, const std::string& moveArrowPath, const std::string& iconsPath)
     : gui(window), mapManager(mapManager), selectedUnit(nullptr) {
     try {
 		if (!m_walkOverlayTexture.loadFromFile(walkOverlayPath)) {
 			throw std::runtime_error("Failed to load walk overlay texture");
+		}
+		if (!m_moveArrowTexture.loadFromFile(moveArrowPath)) {
+			throw std::runtime_error("Failed to load move arrow texture");
+		}
+		if (!m_iconsTexture.loadFromFile(iconsPath)) {
+			throw std::runtime_error("Failed to load icons texture");
 		}
 	}
     catch (const std::exception& e) {
@@ -70,6 +76,7 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                 if (unitAtTile && unitAtTile != selectedUnit && unitAtTile->getTeam() != selectedUnit->getTeam()) {
                     hoveredEnemyUnit = unitAtTile;
                     m_preferredApproachDir = {0, 0};
+                    m_cursorIconCell = 1;
                     updateAttackPath(gridPos, unitGrid, {0, 0});
                     return;
                 }
@@ -79,15 +86,18 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                 bool isReachable = std::find(reachableTiles.begin(), reachableTiles.end(), gridPos) != reachableTiles.end();
                 if (!isReachable) {
                     previewPath.clear();
+                    m_cursorIconCell = -1;
                     return;
                 }
                 previewPath = mapManager.findPath(unitGrid, gridPos, selectedUnit->getTeam());
+                m_cursorIconCell = 0;
             });
 
             btn->onMouseLeave([this]() {
                 previewPath.clear();
                 hoveredEnemyUnit = nullptr;
                 m_preferredApproachDir = {0, 0};
+                m_cursorIconCell = -1;
             });
 
             btn->onClick([this, &mapManager, gridPos, tileSize]() {
@@ -106,7 +116,7 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                         : (dy >= 0 ? MoveDirection::Down : MoveDirection::Up);
 
                     // Ranged units cannot move and attack in the same action.
-                    // If they need to move to reach the target, just move and keep them selected.
+                    // If they need to move to reach the target, just move
                     if (!previewPath.empty() && selectedUnit->getMaxAttackRange() > 1) {
                         selectedUnit->move(previewPath);
                         reachableTiles.clear();
@@ -159,6 +169,8 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
 
 void SelectionController::handleEvent(const sf::Event& event) {
     if (auto* mm = event.getIf<sf::Event::MouseMoved>()) {
+        m_cursorPos = sf::Vector2f(static_cast<float>(mm->position.x), static_cast<float>(mm->position.y));
+
         if (hoveredEnemyUnit && selectedUnit && !mapManager.isAnyUnitActing()) {
             const sf::Vector2u tileSize = mapManager.getTileSize();
             float scaledW = tileSize.x * m_scaleX;
@@ -193,31 +205,106 @@ void SelectionController::handleEvent(const sf::Event& event) {
 
 void SelectionController::drawOverlays(sf::RenderTarget& target) const {
     const sf::Vector2u tileSize = mapManager.getTileSize();
-    sf::RectangleShape overlay(sf::Vector2f(static_cast<float>(tileSize.x), static_cast<float>(tileSize.y)));
+    const float tw = static_cast<float>(tileSize.x);
+    const float th = static_cast<float>(tileSize.y);
 
     sf::Sprite walkSprite(m_walkOverlayTexture);
     for (const auto& pos : reachableTiles) {
-        walkSprite.setPosition(sf::Vector2f(pos.x * static_cast<float>(tileSize.x), pos.y * static_cast<float>(tileSize.y)));
+        walkSprite.setPosition(sf::Vector2f(pos.x * tw, pos.y * th));
         target.draw(walkSprite);
     }
 
-    overlay.setFillColor(sf::Color(100, 255, 100, 160));
-    for (const auto& pos : previewPath) {
-        overlay.setPosition(sf::Vector2f(pos.x * static_cast<float>(tileSize.x), pos.y * static_cast<float>(tileSize.y)));
-        target.draw(overlay);
+    if (!previewPath.empty() && selectedUnit) {
+        sf::Vector2i unitGrid(
+            static_cast<int>(std::round(selectedUnit->getPosition().x / tw)),
+            static_cast<int>(std::round(selectedUnit->getPosition().y / th))
+        );
+
+        // moveDir angle
+        auto dirAngle = [](sf::Vector2i from, sf::Vector2i to) -> float {
+            if (to.x > from.x) return 0.f;
+            if (to.x < from.x) return 180.f;
+            if (to.y > from.y) return 90.f;
+            return 270.f;
+        };
+
+        // corners
+        auto cornerAngle = [](sf::Vector2i inDir, sf::Vector2i outDir) -> float {
+            if ((inDir.x > 0 && outDir.y > 0) || (inDir.y < 0 && outDir.x < 0)) return 0.f;   // Right→Down, Up→Left
+            if ((inDir.y > 0 && outDir.x < 0) || (inDir.x > 0 && outDir.y < 0)) return 90.f;  // Down→Left, Right→Up — wait, need to reconsider
+            if ((inDir.x < 0 && outDir.y < 0) || (inDir.y > 0 && outDir.x > 0)) return 180.f; // Left→Up, Down→Right
+            return 270.f;                                                                         // Up→Right, Left→Down
+        };
+
+        sf::Sprite arrowSprite(m_moveArrowTexture);
+        arrowSprite.setOrigin({ 16.f, 16.f });
+
+        arrowSprite.setTextureRect(sf::IntRect({ 0, 0 }, { 32, 32 }));
+        arrowSprite.setRotation(sf::degrees(dirAngle(unitGrid, previewPath[0])));
+        arrowSprite.setPosition({ unitGrid.x * tw + tw * 0.5f, unitGrid.y * th + th * 0.5f });
+        target.draw(arrowSprite);
+
+        for (int i = 0; i < static_cast<int>(previewPath.size()); ++i) {
+            const sf::Vector2i& cur = previewPath[i];
+            sf::Vector2i prev = (i == 0) ? unitGrid : previewPath[i - 1];
+            bool isLast = (i == static_cast<int>(previewPath.size()) - 1);
+
+            sf::Vector2i inDir = { cur.x - prev.x, cur.y - prev.y };
+            float angle;
+            int cellX;
+
+            if (isLast) {
+                cellX = 64;
+                angle = dirAngle(prev, cur);
+            } else {
+                const sf::Vector2i& next = previewPath[i + 1];
+                sf::Vector2i outDir = { next.x - cur.x, next.y - cur.y };
+                if (inDir.x != outDir.x || inDir.y != outDir.y) {
+                    cellX = 32;
+                    angle = cornerAngle(inDir, outDir);
+                } else {
+                    cellX = 0;
+                    angle = dirAngle(prev, cur);
+                }
+            }
+
+            arrowSprite.setTextureRect(sf::IntRect({ cellX, 0 }, { 32, 32 }));
+            arrowSprite.setRotation(sf::degrees(angle));
+            arrowSprite.setPosition({ cur.x * tw + tw * 0.5f, cur.y * th + th * 0.5f });
+            target.draw(arrowSprite);
+        }
+
+        // Ghost of the selected unit at the path destination
+        const sf::Vector2i& end = previewPath.back();
+        sf::IntRect rect = selectedUnit->getCurrentRect();
+        sf::Sprite ghost(selectedUnit->getCurrentTexture());
+        ghost.setTextureRect(rect);
+        ghost.setColor(sf::Color(255, 255, 255, 150));
+        if (selectedUnit->shouldFlipX()) {
+            ghost.setScale({ -1.f, 1.f });
+            ghost.setPosition({ end.x * tw + static_cast<float>(rect.size.x), end.y * th });
+        } else {
+            ghost.setPosition({ end.x * tw, end.y * th });
+        }
+        target.draw(ghost);
     }
 
-    // Red highlight on the enemy tile being targeted
     if (hoveredEnemyUnit) {
+        sf::RectangleShape overlay(sf::Vector2f(tw, th));
         sf::Vector2i enemyGrid(
-            static_cast<int>(std::round(hoveredEnemyUnit->getPosition().x / static_cast<float>(tileSize.x))),
-            static_cast<int>(std::round(hoveredEnemyUnit->getPosition().y / static_cast<float>(tileSize.y)))
+            static_cast<int>(std::round(hoveredEnemyUnit->getPosition().x / tw)),
+            static_cast<int>(std::round(hoveredEnemyUnit->getPosition().y / th))
         );
         overlay.setFillColor(sf::Color(255, 50, 50, 160));
-        overlay.setPosition(sf::Vector2f(enemyGrid.x * static_cast<float>(tileSize.x), enemyGrid.y * static_cast<float>(tileSize.y)));
+        overlay.setPosition(sf::Vector2f(enemyGrid.x * tw, enemyGrid.y * th));
         target.draw(overlay);
     }
-}
+    if (m_cursorIconCell >= 0) {
+        sf::Sprite icon(m_iconsTexture);
+        icon.setTextureRect(sf::IntRect({ m_cursorIconCell * 32, 0 }, { 32, 32 }));
+        icon.setPosition({ m_cursorPos.x + 4.f, m_cursorPos.y + 4.f });
+        target.draw(icon);
+    }}
 
 void SelectionController::drawGui() {
     gui.draw();
