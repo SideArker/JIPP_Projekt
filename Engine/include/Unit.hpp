@@ -23,12 +23,18 @@ enum class Team {
 };
 
 struct ENGINE_API UnitData {
-	int   maxHealth       = 1;
-	int   damage          = 1;
-	int   moveSpeed       = 3;
-	int   minAttackRange  = 0;
-	int   maxAttackRange  = 1;
-	float hitEffectDelay  = 0.0f;
+	int   maxHealth             = 1;
+	int   damage                = 1;
+	int   moveSpeed             = 3;
+	int   minAttackRange        = 0;
+	int   maxAttackRange        = 1;
+	float hitEffectDelay        = 0.0f;
+	float attackDamageDelay     = 0.75f;
+	std::string deathEffectSet;
+	std::string deathEffectClip;
+	std::string deathEffectTexturePath;
+	std::string deathSoundSet;
+	std::string deathSoundName;
 };
 
 enum class UnitFlag {

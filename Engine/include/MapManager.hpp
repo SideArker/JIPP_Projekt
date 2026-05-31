@@ -5,6 +5,8 @@
 #include "EngineAPI.hpp"
 #include "GameState.hpp"
 #include <Unit.hpp>
+#include <functional>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -23,9 +25,6 @@ private:
 	MapRenderer renderer;
 	std::unique_ptr<SelectionController> selectionController;
 
-	const float m_attackDamageDelay = 0.75f;
-
-
 	std::vector<std::shared_ptr<Unit>> units;
 	std::vector<Tile> mapData;
 	std::string  tilesetPath;
@@ -34,19 +33,19 @@ private:
 	unsigned int mapHeight;
 	std::string  currentMapPath;
 
-	sf::Texture m_hitEffectTexture;
-	bool m_hitEffectLoaded = false;
-	sf::Texture m_explosionTexture;
-	bool m_explosionLoaded = false;
-
-	sf::Texture m_overlayFriendlyTexture;
-	sf::Texture m_overlayEnemyTexture;
-	bool m_overlaysLoaded = false;
-	sf::Texture m_healthTexture;
-	bool m_healthTextureLoaded = false;
+	std::string m_hitEffectSet;
+	std::string m_hitEffectClip;
+	std::string m_hitEffectTexturePath;
+	std::map<std::string, sf::Texture> m_effectTextures;
+	std::function<void(sf::RenderTarget&, const Unit&, bool)> m_unitRenderCallback;
+	std::string m_walkOverlayPath;
 
 	std::vector<Effect> m_effects;
 	std::vector<std::pair<float, std::function<void()>>> m_pendingActions;
+
+	void spawnEffect(const std::string& setName, const std::string& clipName, const std::string& texturePath, sf::Vector2f position, float yOffset = 0.f);
+	void spawnHitEffect(sf::Vector2f position);
+	void spawnDeathEffect(const std::string& setName, const std::string& clipName, const std::string& texturePath, const std::string& soundSet, const std::string& soundName, sf::Vector2f position, std::shared_ptr<Unit> unit);
 
 public:
 	MapManager();
@@ -65,8 +64,11 @@ public:
 	void draw(sf::RenderTarget& target);
 	void drawUI();
 	bool isAnyUnitActing() const;
-	void spawnHitEffect(sf::Vector2f position);
-	void spawnExplosionEffect(sf::Vector2f position, std::shared_ptr<Unit> unit);
+
+	void setHitEffect(std::string setName, std::string clipName, std::string texturePath);
+	void setUnitRenderCallback(std::function<void(sf::RenderTarget&, const Unit&, bool)> cb);
+	void setWalkOverlayPath(std::string path);
+
 	std::vector<sf::Vector2i> findPath(sf::Vector2i start, sf::Vector2i goal, Team movingTeam);
 	std::vector<sf::Vector2i> getReachableTiles(sf::Vector2i from, int moveRange, Team movingTeam) const;
 	std::shared_ptr<Unit> getUnitAtTile(sf::Vector2i gridPos) const;

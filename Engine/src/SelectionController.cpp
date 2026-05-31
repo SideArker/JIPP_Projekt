@@ -21,10 +21,10 @@ static sf::Vector2i computeApproachDir(sf::Vector2f localPos, float btnW, float 
     return { 1,  0 };                                   // right
 }
 
-SelectionController::SelectionController(sf::RenderWindow& window, MapManager& mapManager)
+SelectionController::SelectionController(sf::RenderWindow& window, MapManager& mapManager, const std::string& walkOverlayPath)
     : gui(window), mapManager(mapManager), selectedUnit(nullptr) {
     try {
-		if (!m_walkOverlayTexture.loadFromFile("Art/Effects/Map_Walk_Overlay.png")) {
+		if (!m_walkOverlayTexture.loadFromFile(walkOverlayPath)) {
 			throw std::runtime_error("Failed to load walk overlay texture");
 		}
 	}

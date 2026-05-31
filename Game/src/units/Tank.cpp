@@ -41,6 +41,12 @@ void registerTank() {
     tankData.moveSpeed = 5;
     tankData.minAttackRange = 0;
     tankData.maxAttackRange = 1;
+    tankData.attackDamageDelay = 0.75f;
+    tankData.deathEffectSet = "explosion";
+    tankData.deathEffectClip = "explode";
+    tankData.deathEffectTexturePath = "Art/Effects/Explosion.png";
+    tankData.deathSoundSet = "effects";
+    tankData.deathSoundName = "explosion";
 
     UnitRegistry::registerType("Tank", tankData, [&tankAnim, tankData](Team team) {
         return std::make_shared<Unit>(

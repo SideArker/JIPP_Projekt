@@ -11,7 +11,7 @@ class Unit;
 
 class SelectionController {
 public:
-    SelectionController(sf::RenderWindow& window, MapManager& mapManager);
+    SelectionController(sf::RenderWindow& window, MapManager& mapManager, const std::string& walkOverlayPath);
     void handleEvent(const sf::Event& event);
     void drawOverlays(sf::RenderTarget& target) const;
     void drawGui();

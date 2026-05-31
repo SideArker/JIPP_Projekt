@@ -43,11 +43,17 @@ void registerMissileTank() {
 
     UnitData data;
     data.maxHealth = 10;
-    data.damage = 10;
-    data.moveSpeed = 2;
+    data.damage = 3;
+    data.moveSpeed = 3;
     data.minAttackRange = 2;
     data.maxAttackRange = 6;
-    data.hitEffectDelay = 1.25f;
+    data.hitEffectDelay = 0.9f;
+    data.attackDamageDelay = 0.9f;
+    data.deathEffectSet = "explosion";
+    data.deathEffectClip = "explode";
+    data.deathEffectTexturePath = "Art/Effects/Explosion.png";
+    data.deathSoundSet = "effects";
+    data.deathSoundName = "explosion";
 
     const AnimationSet& unitAnim = *AnimationManager::getSet(UNIT_NAME);
 

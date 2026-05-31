@@ -11,10 +11,6 @@
 		m_vertices.resize(width * height * 6); // 6 vertices per tile (2 triangles)
 
 
-		const int GRASS_ID = 1;
-		const int BORDER_ID = 4;
-		const int WATER_ID = 5;
-
 		for (unsigned int i = 0; i < width; ++i) {
 			for (unsigned int j = 0; j < height; ++j) {
 				int tileNumber = tiles[i + (j * width)].getArtId();

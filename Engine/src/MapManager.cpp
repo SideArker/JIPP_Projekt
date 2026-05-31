@@ -43,7 +43,16 @@ void MapManager::spawnUnit(std::shared_ptr<Unit> unit, int gridX, int gridY) {
     auto weakUnit = std::weak_ptr<Unit>(unit);
     std::string typeName = unit->getName();
 
-    unit->onAttackStart = [this, typeName, hitDelay = unit->getHitEffectDelay()](std::shared_ptr<Unit> target, int dmg) {
+    const UnitData* data   = UnitRegistry::getData(typeName);
+    float attackDelay      = data ? data->attackDamageDelay        : 0.75f;
+    float hitDelay         = unit->getHitEffectDelay();
+    std::string deathSet   = data ? data->deathEffectSet           : "";
+    std::string deathClip  = data ? data->deathEffectClip          : "";
+    std::string deathTex   = data ? data->deathEffectTexturePath   : "";
+    std::string deathSSet  = data ? data->deathSoundSet            : "";
+    std::string deathSName = data ? data->deathSoundName           : "";
+
+    unit->onAttackStart = [this, typeName, hitDelay, attackDelay](std::shared_ptr<Unit> target, int dmg) {
         SoundManager::play(typeName, "shoot");
         sf::Vector2f targetPos = target->getPosition();
         if (hitDelay <= 0.f) {
@@ -55,25 +64,25 @@ void MapManager::spawnUnit(std::shared_ptr<Unit> unit, int gridX, int gridY) {
                 SoundManager::play(typeName, "hit");
             } });
         }
-        m_pendingActions.push_back({hitDelay + m_attackDamageDelay, [target, dmg]() {
+        m_pendingActions.push_back({ hitDelay + attackDelay, [target, dmg]() {
             if (!target->isDead())
                 target->takeDamage(dmg);
         } });
-        };
+    };
 
-    unit->onDamaged = [this, weakUnit, typeName](sf::Vector2f pos, int health) {
+    unit->onDamaged = [this, weakUnit, deathSet, deathClip, deathTex, deathSSet, deathSName](sf::Vector2f pos, int health) {
         if (health <= 0) {
             auto u = weakUnit.lock();
             if (u)
-                spawnExplosionEffect(pos, u);
+                spawnDeathEffect(deathSet, deathClip, deathTex, deathSSet, deathSName, pos, u);
         }
-        };
+    };
 
     units.push_back(unit);
 }
 
 void MapManager::setupInput(sf::RenderWindow& window) {
-    selectionController = std::make_unique<SelectionController>(window, *this);
+    selectionController = std::make_unique<SelectionController>(window, *this, m_walkOverlayPath);
 }
 
 void MapManager::handleEvent(const sf::Event& event) {
@@ -113,12 +122,7 @@ void MapManager::draw(sf::RenderTarget& target) {
     target.draw(renderer);
     if (selectionController) selectionController->drawOverlays(target);
 
-    if (!m_overlaysLoaded) {
-        m_overlayFriendlyTexture.loadFromFile("Art/Effects/Unit_Overlay_Friendly.png");
-        m_overlayEnemyTexture.loadFromFile("Art/Effects/Unit_Overlay_Enemy.png");
-        m_overlaysLoaded = true;
-    }
-
+    bool acting = isAnyUnitActing();
     for (const auto& unit : units) {
         if (unit->isDead()) continue;
         sf::Sprite unitSprite(unit->getCurrentTexture());
@@ -132,30 +136,8 @@ void MapManager::draw(sf::RenderTarget& target) {
         }
         target.draw(unitSprite);
 
-        if (!isAnyUnitActing()) {
-            const sf::Texture& overlayTex = (unit->getTeam() == Team::Enemy)
-                ? m_overlayEnemyTexture
-                : m_overlayFriendlyTexture;
-            sf::Sprite overlaySprite(overlayTex);
-            overlaySprite.setPosition(unit->getPosition());
-            target.draw(overlaySprite);
-        }
-
-
-        if (unit->getHealth() < unit->getMaxHealth()) {
-            if (!m_healthTextureLoaded) {
-                m_healthTexture.loadFromFile("Art/Effects/Unit_Health.png");
-                m_healthTextureLoaded = true;
-            }
-            float ratio = static_cast<float>(unit->getHealth()) / static_cast<float>(unit->getMaxHealth());
-            int frame = static_cast<int>((1.0f - ratio) * 13.0f);
-            if (frame > 12) frame = 12;
-            if (frame < 0) frame = 0;
-            sf::Sprite healthSprite(m_healthTexture);
-            healthSprite.setTextureRect(sf::IntRect({ frame * 32, 0 }, { 32, 32 }));
-            healthSprite.setPosition(unit->getPosition());
-            target.draw(healthSprite);
-        }
+        if (m_unitRenderCallback)
+            m_unitRenderCallback(target, *unit, acting);
     }
 
     for (const auto& e : m_effects) target.draw(e.sprite);
@@ -163,6 +145,49 @@ void MapManager::draw(sf::RenderTarget& target) {
 
 void MapManager::drawUI() {
     if (selectionController) selectionController->drawGui();
+}
+
+void MapManager::setHitEffect(std::string setName, std::string clipName, std::string texturePath) {
+    m_hitEffectSet         = std::move(setName);
+    m_hitEffectClip        = std::move(clipName);
+    m_hitEffectTexturePath = std::move(texturePath);
+}
+
+void MapManager::setUnitRenderCallback(std::function<void(sf::RenderTarget&, const Unit&, bool)> cb) {
+    m_unitRenderCallback = std::move(cb);
+}
+
+void MapManager::setWalkOverlayPath(std::string path) {
+    m_walkOverlayPath = std::move(path);
+}
+
+void MapManager::spawnEffect(const std::string& setName, const std::string& clipName, const std::string& texturePath, sf::Vector2f position, float yOffset) {
+    const AnimationSet* set = AnimationManager::getSet(setName);
+    if (!set) return;
+    auto it = m_effectTextures.find(texturePath);
+    if (it == m_effectTextures.end()) {
+        sf::Texture tex;
+        if (!tex.loadFromFile(texturePath)) return;
+        it = m_effectTextures.emplace(texturePath, std::move(tex)).first;
+    }
+    Effect e{ sf::Sprite(it->second) };
+    e.animSet = set;
+    e.animState.play(clipName, *set);
+    e.sprite.setTextureRect(e.animState.getCurrentRect());
+    e.sprite.setPosition({ position.x, position.y + yOffset });
+    m_effects.push_back(std::move(e));
+}
+
+void MapManager::spawnHitEffect(sf::Vector2f position) {
+    spawnEffect(m_hitEffectSet, m_hitEffectClip, m_hitEffectTexturePath, position, 0.f);
+}
+
+void MapManager::spawnDeathEffect(const std::string& setName, const std::string& clipName, const std::string& texturePath, const std::string& soundSet, const std::string& soundName, sf::Vector2f position, std::shared_ptr<Unit> unit) {
+    units.erase(std::remove(units.begin(), units.end(), unit), units.end());
+    if (!soundSet.empty())
+        SoundManager::play(soundSet, soundName);
+    if (!setName.empty())
+        spawnEffect(setName, clipName, texturePath, position, -32.f);
 }
 
 sf::Vector2u MapManager::getTileSize() const { return tileSize; }
@@ -176,41 +201,7 @@ bool MapManager::isAnyUnitActing() const {
         || !m_effects.empty();
 }
 
-void MapManager::spawnExplosionEffect(sf::Vector2f position, std::shared_ptr<Unit> unit) {
-    const AnimationSet* set = AnimationManager::getSet("explosion");
-    if (!set) return;
-    if (!m_explosionLoaded) {
-        if (!m_explosionTexture.loadFromFile("Art/Effects/Explosion.png"))
-            return;
-        m_explosionLoaded = true;
-    }
-    Effect e{ sf::Sprite(m_explosionTexture) };
-    // Remove unit already
-    units.erase(std::remove(units.begin(), units.end(), unit), units.end());
 
-    e.animSet = set;
-    e.animState.play("explode", *set);
-	SoundManager::play("effects", "explosion");
-    e.sprite.setTextureRect(e.animState.getCurrentRect());
-    e.sprite.setPosition({ position.x, position.y - 32.f});
-    m_effects.push_back(std::move(e));
-}
-
-void MapManager::spawnHitEffect(sf::Vector2f position) {
-    const AnimationSet* set = AnimationManager::getSet("hitEffect");
-    if (!set) return;
-    if (!m_hitEffectLoaded) {
-        if (!m_hitEffectTexture.loadFromFile("Art/Effects/hitEffect.png"))
-            return;
-        m_hitEffectLoaded = true;
-    }
-    Effect e{ sf::Sprite(m_hitEffectTexture) };
-    e.animSet = set;
-    e.animState.play("hit", *set);
-    e.sprite.setTextureRect(e.animState.getCurrentRect());
-    e.sprite.setPosition(position);
-    m_effects.push_back(std::move(e));
-}
 
 std::shared_ptr<Unit> MapManager::getUnitAtTile(sf::Vector2i gridPos) const {
     for (const auto& unit : units) {

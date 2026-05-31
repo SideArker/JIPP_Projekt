@@ -44,6 +44,7 @@ int main() {
     createDefaultLevel1();
 
     MapManager mapManager;
+    GameContent::configure(mapManager);
     if (!mapManager.loadFromFile(LEVEL1_PATH)) return -1;
     mapManager.setupInput(window);
 

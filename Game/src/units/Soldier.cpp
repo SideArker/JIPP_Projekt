@@ -30,6 +30,12 @@ void registerSoldier() {
     soldierData.moveSpeed = 4;
     soldierData.minAttackRange = 0;
     soldierData.maxAttackRange = 1;
+    soldierData.attackDamageDelay = 0.75f;
+    soldierData.deathEffectSet = "explosion";
+    soldierData.deathEffectClip  = "explode";
+    soldierData.deathEffectTexturePath = "Art/Effects/Explosion.png";
+    soldierData.deathSoundSet = "effects";
+    soldierData.deathSoundName = "explosion";
 
     UnitRegistry::registerType("Soldier", soldierData, [&soldierAnim, soldierData](Team team) {
         return std::make_shared<Unit>(
