@@ -6,7 +6,6 @@
 #include <SFML/Graphics.hpp>
 #include <memory>
 
-
 void registerSoldier() {
     AnimationSet soldierAnimSet;
     soldierAnimSet
@@ -24,13 +23,20 @@ void registerSoldier() {
     SoundManager::registerSet("Soldier", std::move(soldierSounds));
 
     const AnimationSet& soldierAnim = *AnimationManager::getSet("Soldier");
-        
-    UnitRegistry::registerType("Soldier", [&soldierAnim](Team team) {
+
+    UnitData soldierData;
+    soldierData.maxHealth = 10;
+    soldierData.damage = 3;
+    soldierData.moveSpeed = 3;
+    soldierData.minAttackRange = 0;
+    soldierData.maxAttackRange = 1;
+
+    UnitRegistry::registerType("Soldier", soldierData, [&soldierAnim, soldierData](Team team) {
         return std::make_shared<Unit>(
             "Soldier",
             "Art/Units/Soldier/soldier_walk.png",
             "Art/Units/Soldier/soldier_walk_mask.png",
-            soldierAnim, team, 20, 5, 5
+            soldierAnim, team, soldierData
         );
         });
 

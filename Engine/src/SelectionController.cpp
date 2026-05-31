@@ -215,30 +215,35 @@ void SelectionController::drawGui() {
 void SelectionController::updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i unitGrid, sf::Vector2i preferredDir) {
     previewPath.clear();
 
-    const std::vector<sf::Vector2i> dirs = { {0,-1},{0,1},{-1,0},{1,0} };
+    int minRange = selectedUnit->getMinAttackRange();
+    int maxRange = selectedUnit->getMaxAttackRange();
 
+    auto inRange = [&](sf::Vector2i tile) {
+        int d = std::max(std::abs(enemyGrid.x - tile.x), std::abs(enemyGrid.y - tile.y));
+        return d >= minRange && d <= maxRange;
+    };
+
+    // Already within attack range
+    if (inRange(unitGrid)) return;
+
+    //  try the requested tile first (mainly useful for melee units)
     if (preferredDir != sf::Vector2i{0, 0}) {
         sf::Vector2i preferred = enemyGrid + preferredDir;
-        if (preferred == unitGrid) return;
-        if (std::find(reachableTiles.begin(), reachableTiles.end(), preferred) != reachableTiles.end()) {
+        if (preferred != unitGrid && inRange(preferred) &&
+            std::find(reachableTiles.begin(), reachableTiles.end(), preferred) != reachableTiles.end()) {
             auto path = mapManager.findPath(unitGrid, preferred, selectedUnit->getTeam());
             if (!path.empty()) {
                 previewPath = path;
                 return;
             }
         }
-    } else {
-        int dx = std::abs(enemyGrid.x - unitGrid.x);
-        int dy = std::abs(enemyGrid.y - unitGrid.y);
-        if (dx + dy == 1) return;
     }
 
+    // Find shortest path to any reachable tile within attack range
     std::vector<sf::Vector2i> bestPath;
-    for (const auto& dir : dirs) {
-        sf::Vector2i adj = enemyGrid + dir;
-        if (adj == unitGrid) continue;
-        if (std::find(reachableTiles.begin(), reachableTiles.end(), adj) == reachableTiles.end()) continue;
-        auto path = mapManager.findPath(unitGrid, adj, selectedUnit->getTeam());
+    for (const auto& tile : reachableTiles) {
+        if (!inRange(tile)) continue;
+        auto path = mapManager.findPath(unitGrid, tile, selectedUnit->getTeam());
         if (!path.empty() && (bestPath.empty() || path.size() < bestPath.size())) {
             bestPath = path;
         }

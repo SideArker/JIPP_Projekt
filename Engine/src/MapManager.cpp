@@ -43,9 +43,16 @@ void MapManager::spawnUnit(std::shared_ptr<Unit> unit, int gridX, int gridY) {
     auto weakUnit = std::weak_ptr<Unit>(unit);
     std::string typeName = unit->getName();
 
-    unit->onAttackStart = [this, typeName](std::shared_ptr<Unit> target, int dmg) {
+    unit->onAttackStart = [this, typeName, hitDelay = unit->getHitEffectDelay()](std::shared_ptr<Unit> target, int dmg) {
         SoundManager::play(typeName, "shoot");
-        spawnHitEffect(target->getPosition());
+        sf::Vector2f targetPos = target->getPosition();
+        if (hitDelay <= 0.f) {
+            spawnHitEffect(targetPos);
+        } else {
+            m_pendingActions.push_back({ hitDelay, [this, targetPos]() {
+                spawnHitEffect(targetPos);
+            } });
+        }
         m_pendingActions.push_back({ m_attackDamageDelay, [target, dmg]() {
             if (!target->isDead())
                 target->takeDamage(dmg);

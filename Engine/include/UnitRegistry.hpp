@@ -11,9 +11,14 @@ class ENGINE_API UnitRegistry {
 public:
     using FactoryFn = std::function<std::shared_ptr<Unit>(Team)>;
 
-    static void registerType(const std::string& typeName, FactoryFn factory);
+    static void registerType(const std::string& typeName, UnitData data, FactoryFn factory);
     static std::shared_ptr<Unit> create(const std::string& typeName, Team team);
+    static const UnitData* getData(const std::string& typeName);
 
 private:
-    static std::unordered_map<std::string, FactoryFn>& registry();
+    struct Entry {
+        UnitData data;
+        FactoryFn factory;
+    };
+    static std::unordered_map<std::string, Entry>& registry();
 };

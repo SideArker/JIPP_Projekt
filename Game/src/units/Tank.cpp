@@ -34,12 +34,19 @@ void registerTank() {
 
     const AnimationSet& tankAnim = *AnimationManager::getSet("Tank");
 
-    UnitRegistry::registerType("Tank", [&tankAnim](Team team) {
+    UnitData tankData;
+    tankData.maxHealth = 20;
+    tankData.damage = 5;
+    tankData.moveSpeed = 5;
+    tankData.minAttackRange = 2;
+    tankData.maxAttackRange = 6;
+
+    UnitRegistry::registerType("Tank", tankData, [&tankAnim, tankData](Team team) {
         return std::make_shared<Unit>(
             "Tank",
             "Art/Units/Tank/tank_idle.png",
             "Art/Units/Tank/tank_idle_mask.png",
-            tankAnim, team, 20, 5, 5
+            tankAnim, team, tankData
         );
     });
 }

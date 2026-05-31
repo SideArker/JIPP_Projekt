@@ -22,6 +22,15 @@ enum class Team {
 	Neutral
 };
 
+struct ENGINE_API UnitData {
+	int   maxHealth       = 1;
+	int   damage          = 1;
+	int   moveSpeed       = 3;
+	int   minAttackRange  = 0;
+	int   maxAttackRange  = 1;
+	float hitEffectDelay  = 0.0f;
+};
+
 enum class UnitFlag {
 	DamageMultToInfantry,
 	Capture,
@@ -45,10 +54,13 @@ protected:
 	AnimationState animState;
 	Team team = Team::Neutral;
 	std::bitset<static_cast<std::size_t>(UnitFlag::Count)> flags;
-	int health;
-	int maxHealth;
-	int damage;
-	int moveSpeed;
+	int   health;
+	int   maxHealth;
+	int   damage;
+	int   moveSpeed;
+	int   minAttackRange;
+	int   maxAttackRange;
+	float hitEffectDelay;
 
 	std::vector<sf::Vector2i> path;
 	sf::Vector2f position = sf::Vector2f(0, 0);
@@ -64,7 +76,7 @@ protected:
 	bool m_isDead = false;
 	std::weak_ptr<Unit> m_pendingTarget;
 public:
-	Unit(const std::string& name, const std::string& artPath, const std::string& maskPath, const AnimationSet& animSet, Team team, int health, int damage, int moveSpeed);
+	Unit(const std::string& name, const std::string& artPath, const std::string& maskPath, const AnimationSet& animSet, Team team, const UnitData& data);
 
 	virtual ~Unit() = default;
 
@@ -87,6 +99,9 @@ public:
 	int getMaxHealth() const { return maxHealth; }
 
 	float getMoveSpeed() const { return moveSpeed; }
+	int   getMinAttackRange()   const { return minAttackRange; }
+	int   getMaxAttackRange()   const { return maxAttackRange; }
+	float getHitEffectDelay()   const { return hitEffectDelay; }
 	const sf::Texture& getTexture() const { return *texture; }
 	const sf::Texture& getCurrentTexture() const;
 	sf::IntRect getCurrentRect() const { return animState.getCurrentRect(); }

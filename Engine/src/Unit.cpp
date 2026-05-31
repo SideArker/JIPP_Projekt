@@ -20,10 +20,12 @@ static std::string clipName(const std::string& action, MoveDirection dir) {
 
 Unit::Unit(const std::string& name, const std::string& artPath, const std::string& maskPath,
            const AnimationSet& animSet, Team team,
-           int health, int damage, int moveSpeed)
+           const UnitData& data)
     : name(name), artPath(artPath), maskPath(maskPath),
       animSet(&animSet), team(team),
-    health(health), maxHealth(health), damage(damage), moveSpeed(moveSpeed)
+      health(data.maxHealth), maxHealth(data.maxHealth), damage(data.damage),
+      moveSpeed(data.moveSpeed), minAttackRange(data.minAttackRange), maxAttackRange(data.maxAttackRange),
+      hitEffectDelay(data.hitEffectDelay)
 {
     texture = &TextureManager::getTexture(artPath, maskPath, TeamRegistry::getColor(team));
     if(team == Team::Ally) animState.play(clipName("idle", currentDirection), *this->animSet);
