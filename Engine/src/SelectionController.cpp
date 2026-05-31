@@ -105,6 +105,17 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                         ? (dx >= 0 ? MoveDirection::Right : MoveDirection::Left)
                         : (dy >= 0 ? MoveDirection::Down : MoveDirection::Up);
 
+                    // Ranged units cannot move and attack in the same action.
+                    // If they need to move to reach the target, just move and keep them selected.
+                    if (!previewPath.empty() && selectedUnit->getMaxAttackRange() > 1) {
+                        selectedUnit->move(previewPath);
+                        reachableTiles.clear();
+                        previewPath.clear();
+                        hoveredEnemyUnit = nullptr;
+                        // selectedUnit stays selected so they can attack next click
+                        return;
+                    }
+
                     if (!previewPath.empty()) {
                         selectedUnit->move(previewPath);
                     }
@@ -219,14 +230,18 @@ void SelectionController::updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i 
     int maxRange = selectedUnit->getMaxAttackRange();
 
     auto inRange = [&](sf::Vector2i tile) {
-        int d = std::max(std::abs(enemyGrid.x - tile.x), std::abs(enemyGrid.y - tile.y));
+        int dx = std::abs(enemyGrid.x - tile.x);
+        int dy = std::abs(enemyGrid.y - tile.y);
+        // Melee units (maxRange == 1) use Manhattan distance - no diagonal attacks.
+        // Ranged units use Chebyshev distance.
+        int d = (maxRange == 1) ? (dx + dy) : std::max(dx, dy);
         return d >= minRange && d <= maxRange;
     };
 
     // Already within attack range
     if (inRange(unitGrid)) return;
 
-    //  try the requested tile first (mainly useful for melee units)
+    //  try the requested tile first (useful for melee units)
     if (preferredDir != sf::Vector2i{0, 0}) {
         sf::Vector2i preferred = enemyGrid + preferredDir;
         if (preferred != unitGrid && inRange(preferred) &&
@@ -239,7 +254,7 @@ void SelectionController::updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i 
         }
     }
 
-    // Find shortest path to any reachable tile within attack range
+    // Find shortest path to tile within attack range
     std::vector<sf::Vector2i> bestPath;
     for (const auto& tile : reachableTiles) {
         if (!inRange(tile)) continue;
