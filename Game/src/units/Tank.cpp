@@ -30,6 +30,7 @@ void registerTank() {
     SoundSet tankSounds;
     tankSounds
         .addSound("shoot", "Art/Sound/TankAttack.wav");
+
     SoundManager::registerSet("Tank", std::move(tankSounds));
 
     const AnimationSet& tankAnim = *AnimationManager::getSet("Tank");
@@ -38,8 +39,8 @@ void registerTank() {
     tankData.maxHealth = 20;
     tankData.damage = 5;
     tankData.moveSpeed = 5;
-    tankData.minAttackRange = 2;
-    tankData.maxAttackRange = 6;
+    tankData.minAttackRange = 0;
+    tankData.maxAttackRange = 1;
 
     UnitRegistry::registerType("Tank", tankData, [&tankAnim, tankData](Team team) {
         return std::make_shared<Unit>(

@@ -48,12 +48,14 @@ void MapManager::spawnUnit(std::shared_ptr<Unit> unit, int gridX, int gridY) {
         sf::Vector2f targetPos = target->getPosition();
         if (hitDelay <= 0.f) {
             spawnHitEffect(targetPos);
+            SoundManager::play(typeName, "hit");
         } else {
-            m_pendingActions.push_back({ hitDelay, [this, targetPos]() {
+            m_pendingActions.push_back({ hitDelay, [this, typeName, targetPos]() {
                 spawnHitEffect(targetPos);
+                SoundManager::play(typeName, "hit");
             } });
         }
-        m_pendingActions.push_back({ m_attackDamageDelay, [target, dmg]() {
+        m_pendingActions.push_back({hitDelay + m_attackDamageDelay, [target, dmg]() {
             if (!target->isDead())
                 target->takeDamage(dmg);
         } });

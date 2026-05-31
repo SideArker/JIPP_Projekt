@@ -26,8 +26,8 @@ void registerSoldier() {
 
     UnitData soldierData;
     soldierData.maxHealth = 10;
-    soldierData.damage = 3;
-    soldierData.moveSpeed = 3;
+    soldierData.damage = 5;
+    soldierData.moveSpeed = 4;
     soldierData.minAttackRange = 0;
     soldierData.maxAttackRange = 1;
 

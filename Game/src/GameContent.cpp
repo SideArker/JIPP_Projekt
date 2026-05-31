@@ -4,6 +4,7 @@
 #include "SoundManager.hpp"
 #include "units/Tank.hpp"
 #include "units/Soldier.hpp"
+#include "units/MissileTank.hpp"
 #include "effects/Effects.hpp"
 #include <SFML/Graphics.hpp>
 
@@ -14,7 +15,7 @@ void GameContent::init() {
 
     registerTank();
     registerSoldier();
-
+	registerMissileTank();
     registerEffects();
 
     SoundManager::registerMusic("MainMenu",  "Art/Sound/main_menu.ogg");
