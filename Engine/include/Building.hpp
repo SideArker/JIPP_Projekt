@@ -43,6 +43,7 @@ public:
     sf::Vector2f getPosition()         const { return position; }
     int          getCaptureProgress()  const { return captureProgress; }
     int          getCaptureThreshold() const { return captureThreshold; }
+    Team         getCaptureTeam()      const { return captureTeam; }
 
     void setPosition(sf::Vector2f pos) { position = pos; }
     void setTeam(Team t)               { team = t; }

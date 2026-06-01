@@ -17,9 +17,9 @@ void registerMissileTank() {
     AnimationSet unitAnimSet;
     unitAnimSet
         .addDirectionalClips("idle",
-            AnimationClip::fromRow({ 0,  0 }, { 32, 32 }, 2, 1.f, true, false),
-            AnimationClip::fromRow({ 0, 32 }, { 32, 32 }, 2, 1.f, true, false),
-            AnimationClip::fromRow({ 0, 64 }, { 32, 32 }, 2, 1.f, true, false))
+            AnimationClip::fromRow({ 0,  0 }, { 32, 32 }, 2, 1.f, true, true),
+            AnimationClip::fromRow({ 0, 64 }, { 32, 32 }, 2, 1.f, true, false), // Up
+            AnimationClip::fromRow({ 0, 32 }, { 32, 32 }, 2, 1.f, true, false)) // Down
 
         .addDirectionalClips("walk",
             AnimationClip::fromRow({ 0,  0 }, { 32, 32 }, 3, 0.1f, false, true),
@@ -29,8 +29,8 @@ void registerMissileTank() {
 
         .addDirectionalClips("shoot",
                 AnimationClip::fromRow({ 0,  0 }, { 32, 32 }, 5, 0.1f, false, true),
-                AnimationClip::fromRow({ 0, 32 }, { 32, 32 }, 5, 0.1f, false, false),
                 AnimationClip::fromRow({ 0, 64 }, { 32, 32 }, 5, 0.1f, false, false),
+                AnimationClip::fromRow({ 0, 32 }, { 32, 32 }, 5, 0.1f, false, false),
                 {}, "Art/Units/MissileTank/missiletank_shoot.png", "Art/Units/MissileTank/missiletank_shoot_mask.png");
 
     AnimationManager::registerSet(UNIT_NAME, std::move(unitAnimSet));

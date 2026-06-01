@@ -5,6 +5,8 @@
 #include "UnitRegistry.hpp"
 #include "BuildingRegistry.hpp"
 #include "SoundManager.hpp"
+#include "TeamRegistry.hpp"
+#include "TextureManager.hpp"
 #include <queue>
 #include <unordered_map>
 #include <cmath>
@@ -146,6 +148,8 @@ void MapManager::update(float deltaTime) {
             if (cb) cb();
         }
     }
+
+    m_captureBounceClock += deltaTime;
 }
 
 void MapManager::draw(sf::RenderTarget& target) {
@@ -182,6 +186,57 @@ void MapManager::draw(sf::RenderTarget& target) {
 
     }
 
+    // Draw capture bounce & TeamCapture overlays
+    if (!m_teamCaptureTexturePath.empty()) {
+        static constexpr float kBounceFreq = 3.0f;   // Hz
+        static constexpr float kBounceAmp  = 3.5f;   // pixels
+        static constexpr float kOverlayOffY = -18.f;  // pixels above tile top
+
+        const float bounceY = std::sin(m_captureBounceClock * kBounceFreq * 2.f * 3.14159265f) * kBounceAmp;
+
+        for (const auto& building : buildings) {
+            int progress = building->getCaptureProgress();
+            if (progress <= 0) continue;  // not being captured
+
+            sf::Vector2i bGrid(
+                static_cast<int>(std::round(building->getPosition().x / static_cast<float>(tileSize.x))),
+                static_cast<int>(std::round(building->getPosition().y / static_cast<float>(tileSize.y)))
+            );
+            auto occupant = getUnitAtTile(bGrid);
+            if (!occupant || occupant->isDead()) continue;
+
+            // --- Bounce: redraw the unit shifted upward ---
+            sf::IntRect rect = occupant->getCurrentRect();
+            sf::Sprite bouncedUnit(occupant->getCurrentTexture());
+            bouncedUnit.setTextureRect(rect);
+            if (occupant->hasActed() && !occupant->isActing())
+                bouncedUnit.setColor(sf::Color(150, 150, 150));
+            const float ux = occupant->getPosition().x;
+            const float uy = occupant->getPosition().y + bounceY;
+            if (occupant->shouldFlipX()) {
+                bouncedUnit.setScale({ -1.f, 1.f });
+                bouncedUnit.setPosition({ ux + static_cast<float>(rect.size.x), uy });
+            } else {
+                bouncedUnit.setPosition({ ux, uy });
+            }
+            target.draw(bouncedUnit);
+
+            // --- TeamCapture overlay above the tile ---
+            const sf::Color teamColor = TeamRegistry::getColor(building->getCaptureTeam());
+            const sf::Texture& capTex = TextureManager::getTexture(
+                m_teamCaptureTexturePath, m_teamCaptureMaskPath, teamColor);
+
+            sf::Sprite capSprite(capTex);
+            const float tx = building->getPosition().x;
+            const float ty = building->getPosition().y;
+            // Centre the overlay horizontally over the tile; place it above
+            const float capW = static_cast<float>(capTex.getSize().x);
+            const float capX = tx + (static_cast<float>(tileSize.x) - capW) * 0.5f;
+            capSprite.setPosition({ capX, ty + kOverlayOffY + bounceY });
+            target.draw(capSprite);
+        }
+    }
+
     for (const auto& e : m_effects) target.draw(e.sprite);
     if (selectionController) selectionController->drawCursorIcon(target);
 }
@@ -194,6 +249,11 @@ void MapManager::setHitEffect(std::string setName, std::string clipName, std::st
     m_hitEffectSet         = std::move(setName);
     m_hitEffectClip        = std::move(clipName);
     m_hitEffectTexturePath = std::move(texturePath);
+}
+
+void MapManager::setTeamCaptureEffect(std::string texturePath, std::string maskPath) {
+    m_teamCaptureTexturePath = std::move(texturePath);
+    m_teamCaptureMaskPath    = std::move(maskPath);
 }
 
 void MapManager::setUnitRenderCallback(std::function<void(sf::RenderTarget&, const Unit&, bool)> cb) {
@@ -210,6 +270,7 @@ void MapManager::endTurn() {
         building->onTurnEnd(occupant.get());
     }
     m_turnController.endTurn(units);
+    m_captureBounceClock = 0.f;  // reset bounce so each turn starts fresh
     if (m_turnController.getCurrentTeam() == Team::Ally)
         SoundManager::playMusic("AllyTurn");
     else

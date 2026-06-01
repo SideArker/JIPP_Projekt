@@ -39,12 +39,15 @@ private:
 	std::string m_hitEffectSet;
 	std::string m_hitEffectClip;
 	std::string m_hitEffectTexturePath;
+	std::string m_teamCaptureTexturePath;
+	std::string m_teamCaptureMaskPath;
 	std::map<std::string, sf::Texture> m_effectTextures;
 	std::function<void(sf::RenderTarget&, const Unit&, bool)> m_unitRenderCallback;
 	std::string m_walkOverlayPath;
 	std::string m_moveArrowPath;
 	std::string m_iconsPath;
 	std::string m_enemyOverlayPath;
+	float m_captureBounceClock = 0.f;
 
 	std::vector<Effect> m_effects;
 	std::vector<std::pair<float, std::function<void()>>> m_pendingActions;
@@ -81,6 +84,7 @@ public:
 	TurnController& getTurnController();
 
 	void setHitEffect(std::string setName, std::string clipName, std::string texturePath);
+	void setTeamCaptureEffect(std::string texturePath, std::string maskPath);
 	void setUnitRenderCallback(std::function<void(sf::RenderTarget&, const Unit&, bool)> cb);
 	void setWalkOverlayPath(std::string path);
 	void setMoveArrowPath(std::string path);
