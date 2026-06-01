@@ -61,6 +61,14 @@ static void writeMapBlock(std::ostream& out, const MapFile& map) {
         writeVal(out, static_cast<uint8_t>(spawn.team));
     }
 
+    writeVal(out, static_cast<uint32_t>(map.buildingSpawns.size()));
+    for (const auto& spawn : map.buildingSpawns) {
+        writeString(out, spawn.typeName);
+        writeVal(out, static_cast<int32_t>(spawn.gridX));
+        writeVal(out, static_cast<int32_t>(spawn.gridY));
+        writeVal(out, static_cast<uint8_t>(spawn.team));
+    }
+
     writeVal(out, static_cast<uint32_t>(map.teams.size()));
     for (const auto& td : map.teams) {
         writeVal(out, static_cast<uint8_t>(td.team));
@@ -93,6 +101,19 @@ static bool readMapBlock(std::istream& in, MapFile& map, uint32_t version) {
     if (!readVal(in, spawnCount)) return false;
     map.spawns.resize(spawnCount);
     for (auto& spawn : map.spawns) {
+        if (!readString(in, spawn.typeName)) return false;
+        int32_t gridX, gridY;
+        uint8_t team;
+        if (!readVal(in, gridX) || !readVal(in, gridY) || !readVal(in, team)) return false;
+        spawn.gridX = gridX;
+        spawn.gridY = gridY;
+        spawn.team  = static_cast<Team>(team);
+    }
+
+    uint32_t buildingCount;
+    if (!readVal(in, buildingCount)) return false;
+    map.buildingSpawns.resize(buildingCount);
+    for (auto& spawn : map.buildingSpawns) {
         if (!readString(in, spawn.typeName)) return false;
         int32_t gridX, gridY;
         uint8_t team;
@@ -170,6 +191,13 @@ bool FileManager::saveGame(const GameState& state, const std::string& path) {
         writeVal(out, static_cast<uint8_t>(unit.team));
         writeVal(out, unit.flags);
     }
+    writeVal(out, static_cast<uint32_t>(state.buildings.size()));
+    for (const auto& b : state.buildings) {
+        writeString(out, b.typeName);
+        writeVal(out, static_cast<int32_t>(b.gridX));
+        writeVal(out, static_cast<int32_t>(b.gridY));
+        writeVal(out, static_cast<uint8_t>(b.team));
+    }
     return out.good();
 }
 
@@ -205,6 +233,18 @@ bool FileManager::loadGame(const std::string& path, GameState& out) {
         unit.moveSpeed = moveSpeed;
         unit.team      = static_cast<Team>(team);
         unit.flags     = flags;
+    }
+    uint32_t buildingCount;
+    if (!readVal(in, buildingCount)) return false;
+    out.buildings.resize(buildingCount);
+    for (auto& b : out.buildings) {
+        if (!readString(in, b.typeName)) return false;
+        int32_t gridX, gridY;
+        uint8_t team;
+        if (!readVal(in, gridX) || !readVal(in, gridY) || !readVal(in, team)) return false;
+        b.gridX = gridX;
+        b.gridY = gridY;
+        b.team  = static_cast<Team>(team);
     }
     return true;
 }

@@ -11,6 +11,7 @@
 #include "GameContent.hpp"
 #include "TextureManager.hpp"
 #include "SoundManager.hpp"
+#include "AIController.hpp"
 
 
 static constexpr const char* LEVEL1_PATH = "levels/level1.map";
@@ -32,6 +33,12 @@ static void createDefaultLevel1() {
         {14, T::Grass},    {15, T::Grass},    {15, T::Grass},    {15, T::Grass},    {15, T::Grass},    {15, T::Grass},    {15, T::Grass},    {8,  T::Grass}
     };
     map.spawns = { { "MissileTank", 1, 1, Team::Ally },{ "Tank", 3, 3, Team::Ally },{ "Soldier" , 3, 4, Team::Ally }, {"Tank", 5, 4, Team::Enemy }};
+    map.buildingSpawns = {
+        { "HQ",      1, 5, Team::Ally    },
+        { "HQ",      6, 1, Team::Enemy   },
+        { "Factory", 2, 5, Team::Ally    },
+        { "OilRig",  6, 5, Team::Neutral }
+    };
     FileManager::saveMap(map, LEVEL1_PATH);
 }
 
@@ -50,6 +57,7 @@ int main() {
     if (!mapManager.loadFromFile(LEVEL1_PATH)) return -1;
     mapManager.setupInput(window);
 
+    AIController aiController;
     sf::Clock clock;
 
     while (window.isOpen()) {
@@ -57,12 +65,19 @@ int main() {
             if (event->is<sf::Event::Closed>()) window.close();
             mapManager.handleEvent(*event);
         }
-        SoundManager::registerMusic("AllyTheme", "Art/Sound/AllyTheme.wav");
-		SoundManager::playMusic("AllyTheme");
-		SoundManager::setMusicVolume(20.f);
-
-
         float deltaTime = clock.restart().asSeconds();
+
+        if (mapManager.getCurrentTeam() == Team::Enemy) {
+            if (!mapManager.isAnyUnitActing()) {
+                aiController.update(deltaTime, mapManager, mapManager.getTurnController());
+            }
+            if (aiController.isDone() && !mapManager.isAnyUnitActing()) {
+                mapManager.endTurn();
+            }
+        } else {
+            aiController.reset();
+        }
+
         mapManager.update(deltaTime);
 
         window.clear();

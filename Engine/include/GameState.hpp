@@ -17,7 +17,15 @@ struct ENGINE_API UnitSaveData {
     uint8_t flags     = 0;
 };
 
+struct ENGINE_API BuildingSaveData {
+    std::string typeName;
+    int  gridX = 0;
+    int  gridY = 0;
+    Team team  = Team::Neutral;
+};
+
 struct ENGINE_API GameState {
-    std::string              mapFilePath;
-    std::vector<UnitSaveData> units;
+    std::string                   mapFilePath;
+    std::vector<UnitSaveData>     units;
+    std::vector<BuildingSaveData> buildings;
 };

@@ -12,7 +12,7 @@ void registerMissileTank() {
     static const std::string UNIT_NAME = "MissileTank";
 	static const std::string ART_PATH = "Art/Units/MissileTank/missiletank.png";
 	static const std::string MASK_PATH = "Art/Units/MissileTank/missiletank_mask.png";
-
+    static const std::vector<UnitFlag> FLAGS = {};
 
     AnimationSet unitAnimSet;
     unitAnimSet
@@ -59,7 +59,11 @@ void registerMissileTank() {
     const AnimationSet& unitAnim = *AnimationManager::getSet(UNIT_NAME);
 
     UnitRegistry::registerType(UNIT_NAME, data, [&unitAnim, data](Team team) {
-        return std::make_shared<Unit>(UNIT_NAME, ART_PATH, MASK_PATH, unitAnim, team, data);
+        auto unit = std::make_shared<Unit>(UNIT_NAME, ART_PATH, MASK_PATH, unitAnim, team, data);
+        for (const auto& flag : FLAGS) {
+            unit->addFlag(flag);
+        }
+        return unit;
         });
 
 }

@@ -3,6 +3,7 @@
 #include "FileManager.hpp"
 #include "MapFile.hpp"
 #include "UnitRegistry.hpp"
+#include "BuildingRegistry.hpp"
 #include "SoundManager.hpp"
 #include <queue>
 #include <unordered_map>
@@ -81,8 +82,27 @@ void MapManager::spawnUnit(std::shared_ptr<Unit> unit, int gridX, int gridY) {
     units.push_back(unit);
 }
 
+void MapManager::spawnBuilding(std::shared_ptr<Building> building, int gridX, int gridY) {
+    building->setPosition(sf::Vector2f(
+        static_cast<float>(gridX * tileSize.x),
+        static_cast<float>(gridY * tileSize.y)
+    ));
+    buildings.push_back(building);
+}
+
+std::shared_ptr<Building> MapManager::getBuildingAtTile(sf::Vector2i gridPos) const {
+    for (const auto& building : buildings) {
+        sf::Vector2i bGrid(
+            static_cast<int>(std::round(building->getPosition().x / static_cast<float>(tileSize.x))),
+            static_cast<int>(std::round(building->getPosition().y / static_cast<float>(tileSize.y)))
+        );
+        if (bGrid == gridPos) return building;
+    }
+    return nullptr;
+}
+
 void MapManager::setupInput(sf::RenderWindow& window) {
-    selectionController = std::make_unique<SelectionController>(window, *this, m_walkOverlayPath, m_moveArrowPath, m_iconsPath, m_enemyOverlayPath);
+    selectionController = std::make_unique<SelectionController>(window, *this, m_turnController, m_walkOverlayPath, m_moveArrowPath, m_iconsPath, m_enemyOverlayPath);
 }
 
 void MapManager::handleEvent(const sf::Event& event) {
@@ -120,6 +140,13 @@ void MapManager::update(float deltaTime) {
 
 void MapManager::draw(sf::RenderTarget& target) {
     target.draw(renderer);
+    for (const auto& building : buildings) {
+        sf::Sprite sprite(building->getTexture());
+        if (building->hasTextureRect())
+            sprite.setTextureRect(building->getTextureRect());
+        sprite.setPosition(building->getPosition());
+        target.draw(sprite);
+    }
     if (selectionController) selectionController->drawOverlays(target);
 
     bool acting = isAnyUnitActing();
@@ -128,6 +155,8 @@ void MapManager::draw(sf::RenderTarget& target) {
         sf::Sprite unitSprite(unit->getCurrentTexture());
         sf::IntRect rect = unit->getCurrentRect();
         unitSprite.setTextureRect(rect);
+        if (unit->hasActed())
+            unitSprite.setColor(sf::Color(150, 150, 150));
         if (unit->shouldFlipX()) {
             unitSprite.setScale({ -1.f, 1.f });
             unitSprite.setPosition({ unit->getPosition().x + static_cast<float>(rect.size.x), unit->getPosition().y });
@@ -138,6 +167,7 @@ void MapManager::draw(sf::RenderTarget& target) {
 
         if (m_unitRenderCallback)
             m_unitRenderCallback(target, *unit, acting);
+
     }
 
     for (const auto& e : m_effects) target.draw(e.sprite);
@@ -156,6 +186,31 @@ void MapManager::setHitEffect(std::string setName, std::string clipName, std::st
 
 void MapManager::setUnitRenderCallback(std::function<void(sf::RenderTarget&, const Unit&, bool)> cb) {
     m_unitRenderCallback = std::move(cb);
+}
+
+void MapManager::endTurn() {
+    for (const auto& building : buildings) {
+        sf::Vector2i bGrid(
+            static_cast<int>(std::round(building->getPosition().x / static_cast<float>(tileSize.x))),
+            static_cast<int>(std::round(building->getPosition().y / static_cast<float>(tileSize.y)))
+        );
+        auto occupant = getUnitAtTile(bGrid);
+        building->onTurnEnd(occupant.get());
+    }
+    m_turnController.endTurn(units);
+    if (m_turnController.getCurrentTeam() == Team::Ally)
+        SoundManager::playMusic("AllyTurn");
+    else
+        SoundManager::playMusic("EnemyTurn");
+    SoundManager::setMusicVolume(20.f);
+}
+
+Team MapManager::getCurrentTeam() const {
+    return m_turnController.getCurrentTeam();
+}
+
+TurnController& MapManager::getTurnController() {
+    return m_turnController;
 }
 
 void MapManager::setWalkOverlayPath(std::string path) {
@@ -340,6 +395,7 @@ bool MapManager::loadFromFile(const std::string& mapPath) {
     if (!FileManager::loadMap(mapPath, mapFile)) return false;
 
     units.clear();
+    buildings.clear();
     selectionController.reset();
     currentMapPath = mapPath;
 
@@ -349,6 +405,10 @@ bool MapManager::loadFromFile(const std::string& mapPath) {
     for (const auto& spawn : mapFile.spawns) {
         auto unit = UnitRegistry::create(spawn.typeName, spawn.team);
         if (unit) spawnUnit(unit, spawn.gridX, spawn.gridY);
+    }
+    for (const auto& spawn : mapFile.buildingSpawns) {
+        auto building = BuildingRegistry::create(spawn.typeName, spawn.team);
+        if (building) spawnBuilding(building, spawn.gridX, spawn.gridY);
     }
     return true;
 }
@@ -364,6 +424,13 @@ bool MapManager::saveToFile(const std::string& mapPath) const {
     for (const auto& unit : units) {
         auto gridPos = unit->getGridPosition(tileSize);
         mapFile.spawns.push_back({ unit->getName(), gridPos.x, gridPos.y, unit->getTeam() });
+    }
+    for (const auto& building : buildings) {
+        sf::Vector2i gridPos(
+            static_cast<int>(std::round(building->getPosition().x / static_cast<float>(tileSize.x))),
+            static_cast<int>(std::round(building->getPosition().y / static_cast<float>(tileSize.y)))
+        );
+        mapFile.buildingSpawns.push_back({ building->getTypeName(), gridPos.x, gridPos.y, building->getTeam() });
     }
     return FileManager::saveMap(mapFile, mapPath);
 }
@@ -385,6 +452,13 @@ GameState MapManager::captureGameState() const {
             unit->getFlags()
         });
     }
+    for (const auto& building : buildings) {
+        sf::Vector2i gridPos(
+            static_cast<int>(std::round(building->getPosition().x / static_cast<float>(tileSize.x))),
+            static_cast<int>(std::round(building->getPosition().y / static_cast<float>(tileSize.y)))
+        );
+        state.buildings.push_back({ building->getTypeName(), gridPos.x, gridPos.y, building->getTeam() });
+    }
     return state;
 }
 
@@ -396,6 +470,7 @@ bool MapManager::restoreGameState(const std::string& savePath) {
     if (!FileManager::loadMap(state.mapFilePath, mapFile)) return false;
 
     units.clear();
+    buildings.clear();
     selectionController.reset();
     currentMapPath = state.mapFilePath;
 
@@ -410,6 +485,10 @@ bool MapManager::restoreGameState(const std::string& savePath) {
         unit->setMoveSpeed(unitData.moveSpeed);
         unit->setFlags(unitData.flags);
         spawnUnit(unit, unitData.gridX, unitData.gridY);
+    }
+    for (const auto& bData : state.buildings) {
+        auto building = getBuildingAtTile({ bData.gridX, bData.gridY });
+        if (building) building->setTeam(bData.team);
     }
     return true;
 }

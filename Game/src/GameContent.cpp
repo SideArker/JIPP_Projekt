@@ -7,6 +7,7 @@
 #include "units/Tank.hpp"
 #include "units/Soldier.hpp"
 #include "units/MissileTank.hpp"
+#include "buildings/Buildings.hpp"
 #include "effects/Effects.hpp"
 #include <SFML/Graphics.hpp>
 #include <algorithm>
@@ -19,11 +20,14 @@ void GameContent::init() {
     registerTank();
     registerSoldier();
 	registerMissileTank();
+    registerBuildings();
     registerEffects();
 
     SoundManager::registerMusic("MainMenu",  "Art/Sound/main_menu.ogg");
-    SoundManager::registerMusic("EnemyTurn", "Art/Sound/enemy_turn.ogg");
-    SoundManager::registerMusic("AllyTurn",  "Art/Sound/ally_turn.ogg");
+    SoundManager::registerMusic("EnemyTurn", "Art/Sound/EnemyTheme.wav");
+    SoundManager::registerMusic("AllyTurn",  "Art/Sound/AllyTheme.wav");
+    SoundManager::setMusicVolume(20.f);
+
 }
 
 void GameContent::configure(MapManager& mapManager) {
@@ -42,10 +46,14 @@ void GameContent::configure(MapManager& mapManager) {
             loaded = true;
         }
         if (!anyActing) {
-            const sf::Texture& overlayTex = (unit.getTeam() == Team::Enemy) ? overlayEnemy : overlayFriendly;
-            sf::Sprite overlaySprite(overlayTex);
-            overlaySprite.setPosition(unit.getPosition());
-            target.draw(overlaySprite);
+            const bool showFriendlyOverlay = unit.getTeam() == Team::Ally && !unit.hasActed();
+            const bool showEnemyOverlay = unit.getTeam() == Team::Enemy;
+            if (showFriendlyOverlay || showEnemyOverlay) {
+                const sf::Texture& overlayTex = showEnemyOverlay ? overlayEnemy : overlayFriendly;
+                sf::Sprite overlaySprite(overlayTex);
+                overlaySprite.setPosition(unit.getPosition());
+                target.draw(overlaySprite);
+            }
         }
         if (unit.getHealth() < unit.getMaxHealth()) {
             float ratio = static_cast<float>(unit.getHealth()) / static_cast<float>(unit.getMaxHealth());

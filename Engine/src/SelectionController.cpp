@@ -1,5 +1,6 @@
 #include "SelectionController.hpp"
 #include "MapManager.hpp"
+#include "TurnController.hpp"
 #include "Unit.hpp"
 #include <algorithm>
 #include <cmath>
@@ -21,8 +22,8 @@ static sf::Vector2i computeApproachDir(sf::Vector2f localPos, float btnW, float 
     return { 1,  0 };                                   // right
 }
 
-SelectionController::SelectionController(sf::RenderWindow& window, MapManager& mapManager, const std::string& walkOverlayPath, const std::string& moveArrowPath, const std::string& iconsPath, const std::string& enemyOverlayPath)
-    : gui(window), mapManager(mapManager), selectedUnit(nullptr) {
+SelectionController::SelectionController(sf::RenderWindow& window, MapManager& mapManager, TurnController& turnController, const std::string& walkOverlayPath, const std::string& moveArrowPath, const std::string& iconsPath, const std::string& enemyOverlayPath)
+    : gui(window), mapManager(mapManager), m_turnController(turnController), selectedUnit(nullptr) {
     try {
 		if (!m_walkOverlayTexture.loadFromFile(walkOverlayPath)) {
 			throw std::runtime_error("Failed to load walk overlay texture");
@@ -122,11 +123,12 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                     // If they need to move to reach the target, just move
                     if (!previewPath.empty() && selectedUnit->getMaxAttackRange() > 1) {
                         selectedUnit->move(previewPath);
+                        m_turnController.markActed(*selectedUnit);
+                        selectedUnit = nullptr;
                         reachableTiles.clear();
                         previewPath.clear();
                         hoveredEnemyUnit = nullptr;
                         m_cursorIconCell = -1;
-                        // selectedUnit stays selected so they can attack next click
                         return;
                     }
 
@@ -134,6 +136,7 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                         selectedUnit->move(previewPath);
                     }
                     selectedUnit->dealDamage(hoveredEnemyUnit, shootDir);
+                    m_turnController.markActed(*selectedUnit);
                     selectedUnit = nullptr;
                     reachableTiles.clear();
                     previewPath.clear();
@@ -145,6 +148,7 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                 auto unitAtTile = mapManager.getUnitAtTile(gridPos);
                 if (unitAtTile) {
                     if (unitAtTile->getTeam() == Team::Enemy) return;
+                    if (!m_turnController.canAct(*unitAtTile)) return;
                     selectedUnit = unitAtTile;
                     sf::Vector2i unitGrid(
                         static_cast<int>(std::round(unitAtTile->getPosition().x / static_cast<float>(tileSize.x))),
@@ -156,12 +160,17 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                     return;
                 }
 
-                if (!selectedUnit) return;
+                if (!selectedUnit) {
+                    auto building = mapManager.getBuildingAtTile(gridPos);
+                    if (building) building->onClicked();
+                    return;
+                }
 
                 bool isReachable = std::find(reachableTiles.begin(), reachableTiles.end(), gridPos) != reachableTiles.end();
                 if (isReachable && !previewPath.empty()) {
                     selectedUnit->move(previewPath);
                 }
+                m_turnController.markActed(*selectedUnit);
                 selectedUnit = nullptr;
                 reachableTiles.clear();
                 previewPath.clear();
@@ -171,6 +180,32 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
             gui.add(btn);
         }
     }
+
+    auto endTurnPanel = tgui::Panel::create();
+    endTurnPanel->setPosition("100% - 150px", "100% - 70px");
+    endTurnPanel->setSize(140, 60);
+    endTurnPanel->getRenderer()->setBackgroundColor(sf::Color(20, 20, 20, 210));
+
+    m_turnLabel = tgui::Label::create("Turn 1 - Ally");
+    m_turnLabel->setPosition(10, 6);
+    m_turnLabel->setTextSize(13);
+    endTurnPanel->add(m_turnLabel);
+
+    auto endTurnBtn = tgui::Button::create("End Turn");
+    endTurnBtn->setPosition(10, 30);
+    endTurnBtn->setSize(120, 24);
+    endTurnBtn->onClick([this, &mapManager]() {
+        if (m_turnController.getCurrentTeam() == Team::Ally && !mapManager.isAnyUnitActing()) {
+            selectedUnit = nullptr;
+            reachableTiles.clear();
+            previewPath.clear();
+            hoveredEnemyUnit = nullptr;
+            m_cursorIconCell = -1;
+            mapManager.endTurn();
+        }
+    });
+    endTurnPanel->add(endTurnBtn);
+    gui.add(endTurnPanel);
 }
 
 void SelectionController::handleEvent(const sf::Event& event) {
@@ -207,6 +242,19 @@ void SelectionController::handleEvent(const sf::Event& event) {
         }
     }
     gui.handleEvent(event);
+
+    if (const auto* kp = event.getIf<sf::Event::KeyPressed>()) {
+        if ((kp->code == sf::Keyboard::Key::Enter || kp->code == sf::Keyboard::Key::Space)
+            && m_turnController.getCurrentTeam() == Team::Ally
+            && !mapManager.isAnyUnitActing()) {
+            selectedUnit = nullptr;
+            reachableTiles.clear();
+            previewPath.clear();
+            hoveredEnemyUnit = nullptr;
+            m_cursorIconCell = -1;
+            mapManager.endTurn();
+        }
+    }
 }
 
 void SelectionController::drawOverlays(sf::RenderTarget& target) {
@@ -379,6 +427,10 @@ void SelectionController::drawCursorIcon(sf::RenderTarget& target) {
 }
 
 void SelectionController::drawGui() {
+    if (m_turnLabel) {
+        const std::string teamStr = (m_turnController.getCurrentTeam() == Team::Ally) ? "Ally" : "Enemy";
+        m_turnLabel->setText("Turn " + std::to_string(m_turnController.getTurnNumber()) + " - " + teamStr);
+    }
     gui.draw();
 }
 

@@ -82,6 +82,7 @@ protected:
 	bool m_shootPending = false;
 	MoveDirection m_pendingShootDir = MoveDirection::Right;
 	bool m_isDead = false;
+	bool m_hasActed = false;
 	std::weak_ptr<Unit> m_pendingTarget;
 public:
 	Unit(const std::string& name, const std::string& artPath, const std::string& maskPath, const AnimationSet& animSet, Team team, const UnitData& data);
@@ -129,6 +130,8 @@ public:
 	void setFlags(uint8_t f) { flags = std::bitset<static_cast<std::size_t>(UnitFlag::Count)>(f); }
 
 	bool isDead() const { return m_isDead; }
+	bool hasActed() const { return m_hasActed; }
+	void setActed(bool acted) { m_hasActed = acted; }
 
 	std::function<void(sf::Vector2f, int health)> onDamaged;	
 	std::function<void(std::shared_ptr<Unit>, int)> onAttackStart;

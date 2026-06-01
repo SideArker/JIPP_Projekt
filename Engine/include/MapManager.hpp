@@ -4,7 +4,9 @@
 #include "AnimationManager.hpp"
 #include "EngineAPI.hpp"
 #include "GameState.hpp"
+#include "TurnController.hpp"
 #include <Unit.hpp>
+#include "Building.hpp"
 #include <functional>
 #include <map>
 #include <memory>
@@ -26,6 +28,7 @@ private:
 	std::unique_ptr<SelectionController> selectionController;
 
 	std::vector<std::shared_ptr<Unit>> units;
+	std::vector<std::shared_ptr<Building>> buildings;
 	std::vector<Tile> mapData;
 	std::string  tilesetPath;
 	sf::Vector2u tileSize;
@@ -45,6 +48,7 @@ private:
 
 	std::vector<Effect> m_effects;
 	std::vector<std::pair<float, std::function<void()>>> m_pendingActions;
+	TurnController m_turnController;
 
 	void spawnEffect(const std::string& setName, const std::string& clipName, const std::string& texturePath, sf::Vector2f position, float yOffset = 0.f);
 	void spawnHitEffect(sf::Vector2f position);
@@ -61,12 +65,18 @@ public:
 
 	bool loadMap(const std::string& tileset, sf::Vector2u tileSize, const std::vector<Tile>& tiles, unsigned int w, unsigned int h);
 	void spawnUnit(std::shared_ptr<Unit> unit, int gridX, int gridY);
+	void spawnBuilding(std::shared_ptr<Building> building, int gridX, int gridY);
+	std::shared_ptr<Building> getBuildingAtTile(sf::Vector2i gridPos) const;
+	const std::vector<std::shared_ptr<Building>>& getBuildings() const { return buildings; }
 	void setupInput(sf::RenderWindow& window);
 	void handleEvent(const sf::Event& event);
 	void update(float deltaTime);
 	void draw(sf::RenderTarget& target);
 	void drawUI();
 	bool isAnyUnitActing() const;
+	void endTurn();
+	Team getCurrentTeam() const;
+	TurnController& getTurnController();
 
 	void setHitEffect(std::string setName, std::string clipName, std::string texturePath);
 	void setUnitRenderCallback(std::function<void(sf::RenderTarget&, const Unit&, bool)> cb);
