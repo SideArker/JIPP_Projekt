@@ -41,6 +41,7 @@ private:
 	std::string m_walkOverlayPath;
 	std::string m_moveArrowPath;
 	std::string m_iconsPath;
+	std::string m_enemyOverlayPath;
 
 	std::vector<Effect> m_effects;
 	std::vector<std::pair<float, std::function<void()>>> m_pendingActions;
@@ -72,6 +73,9 @@ public:
 	void setWalkOverlayPath(std::string path);
 	void setMoveArrowPath(std::string path);
 	void setIconsPath(std::string path);
+	void setEnemyOverlayPath(std::string path);
+
+	const std::vector<std::shared_ptr<Unit>>& getUnits() const { return units; }
 
 	std::vector<sf::Vector2i> findPath(sf::Vector2i start, sf::Vector2i goal, Team movingTeam);
 	std::vector<sf::Vector2i> getReachableTiles(sf::Vector2i from, int moveRange, Team movingTeam) const;

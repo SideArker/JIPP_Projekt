@@ -21,7 +21,7 @@ static sf::Vector2i computeApproachDir(sf::Vector2f localPos, float btnW, float 
     return { 1,  0 };                                   // right
 }
 
-SelectionController::SelectionController(sf::RenderWindow& window, MapManager& mapManager, const std::string& walkOverlayPath, const std::string& moveArrowPath, const std::string& iconsPath)
+SelectionController::SelectionController(sf::RenderWindow& window, MapManager& mapManager, const std::string& walkOverlayPath, const std::string& moveArrowPath, const std::string& iconsPath, const std::string& enemyOverlayPath)
     : gui(window), mapManager(mapManager), selectedUnit(nullptr) {
     try {
 		if (!m_walkOverlayTexture.loadFromFile(walkOverlayPath)) {
@@ -32,6 +32,9 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
 		}
 		if (!m_iconsTexture.loadFromFile(iconsPath)) {
 			throw std::runtime_error("Failed to load icons texture");
+		}
+		if (!enemyOverlayPath.empty() && !m_enemyOverlayTexture.loadFromFile(enemyOverlayPath)) {
+			throw std::runtime_error("Failed to load enemy overlay texture");
 		}
 	}
     catch (const std::exception& e) {
@@ -122,6 +125,7 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                         reachableTiles.clear();
                         previewPath.clear();
                         hoveredEnemyUnit = nullptr;
+                        m_cursorIconCell = -1;
                         // selectedUnit stays selected so they can attack next click
                         return;
                     }
@@ -134,6 +138,7 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                     reachableTiles.clear();
                     previewPath.clear();
                     hoveredEnemyUnit = nullptr;
+                    m_cursorIconCell = -1;
                     return;
                 }
 
@@ -160,6 +165,7 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                 selectedUnit = nullptr;
                 reachableTiles.clear();
                 previewPath.clear();
+                m_cursorIconCell = -1;
             });
 
             gui.add(btn);
@@ -203,15 +209,71 @@ void SelectionController::handleEvent(const sf::Event& event) {
     gui.handleEvent(event);
 }
 
-void SelectionController::drawOverlays(sf::RenderTarget& target) const {
+void SelectionController::drawOverlays(sf::RenderTarget& target) {
     const sf::Vector2u tileSize = mapManager.getTileSize();
     const float tw = static_cast<float>(tileSize.x);
     const float th = static_cast<float>(tileSize.y);
 
+    // Compute tiles that should receive the enemy highlight (3x3 box around each in-range enemy)
+    std::vector<sf::Vector2i> enemyOverlayTiles;
+    if (selectedUnit) {
+        const sf::Vector2i unitGrid(
+            static_cast<int>(std::round(selectedUnit->getPosition().x / tw)),
+            static_cast<int>(std::round(selectedUnit->getPosition().y / th))
+        );
+        const int minRange = selectedUnit->getMinAttackRange();
+        const int maxRange = selectedUnit->getMaxAttackRange();
+        const int mapW = static_cast<int>(mapManager.getMapWidth());
+        const int mapH = static_cast<int>(mapManager.getMapHeight());
+
+        for (const auto& unit : mapManager.getUnits()) {
+            if (unit->getTeam() == selectedUnit->getTeam() || unit->isDead()) continue;
+
+            const sf::Vector2i enemyGrid(
+                static_cast<int>(std::round(unit->getPosition().x / tw)),
+                static_cast<int>(std::round(unit->getPosition().y / th))
+            );
+
+            auto inRange = [&](sf::Vector2i from) {
+                int dx = std::abs(enemyGrid.x - from.x);
+                int dy = std::abs(enemyGrid.y - from.y);
+                int d = (maxRange == 1) ? (dx + dy) : std::max(dx, dy);
+                return d >= minRange && d <= maxRange;
+            };
+
+            bool reachable = inRange(unitGrid);
+            if (!reachable) {
+                for (const auto& tile : reachableTiles) {
+                    if (inRange(tile)) { reachable = true; break; }
+                }
+            }
+            if (!reachable) continue;
+
+            for (int dy = -1; dy <= 1; ++dy) {
+                for (int dx = -1; dx <= 1; ++dx) {
+                    sf::Vector2i boxTile(enemyGrid.x + dx, enemyGrid.y + dy);
+                    if (boxTile.x >= 0 && boxTile.y >= 0 && boxTile.x < mapW && boxTile.y < mapH) {
+                        if (std::find(enemyOverlayTiles.begin(), enemyOverlayTiles.end(), boxTile) == enemyOverlayTiles.end())
+                            enemyOverlayTiles.push_back(boxTile);
+                    }
+                }
+            }
+        }
+    }
+
     sf::Sprite walkSprite(m_walkOverlayTexture);
     for (const auto& pos : reachableTiles) {
+        if (std::find(enemyOverlayTiles.begin(), enemyOverlayTiles.end(), pos) != enemyOverlayTiles.end()) continue;
         walkSprite.setPosition(sf::Vector2f(pos.x * tw, pos.y * th));
         target.draw(walkSprite);
+    }
+
+    if (!enemyOverlayTiles.empty()) {
+        sf::Sprite enemySprite(m_enemyOverlayTexture);
+        for (const auto& pos : enemyOverlayTiles) {
+            enemySprite.setPosition(sf::Vector2f(pos.x * tw, pos.y * th));
+            target.draw(enemySprite);
+        }
     }
 
     if (!previewPath.empty() && selectedUnit) {
@@ -299,12 +361,22 @@ void SelectionController::drawOverlays(sf::RenderTarget& target) const {
         overlay.setPosition(sf::Vector2f(enemyGrid.x * tw, enemyGrid.y * th));
         target.draw(overlay);
     }
-    if (m_cursorIconCell >= 0) {
-        sf::Sprite icon(m_iconsTexture);
-        icon.setTextureRect(sf::IntRect({ m_cursorIconCell * 32, 0 }, { 32, 32 }));
-        icon.setPosition({ m_cursorPos.x + 4.f, m_cursorPos.y + 4.f });
-        target.draw(icon);
-    }}
+}
+
+void SelectionController::drawCursorIcon(sf::RenderTarget& target) {
+    if (m_cursorIconCell < 0) return;
+
+    sf::View savedView = target.getView();
+    target.setView(target.getDefaultView());
+
+    sf::Sprite icon(m_iconsTexture);
+    icon.setTextureRect(sf::IntRect({ m_cursorIconCell * 32, 0 }, { 32, 32 }));
+    icon.setScale({ 1.2f, 1.2f });
+    icon.setPosition({ m_cursorPos.x + 15.f, m_cursorPos.y + 15.f });
+    target.draw(icon);
+
+    target.setView(savedView);
+}
 
 void SelectionController::drawGui() {
     gui.draw();

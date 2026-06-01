@@ -11,9 +11,10 @@ class Unit;
 
 class SelectionController {
 public:
-    SelectionController(sf::RenderWindow& window, MapManager& mapManager, const std::string& walkOverlayPath, const std::string& moveArrowPath, const std::string& iconsPath);
+    SelectionController(sf::RenderWindow& window, MapManager& mapManager, const std::string& walkOverlayPath, const std::string& moveArrowPath, const std::string& iconsPath, const std::string& enemyOverlayPath);
     void handleEvent(const sf::Event& event);
-    void drawOverlays(sf::RenderTarget& target) const;
+    void drawOverlays(sf::RenderTarget& target);
+    void drawCursorIcon(sf::RenderTarget& target);
     void drawGui();
 
 private:
@@ -28,6 +29,7 @@ private:
     sf::Texture m_walkOverlayTexture;
     sf::Texture m_moveArrowTexture;
     sf::Texture m_iconsTexture;
+    sf::Texture m_enemyOverlayTexture;
     sf::Vector2f m_cursorPos;
     int m_cursorIconCell{-1}; // -1 = hidden, 0 = walk, 1 = shoot
     sf::Vector2i m_preferredApproachDir{0, 0};
