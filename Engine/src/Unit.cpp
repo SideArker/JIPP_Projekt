@@ -28,7 +28,12 @@ Unit::Unit(const std::string& name, const std::string& artPath, const std::strin
       hitEffectDelay(data.hitEffectDelay), movementCategory(data.movementCategory)
 {
     texture = &TextureManager::getTexture(artPath, maskPath, TeamRegistry::getColor(team));
-    if(team == Team::Ally) animState.play(clipName("idle", currentDirection), *this->animSet);
+    const std::string directionalIdle = clipName("idle", currentDirection);
+    if (this->animSet->getClip(directionalIdle)) {
+        animState.play(directionalIdle, *this->animSet);
+    } else if (this->animSet->getClip("idle")) {
+        animState.play("idle", *this->animSet);
+    }
 }
 
 void Unit::setTeam(Team t) {
@@ -66,19 +71,37 @@ void Unit::update(float deltaTime) {
             m_shootPending = false;
             m_isShooting = true;
             auto target = m_pendingTarget.lock();
+
             if (target && !target->isDead()) {
                 if (onAttackStart)
                     onAttackStart(target, damage);
                 else
                     target->takeDamage(damage);
             }
+
             m_pendingTarget.reset();
             currentDirection = m_pendingShootDir;
             const std::string clip = clipName("shoot", m_pendingShootDir);
-            if (!animSet->getClip(clip))
+
+           if (!animSet->getClip(clip)) {
                 m_isShooting = false;
-            else
-                animState.play(clip, *animSet, [this]() { m_isShooting = false; });
+
+                if (onAttackFinished) {
+                    onAttackFinished();
+                    onAttackFinished = nullptr; // Clean up
+                }
+
+            } else {
+                animState.play(clip, *animSet, [this]() { 
+                    m_isShooting = false; 
+
+                    if (onAttackFinished) {
+                        onAttackFinished();
+                        onAttackFinished = nullptr; // Clean up
+                    }
+                    
+                });
+            }
         }
         if (m_isShooting) {
             animState.update(deltaTime);
@@ -86,9 +109,19 @@ void Unit::update(float deltaTime) {
         }
         currentSpeed = 0.0f;
 
-        if (team == Team::Ally) {
-            animState.play("idle", *animSet);
+        const std::string directionalIdle = clipName("idle", currentDirection);
+        const AnimationClip* targetIdleClip = animSet->getClip(directionalIdle);
+        if (targetIdleClip) {
+            if (animState.getCurrentClip() != targetIdleClip) {
+                animState.play(directionalIdle, *animSet);
+            }
+        } else {
+            targetIdleClip = animSet->getClip("idle");
+            if (targetIdleClip && animState.getCurrentClip() != targetIdleClip) {
+                animState.play("idle", *animSet);
+            }
         }
+
         animState.update(deltaTime);
         return;
     }

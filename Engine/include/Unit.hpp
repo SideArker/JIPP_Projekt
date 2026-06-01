@@ -24,13 +24,13 @@ enum class Team {
 };
 
 struct ENGINE_API UnitData {
-	int   maxHealth             = 1;
-	int   damage                = 1;
-	int   moveSpeed             = 3;
-	int   minAttackRange        = 0;
-	int   maxAttackRange        = 1;
-	float hitEffectDelay        = 0.0f;
-	float attackDamageDelay     = 0.75f;
+	int maxHealth = 1;
+	int damage = 1;
+	int moveSpeed = 3;
+	int minAttackRange = 0;
+	int maxAttackRange = 1;
+	float hitEffectDelay = 0.0f;
+	float attackDamageDelay = 0.75f;
 	MovementCategory movementCategory = MovementCategory::Ground;
 	std::string deathEffectSet;
 	std::string deathEffectClip;
@@ -61,12 +61,12 @@ protected:
 	AnimationState animState;
 	Team team = Team::Neutral;
 	std::bitset<static_cast<std::size_t>(UnitFlag::Count)> flags;
-	int   health;
-	int   maxHealth;
-	int   damage;
-	int   moveSpeed;
-	int   minAttackRange;
-	int   maxAttackRange;
+	int health;
+	int maxHealth;
+	int damage;
+	int moveSpeed;
+	int minAttackRange;
+	int maxAttackRange;
 	float hitEffectDelay;
 	MovementCategory movementCategory = MovementCategory::Ground;
 
@@ -135,4 +135,5 @@ public:
 
 	std::function<void(sf::Vector2f, int health)> onDamaged;	
 	std::function<void(std::shared_ptr<Unit>, int)> onAttackStart;
+	std::function<void()> onAttackFinished;
 };

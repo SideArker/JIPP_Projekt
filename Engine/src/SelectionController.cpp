@@ -78,6 +78,33 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                 // Check for enemy unit on this tile
                 auto unitAtTile = mapManager.getUnitAtTile(gridPos);
                 if (unitAtTile && unitAtTile != selectedUnit && unitAtTile->getTeam() != selectedUnit->getTeam()) {
+                    const int minRange = selectedUnit->getMinAttackRange();
+                    const int maxRange = selectedUnit->getMaxAttackRange();
+                    auto canAttackFrom = [&](sf::Vector2i from) {
+                        const int dx = std::abs(gridPos.x - from.x);
+                        const int dy = std::abs(gridPos.y - from.y);
+                        const int distance = (maxRange == 1) ? (dx + dy) : std::max(dx, dy);
+                        return distance >= minRange && distance <= maxRange;
+                    };
+
+                    bool canAttackThisAction = canAttackFrom(unitGrid);
+                    if (!canAttackThisAction) {
+                        for (const auto& tile : reachableTiles) {
+                            if (canAttackFrom(tile)) {
+                                canAttackThisAction = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!canAttackThisAction) {
+                        hoveredEnemyUnit = nullptr;
+                        previewPath.clear();
+                        m_preferredApproachDir = {0, 0};
+                        m_cursorIconCell = -1;
+                        return;
+                    }
+
                     hoveredEnemyUnit = unitAtTile;
                     m_preferredApproachDir = {0, 0};
                     m_cursorIconCell = 1;
@@ -113,14 +140,35 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                         static_cast<int>(std::round(selectedUnit->getPosition().y / static_cast<float>(tileSize.y)))
                     );
                     sf::Vector2i attackerEnd = previewPath.empty() ? attackerGrid : previewPath.back();
+
                     int dx = gridPos.x - attackerEnd.x;
                     int dy = gridPos.y - attackerEnd.y;
+                    
+                    int distanceToTarget = (selectedUnit->getMaxAttackRange() == 1) 
+                                            ? (std::abs(dx) + std::abs(dy)) 
+                                            : std::max(std::abs(dx), std::abs(dy));
+
+                    if (distanceToTarget < selectedUnit->getMinAttackRange() || distanceToTarget > selectedUnit->getMaxAttackRange()) {
+                        // The enemy is completely out of range. 
+
+                        if (!previewPath.empty()) {
+                            selectedUnit->move(previewPath);
+                            m_turnController.markActed(*selectedUnit);
+                        }
+
+                        selectedUnit = nullptr;
+                        reachableTiles.clear();
+                        previewPath.clear();
+                        hoveredEnemyUnit = nullptr;
+                        m_cursorIconCell = -1;
+                        return;
+                    }
+
                     MoveDirection shootDir = (std::abs(dx) >= std::abs(dy))
                         ? (dx >= 0 ? MoveDirection::Right : MoveDirection::Left)
                         : (dy >= 0 ? MoveDirection::Down : MoveDirection::Up);
 
                     // Ranged units cannot move and attack in the same action.
-                    // If they need to move to reach the target, just move
                     if (!previewPath.empty() && selectedUnit->getMaxAttackRange() > 1) {
                         selectedUnit->move(previewPath);
                         m_turnController.markActed(*selectedUnit);
@@ -135,8 +183,17 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                     if (!previewPath.empty()) {
                         selectedUnit->move(previewPath);
                     }
+
+                    auto unitToMark = selectedUnit; // Capture the smart pointer safely
+                    auto* self = this;
+                    unitToMark->onAttackFinished = [self, unitToMark]() {
+                        self->mapManager.runWhenAllActionsFinished([self, unitToMark]() {
+                            self->m_turnController.markActed(*unitToMark);
+                        });
+                    };
+
                     selectedUnit->dealDamage(hoveredEnemyUnit, shootDir);
-                    m_turnController.markActed(*selectedUnit);
+                    
                     selectedUnit = nullptr;
                     reachableTiles.clear();
                     previewPath.clear();

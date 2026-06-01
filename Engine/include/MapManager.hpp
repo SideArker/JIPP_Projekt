@@ -48,6 +48,7 @@ private:
 
 	std::vector<Effect> m_effects;
 	std::vector<std::pair<float, std::function<void()>>> m_pendingActions;
+	std::vector<std::function<void()>> m_whenIdleActions;
 	TurnController m_turnController;
 
 	void spawnEffect(const std::string& setName, const std::string& clipName, const std::string& texturePath, sf::Vector2f position, float yOffset = 0.f);
@@ -74,6 +75,7 @@ public:
 	void draw(sf::RenderTarget& target);
 	void drawUI();
 	bool isAnyUnitActing() const;
+	void runWhenAllActionsFinished(std::function<void()> action);
 	void endTurn();
 	Team getCurrentTeam() const;
 	TurnController& getTurnController();

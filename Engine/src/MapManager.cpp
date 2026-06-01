@@ -10,6 +10,8 @@
 #include <cmath>
 #include <algorithm>
 
+// Core gameplay file that manages the map, units, buildings, and turn logic.
+
 struct Node {
     sf::Vector2i pos;
     int gCost = 0;
@@ -44,16 +46,16 @@ void MapManager::spawnUnit(std::shared_ptr<Unit> unit, int gridX, int gridY) {
     auto weakUnit = std::weak_ptr<Unit>(unit);
     std::string typeName = unit->getName();
 
-    const UnitData* data   = UnitRegistry::getData(typeName);
-    float attackDelay      = data ? data->attackDamageDelay        : 0.75f;
-    float hitDelay         = unit->getHitEffectDelay();
-    std::string deathSet   = data ? data->deathEffectSet           : "";
-    std::string deathClip  = data ? data->deathEffectClip          : "";
-    std::string deathTex   = data ? data->deathEffectTexturePath   : "";
-    std::string deathSSet  = data ? data->deathSoundSet            : "";
-    std::string deathSName = data ? data->deathSoundName           : "";
+    const UnitData* data = UnitRegistry::getData(typeName);
+    float attackDelay = data ? data->attackDamageDelay: 0.75f;
+    float hitDelay = unit->getHitEffectDelay();
+    std::string deathSet = data ? data->deathEffectSet: "";
+    std::string deathClip = data ? data->deathEffectClip: "";
+    std::string deathTex = data ? data->deathEffectTexturePath: "";
+    std::string deathSSet = data ? data->deathSoundSet: "";
+    std::string deathSName = data ? data->deathSoundName: "";
 
-    unit->onAttackStart = [this, typeName, hitDelay, attackDelay](std::shared_ptr<Unit> target, int dmg) {
+    unit->onAttackStart = [this, typeName, hitDelay, attackDelay, unit](std::shared_ptr<Unit> target, int dmg) {
         SoundManager::play(typeName, "shoot");
         sf::Vector2f targetPos = target->getPosition();
         if (hitDelay <= 0.f) {
@@ -65,7 +67,7 @@ void MapManager::spawnUnit(std::shared_ptr<Unit> unit, int gridX, int gridY) {
                 SoundManager::play(typeName, "hit");
             } });
         }
-        m_pendingActions.push_back({ hitDelay + attackDelay, [target, dmg]() {
+        m_pendingActions.push_back({ hitDelay + attackDelay, [target, dmg, unit]() {
             if (!target->isDead())
                 target->takeDamage(dmg);
         } });
@@ -136,6 +138,14 @@ void MapManager::update(float deltaTime) {
             [](const auto& p) { return p.first <= 0.f; }),
         m_pendingActions.end()
     );
+
+    if (!isAnyUnitActing() && !m_whenIdleActions.empty()) {
+        auto callbacks = std::move(m_whenIdleActions);
+        m_whenIdleActions.clear();
+        for (auto& cb : callbacks) {
+            if (cb) cb();
+        }
+    }
 }
 
 void MapManager::draw(sf::RenderTarget& target) {
@@ -155,7 +165,7 @@ void MapManager::draw(sf::RenderTarget& target) {
         sf::Sprite unitSprite(unit->getCurrentTexture());
         sf::IntRect rect = unit->getCurrentRect();
         unitSprite.setTextureRect(rect);
-        if (unit->hasActed())
+        if (unit->hasActed() && !unit->isActing())
             unitSprite.setColor(sf::Color(150, 150, 150));
         if (unit->shouldFlipX()) {
             unitSprite.setScale({ -1.f, 1.f });
@@ -165,6 +175,8 @@ void MapManager::draw(sf::RenderTarget& target) {
         }
         target.draw(unitSprite);
 
+        // Start music
+        SoundManager::playMusic("AllyTurn");
         if (m_unitRenderCallback)
             m_unitRenderCallback(target, *unit, acting);
 
@@ -267,6 +279,15 @@ bool MapManager::isAnyUnitActing() const {
         [](const std::shared_ptr<Unit>& u) { return u->isActing(); })
         || !m_pendingActions.empty()
         || !m_effects.empty();
+}
+
+void MapManager::runWhenAllActionsFinished(std::function<void()> action) {
+    if (!action) return;
+    if (!isAnyUnitActing()) {
+        action();
+        return;
+    }
+    m_whenIdleActions.push_back(std::move(action));
 }
 
 
