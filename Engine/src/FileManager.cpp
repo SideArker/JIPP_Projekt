@@ -50,7 +50,7 @@ static void writeMapBlock(std::ostream& out, const MapFile& map) {
     writeVal(out, static_cast<uint32_t>(map.tiles.size()));
     for (const auto& tile : map.tiles) {
         writeVal(out, static_cast<int32_t>(tile.getArtId()));
-        writeVal(out, static_cast<uint8_t>(tile.isWalkable() ? 1 : 0));
+        writeVal(out, static_cast<uint8_t>(tile.getTerrain()));
     }
 
     writeVal(out, static_cast<uint32_t>(map.spawns.size()));
@@ -84,9 +84,9 @@ static bool readMapBlock(std::istream& in, MapFile& map, uint32_t version) {
     map.tiles.reserve(tileCount);
     for (uint32_t i = 0; i < tileCount; ++i) {
         int32_t artId;
-        uint8_t walkable;
-        if (!readVal(in, artId) || !readVal(in, walkable)) return false;
-        map.tiles.emplace_back(static_cast<int>(artId), walkable != 0);
+        uint8_t terrain;
+        if (!readVal(in, artId) || !readVal(in, terrain)) return false;
+        map.tiles.emplace_back(static_cast<int>(artId), static_cast<TerrainType>(terrain));
     }
 
     uint32_t spawnCount;

@@ -77,8 +77,8 @@ public:
 
 	const std::vector<std::shared_ptr<Unit>>& getUnits() const { return units; }
 
-	std::vector<sf::Vector2i> findPath(sf::Vector2i start, sf::Vector2i goal, Team movingTeam);
-	std::vector<sf::Vector2i> getReachableTiles(sf::Vector2i from, int moveRange, Team movingTeam) const;
+	std::vector<sf::Vector2i> findPath(sf::Vector2i start, sf::Vector2i goal, Team movingTeam, MovementCategory category);
+	std::vector<sf::Vector2i> getReachableTiles(sf::Vector2i from, int moveRange, Team movingTeam, MovementCategory category) const;
 	std::shared_ptr<Unit> getUnitAtTile(sf::Vector2i gridPos) const;
 	sf::Vector2u getTileSize() const;
 	unsigned int getMapWidth() const;

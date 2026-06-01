@@ -1,13 +1,15 @@
 #pragma once
 
 #include "EngineAPI.hpp"
+#include "TerrainMovement.hpp"
+
 class ENGINE_API Tile {
 private:
 	int artId;
-	bool walkable;
+	TerrainType terrain;
 public:
-	Tile(int artId, bool walkable) : artId(artId), walkable(walkable) {}
+	Tile(int artId, TerrainType terrain) : artId(artId), terrain(terrain) {}
 
 	int getArtId() const;
-	bool isWalkable() const;
+	TerrainType getTerrain() const;
 };

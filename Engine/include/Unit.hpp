@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EngineAPI.hpp"
+#include "TerrainMovement.hpp"
 #include "AnimationManager.hpp"
 #include <SFML/Graphics.hpp>
 #include <memory>
@@ -30,6 +31,7 @@ struct ENGINE_API UnitData {
 	int   maxAttackRange        = 1;
 	float hitEffectDelay        = 0.0f;
 	float attackDamageDelay     = 0.75f;
+	MovementCategory movementCategory = MovementCategory::Ground;
 	std::string deathEffectSet;
 	std::string deathEffectClip;
 	std::string deathEffectTexturePath;
@@ -40,7 +42,6 @@ struct ENGINE_API UnitData {
 enum class UnitFlag {
 	DamageMultToInfantry,
 	Capture,
-	CanFly,
 	IsArmored,
 
 	// Always keep this last!
@@ -67,6 +68,7 @@ protected:
 	int   minAttackRange;
 	int   maxAttackRange;
 	float hitEffectDelay;
+	MovementCategory movementCategory = MovementCategory::Ground;
 
 	std::vector<sf::Vector2i> path;
 	sf::Vector2f position = sf::Vector2f(0, 0);
@@ -105,6 +107,7 @@ public:
 	int getMaxHealth() const { return maxHealth; }
 
 	float getMoveSpeed() const { return moveSpeed; }
+	MovementCategory getMovementCategory() const { return movementCategory; }
 	int   getMinAttackRange()   const { return minAttackRange; }
 	int   getMaxAttackRange()   const { return maxAttackRange; }
 	float getHitEffectDelay()   const { return hitEffectDelay; }

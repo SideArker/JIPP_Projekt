@@ -31,6 +31,7 @@ void registerSoldier() {
     soldierData.minAttackRange = 0;
     soldierData.maxAttackRange = 1;
     soldierData.attackDamageDelay = 0.75f;
+    soldierData.movementCategory = MovementCategory::Infantry;
     soldierData.deathEffectSet = "explosion";
     soldierData.deathEffectClip  = "explode";
     soldierData.deathEffectTexturePath = "Art/Effects/Explosion.png";

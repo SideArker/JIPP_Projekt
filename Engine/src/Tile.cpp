@@ -4,6 +4,6 @@ int Tile::getArtId() const {
 	return artId;
 }
 
-bool Tile::isWalkable() const {
-	return walkable;
+TerrainType Tile::getTerrain() const {
+    return terrain;
 }

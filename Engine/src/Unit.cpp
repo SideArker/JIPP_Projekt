@@ -25,7 +25,7 @@ Unit::Unit(const std::string& name, const std::string& artPath, const std::strin
       animSet(&animSet), team(team),
       health(data.maxHealth), maxHealth(data.maxHealth), damage(data.damage),
       moveSpeed(data.moveSpeed), minAttackRange(data.minAttackRange), maxAttackRange(data.maxAttackRange),
-      hitEffectDelay(data.hitEffectDelay)
+      hitEffectDelay(data.hitEffectDelay), movementCategory(data.movementCategory)
 {
     texture = &TextureManager::getTexture(artPath, maskPath, TeamRegistry::getColor(team));
     if(team == Team::Ally) animState.play(clipName("idle", currentDirection), *this->animSet);

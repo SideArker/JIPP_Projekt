@@ -4,6 +4,7 @@
 #include <optional>
 #include "MapManager.hpp"
 #include "Unit.hpp"
+#include "TerrainMovement.hpp"
 #include "FileManager.hpp"
 #include "MapFile.hpp"
 #include "UnitRegistry.hpp"
@@ -20,16 +21,17 @@ static void createDefaultLevel1() {
     map.tileSize    = { 32, 32 };
     map.width       = 8;
     map.height      = 7;
+    using T = TerrainType;
     map.tiles = {
-        {18, true},  {19, true},  {19, true},  {19, true},  {19, true},  {19, true},  {19, true},  {9, true},
-        {13, false}, {2, true},   {3, true},   {17, false}, {7, false},  {17, false}, {3, true},   {5, false},
-        {13, false}, {2, true},   {7, false},  {7, false},  {17, false}, {7, false},  {7, false},  {5, false},
-        {13, false}, {2, true},   {3, true},   {12, true},  {2, true},   {2, true},   {4, true},   {5, false},
-        {13, false}, {10, true},  {10, true},  {11, true},  {10, true},  {10, true},  {16, true},  {5, false},
-        {13, false}, {2, true},   {2, true},   {2, true},   {2, true},   {2, true},   {2, true},   {5, false},
-        {14, false}, {15, false}, {15, false}, {15, false}, {15, false}, {15, false}, {15, false}, {8, false}
+        {18, T::Grass},    {19, T::Grass},    {19, T::Grass},    {19, T::Grass},    {19, T::Grass},    {19, T::Grass},    {19, T::Grass},    {9,  T::Grass},
+        {13, T::Grass},    {2,  T::Grass},    {3,  T::Grass},    {17, T::Mountain}, {7,  T::Mountain}, {17, T::Mountain}, {3,  T::Grass},    {5,  T::Grass},
+        {13, T::Grass},    {2,  T::Grass},    {7,  T::Mountain}, {7,  T::Mountain}, {17, T::Mountain}, {7,  T::Mountain}, {7,  T::Mountain}, {5,  T::Grass},
+        {13, T::Grass},    {2,  T::Grass},    {3,  T::Grass},    {12, T::Road},     {2,  T::Grass},    {2,  T::Grass},    {4,  T::Grass},    {5,  T::Grass},
+        {13, T::Grass},    {10, T::Road},     {10, T::Road},     {11, T::Road},     {10, T::Road},     {10, T::Road},     {16, T::Road},     {5,  T::Grass},
+        {13, T::Grass},    {2,  T::Grass},    {2,  T::Grass},    {2,  T::Grass},    {2,  T::Grass},    {2,  T::Grass},    {2,  T::Grass},    {5,  T::Grass},
+        {14, T::Grass},    {15, T::Grass},    {15, T::Grass},    {15, T::Grass},    {15, T::Grass},    {15, T::Grass},    {15, T::Grass},    {8,  T::Grass}
     };
-    map.spawns = { { "MissileTank", 2, 2, Team::Ally },{ "Tank", 3, 3, Team::Ally },{ "Soldier" , 3, 4, Team::Ally }, {"Tank", 5, 4, Team::Enemy }};
+    map.spawns = { { "MissileTank", 1, 1, Team::Ally },{ "Tank", 3, 3, Team::Ally },{ "Soldier" , 3, 4, Team::Ally }, {"Tank", 5, 4, Team::Enemy }};
     FileManager::saveMap(map, LEVEL1_PATH);
 }
 

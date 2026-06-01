@@ -230,7 +230,7 @@ std::shared_ptr<Unit> MapManager::getUnitAtTile(sf::Vector2i gridPos) const {
     return nullptr;
 }
 
-std::vector<sf::Vector2i> MapManager::getReachableTiles(sf::Vector2i from, int moveRange, Team movingTeam) const {
+std::vector<sf::Vector2i> MapManager::getReachableTiles(sf::Vector2i from, int moveRange, Team movingTeam, MovementCategory category) const {
     std::vector<sf::Vector2i> reachable;
     std::unordered_map<int, int> visited;
     std::queue<std::pair<sf::Vector2i, int>> bfsQueue;
@@ -258,7 +258,7 @@ std::vector<sf::Vector2i> MapManager::getReachableTiles(sf::Vector2i from, int m
             if (next.x < 0 || next.y < 0 ||
                 next.x >= static_cast<int>(mapWidth) ||
                 next.y >= static_cast<int>(mapHeight)) continue;
-            if (!mapData[next.x + next.y * static_cast<int>(mapWidth)].isWalkable()) continue;
+            if (!canTraverse(mapData[next.x + next.y * static_cast<int>(mapWidth)].getTerrain(), category)) continue;
             auto occupant = getUnitAtTile(next);
             if (occupant != nullptr && occupant->getTeam() != movingTeam) continue;
             int key = next.x + next.y * static_cast<int>(mapWidth);
@@ -275,11 +275,11 @@ static int getManhattanDistance(sf::Vector2i a, sf::Vector2i b) {
     return std::abs(a.x - b.x) + std::abs(a.y - b.y);
 }
 
-std::vector<sf::Vector2i> MapManager::findPath(sf::Vector2i start, sf::Vector2i goal, Team movingTeam) {
+std::vector<sf::Vector2i> MapManager::findPath(sf::Vector2i start, sf::Vector2i goal, Team movingTeam, MovementCategory category) {
     std::vector<sf::Vector2i> path;
     auto isValid = [&](int x, int y) {
         if (x < 0 || x >= static_cast<int>(mapWidth) || y < 0 || y >= static_cast<int>(mapHeight)) return false;
-        return mapData[x + y * static_cast<int>(mapWidth)].isWalkable();
+        return canTraverse(mapData[x + y * static_cast<int>(mapWidth)].getTerrain(), category);
     };
 
     if (!isValid(start.x, start.y) || !isValid(goal.x, goal.y)) {

@@ -42,6 +42,7 @@ void registerTank() {
     tankData.minAttackRange = 0;
     tankData.maxAttackRange = 1;
     tankData.attackDamageDelay = 0.75f;
+    tankData.movementCategory = MovementCategory::Ground;
     tankData.deathEffectSet = "explosion";
     tankData.deathEffectClip = "explode";
     tankData.deathEffectTexturePath = "Art/Effects/Explosion.png";

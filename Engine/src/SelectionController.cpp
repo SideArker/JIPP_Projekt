@@ -92,7 +92,7 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                     m_cursorIconCell = -1;
                     return;
                 }
-                previewPath = mapManager.findPath(unitGrid, gridPos, selectedUnit->getTeam());
+                previewPath = mapManager.findPath(unitGrid, gridPos, selectedUnit->getTeam(), selectedUnit->getMovementCategory());
                 m_cursorIconCell = 0;
             });
 
@@ -150,7 +150,7 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                         static_cast<int>(std::round(unitAtTile->getPosition().x / static_cast<float>(tileSize.x))),
                         static_cast<int>(std::round(unitAtTile->getPosition().y / static_cast<float>(tileSize.y)))
                     );
-                    reachableTiles = mapManager.getReachableTiles(unitGrid, unitAtTile->getMoveSpeed(), unitAtTile->getTeam());
+                    reachableTiles = mapManager.getReachableTiles(unitGrid, unitAtTile->getMoveSpeed(), unitAtTile->getTeam(), unitAtTile->getMovementCategory());
                     previewPath.clear();
                     hoveredEnemyUnit = nullptr;
                     return;
@@ -405,7 +405,7 @@ void SelectionController::updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i 
         sf::Vector2i preferred = enemyGrid + preferredDir;
         if (preferred != unitGrid && inRange(preferred) &&
             std::find(reachableTiles.begin(), reachableTiles.end(), preferred) != reachableTiles.end()) {
-            auto path = mapManager.findPath(unitGrid, preferred, selectedUnit->getTeam());
+            auto path = mapManager.findPath(unitGrid, preferred, selectedUnit->getTeam(), selectedUnit->getMovementCategory());
             if (!path.empty()) {
                 previewPath = path;
                 return;
@@ -417,7 +417,7 @@ void SelectionController::updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i 
     std::vector<sf::Vector2i> bestPath;
     for (const auto& tile : reachableTiles) {
         if (!inRange(tile)) continue;
-        auto path = mapManager.findPath(unitGrid, tile, selectedUnit->getTeam());
+        auto path = mapManager.findPath(unitGrid, tile, selectedUnit->getTeam(), selectedUnit->getMovementCategory());
         if (!path.empty() && (bestPath.empty() || path.size() < bestPath.size())) {
             bestPath = path;
         }

@@ -49,6 +49,7 @@ void registerMissileTank() {
     data.maxAttackRange = 6;
     data.hitEffectDelay = 1.1f;
     data.attackDamageDelay = 0.9f;
+    data.movementCategory = MovementCategory::Ground;
     data.deathEffectSet = "explosion";
     data.deathEffectClip = "explode";
     data.deathEffectTexturePath = "Art/Effects/Explosion.png";
