@@ -17,6 +17,9 @@ public:
     void drawOverlays(sf::RenderTarget& target);
     void drawCursorIcon(sf::RenderTarget& target);
     void drawGui();
+    void clearSelection();
+    void syncCameraView(sf::View gameView);
+    tgui::Gui& getGui() { return gui; }
 
 private:
     void updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i unitGrid, sf::Vector2i preferredDir);
@@ -41,3 +44,4 @@ private:
     std::vector<tgui::Button::Ptr> m_tileButtons;
     tgui::Label::Ptr m_turnLabel;
 };
+

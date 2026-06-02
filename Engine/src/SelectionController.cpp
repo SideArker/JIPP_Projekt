@@ -9,17 +9,15 @@ static sf::Vector2i computeApproachDir(sf::Vector2f localPos, float btnW, float 
     float rx = localPos.x / btnW;
     float ry = localPos.y / btnH;
 
-    // Centre deadzone: show the easiest (shortest) attack path
     const float deadzone = 0.28f;
     if (rx > deadzone && rx < 1.f - deadzone && ry > deadzone && ry < 1.f - deadzone)
         return {0, 0};
-
-    // Outer area divided by diagonal lines into 4 quadrants.
-    // Corners are assigned to the nearest cardinal direction.
-    if (ry < rx && ry < 1.f - rx) return { 0, -1 };  // top
-    if (ry > rx && ry > 1.f - rx) return { 0,  1 };  // bottom
-    if (rx <= ry && rx <= 1.f - ry) return {-1,  0 }; // left
-    return { 1,  0 };                                   // right
+    
+    
+        if (ry < rx && ry < 1.f - rx) return { 0, -1 };
+    if (ry > rx && ry > 1.f - rx) return { 0,  1 };
+    if (rx <= ry && rx <= 1.f - ry) return {-1,  0 };
+    return { 1,  0 };
 }
 
 SelectionController::SelectionController(sf::RenderWindow& window, MapManager& mapManager, TurnController& turnController, const std::string& walkOverlayPath, const std::string& moveArrowPath, const std::string& iconsPath, const std::string& enemyOverlayPath)
@@ -318,6 +316,9 @@ void SelectionController::handleEvent(const sf::Event& event) {
 }
 
 void SelectionController::drawOverlays(sf::RenderTarget& target) {
+    if (m_turnController.getCurrentTeam() == Team::Enemy)
+        return;
+
     const sf::Vector2u tileSize = mapManager.getTileSize();
     const float tw = static_cast<float>(tileSize.x);
     const float th = static_cast<float>(tileSize.y);
@@ -486,26 +487,37 @@ void SelectionController::drawCursorIcon(sf::RenderTarget& target) {
     target.setView(savedView);
 }
 
+void SelectionController::clearSelection() {
+    selectedUnit = nullptr;
+    reachableTiles.clear();
+    previewPath.clear();
+    hoveredEnemyUnit = nullptr;
+    m_cursorIconCell = -1;
+}
+
+void SelectionController::syncCameraView(sf::View gameView) {
+    const sf::Vector2u tileSize = mapManager.getTileSize();
+    const unsigned int mapW = mapManager.getMapWidth();
+    for (size_t i = 0; i < m_tileButtons.size(); ++i) {
+        unsigned int tx = static_cast<unsigned int>(i) % mapW;
+        unsigned int ty = static_cast<unsigned int>(i) / mapW;
+        sf::Vector2f worldPos(tx * static_cast<float>(tileSize.x),
+                              ty * static_cast<float>(tileSize.y));
+        sf::Vector2i screenPos = m_window.mapCoordsToPixel(worldPos, gameView);
+        m_tileButtons[i]->setPosition(static_cast<float>(screenPos.x),
+                                      static_cast<float>(screenPos.y));
+    }
+}
+
 void SelectionController::drawGui() {
     if (m_turnLabel) {
         const std::string teamStr = (m_turnController.getCurrentTeam() == Team::Ally) ? "Ally" : "Enemy";
         m_turnLabel->setText("Turn " + std::to_string(m_turnController.getTurnNumber()) + " - " + teamStr);
     }
-
-    const sf::Vector2u tileSize = mapManager.getTileSize();
-    const unsigned int mapW = mapManager.getMapWidth();
-    const sf::View gameView = m_window.getView();
-    for (size_t i = 0; i < m_tileButtons.size(); ++i) {
-        unsigned int tx = static_cast<unsigned int>(i) % mapW;
-        unsigned int ty = static_cast<unsigned int>(i) / mapW;
-        sf::Vector2f worldPos(tx * static_cast<float>(tileSize.x), ty * static_cast<float>(tileSize.y));
-        sf::Vector2i screenPos = m_window.mapCoordsToPixel(worldPos, gameView);
-        m_tileButtons[i]->setPosition(static_cast<float>(screenPos.x), static_cast<float>(screenPos.y));
-    }
-
+    sf::View savedView = m_window.getView();
     m_window.setView(m_window.getDefaultView());
     gui.draw();
-    m_window.setView(gameView);
+    m_window.setView(savedView);
 }
 
 void SelectionController::updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i unitGrid, sf::Vector2i preferredDir) {

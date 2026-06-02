@@ -7,6 +7,8 @@
 #include "TurnController.hpp"
 #include <Unit.hpp>
 #include "Building.hpp"
+#include <TGUI/TGUI.hpp>
+#include <TGUI/Backend/SFML-Graphics.hpp>
 #include <functional>
 #include <map>
 #include <memory>
@@ -82,8 +84,11 @@ public:
 	bool isAnyUnitActing() const;
 	void runWhenAllActionsFinished(std::function<void()> action);
 	void endTurn();
+	void requestEndTurn();
 	Team getCurrentTeam() const;
 	TurnController& getTurnController();
+	tgui::Gui* getGui();
+	void syncCameraView(const sf::View& gameView);
 
 	void setHitEffect(std::string setName, std::string clipName, std::string texturePath);
 	void setTeamCaptureEffect(std::string texturePath, std::string maskPath);

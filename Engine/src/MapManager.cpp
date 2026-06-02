@@ -348,6 +348,19 @@ TurnController& MapManager::getTurnController() {
     return m_turnController;
 }
 
+void MapManager::requestEndTurn() {
+    if (selectionController) selectionController->clearSelection();
+    endTurn();
+}
+
+tgui::Gui* MapManager::getGui() {
+    return selectionController ? &selectionController->getGui() : nullptr;
+}
+
+void MapManager::syncCameraView(const sf::View& gameView) {
+    if (selectionController) selectionController->syncCameraView(gameView);
+}
+
 void MapManager::setWalkOverlayPath(std::string path) {
     m_walkOverlayPath = std::move(path);
 }

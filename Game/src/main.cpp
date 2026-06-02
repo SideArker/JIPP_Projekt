@@ -3,6 +3,7 @@
 #include <memory>
 #include <optional>
 #include "CameraController.hpp"
+#include "RightPanelUI.hpp"
 #include "MapManager.hpp"
 #include "Unit.hpp"
 #include "TerrainMovement.hpp"
@@ -45,7 +46,8 @@ static void createDefaultLevel1() {
 
 int main() {
     sf::RenderWindow window(sf::VideoMode({ 1920, 1080 }), "Map Renderer", sf::State::Windowed);
-    sf::View view(sf::FloatRect({ 0.f, 0.f }, { 640.f, 360.f }));
+    sf::View view(sf::FloatRect({ 0.f, 0.f }, { 480.f, 256.f }));
+    view.setViewport(sf::FloatRect({ 0.f, 0.f }, { 1440.f / 1920.f, 768.f / 1080.f }));
 
 
     sf::Vector2f center = sf::Vector2f(0.f, 0.f);
@@ -64,6 +66,17 @@ int main() {
         mapManager.getMapHeight() * mapManager.getTileSize().y
     );
     cameraController.init(view, mapPixels, window.getSize());
+
+    if (tgui::Gui* gui = mapManager.getGui()) {
+        auto panels = buildRightPanelUI(
+            *gui,
+            480.f, 0.f,
+            static_cast<float>(window.getSize().x) / 640.f,
+            static_cast<float>(window.getSize().y) / 360.f,
+            2, 80.f
+        );
+        panels.endTurnBtn->onClick([&mapManager]() { mapManager.requestEndTurn(); });
+    }
 
     AIController aiController;
     sf::Clock clock;
@@ -90,11 +103,13 @@ int main() {
                 mapManager.endTurn();
             }
         } else {
+            cameraController.release();
             aiController.reset();
         }
 
         mapManager.update(deltaTime);
         cameraController.update(deltaTime, window);
+        mapManager.syncCameraView(cameraController.getView());
 
         window.clear();
         window.setView(cameraController.getView());
