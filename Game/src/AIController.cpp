@@ -1,4 +1,5 @@
 #include "AIController.hpp"
+#include "CameraController.hpp"
 #include "Building.hpp"
 #include <algorithm>
 #include <climits>
@@ -74,7 +75,7 @@ void AIController::buildQueue(MapManager& mapManager) {
     }
 }
 
-void AIController::update(float dt, MapManager& mapManager, TurnController& tc) {
+void AIController::update(float dt, MapManager& mapManager, TurnController& tc, CameraController& camera) {
     if (!m_started) {
         buildQueue(mapManager);
         m_started = true;
@@ -82,18 +83,22 @@ void AIController::update(float dt, MapManager& mapManager, TurnController& tc) 
 
     if (m_waitTimer > 0.f) { m_waitTimer -= dt; return; }
     if (mapManager.isAnyUnitActing()) return;
-    if (m_queue.empty()) return;
+    if (m_queue.empty()) { camera.release(); return; }
 
-    processNextUnit(mapManager, tc);
+    processNextUnit(mapManager, tc, camera);
     m_waitTimer = ACTION_DELAY;
 }
 
-void AIController::processNextUnit(MapManager& mapManager, TurnController& tc) {
+void AIController::processNextUnit(MapManager& mapManager, TurnController& tc, CameraController& camera) {
+    camera.release();
+
     while (!m_queue.empty()) {
         auto unit = m_queue.front();
         m_queue.erase(m_queue.begin());
 
         if (unit->isDead() || unit->hasActed()) continue;
+
+        camera.trackUnit(unit);
 
         bool openingNeutralFocus = tc.getTurnNumber() <= 2;
 

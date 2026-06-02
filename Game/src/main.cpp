@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include "CameraController.hpp"
 #include "MapManager.hpp"
 #include "Unit.hpp"
 #include "TerrainMovement.hpp"
@@ -57,6 +58,13 @@ int main() {
     if (!mapManager.loadFromFile(LEVEL1_PATH)) return -1;
     mapManager.setupInput(window);
 
+    CameraController cameraController;
+    sf::Vector2u mapPixels(
+        mapManager.getMapWidth()  * mapManager.getTileSize().x,
+        mapManager.getMapHeight() * mapManager.getTileSize().y
+    );
+    cameraController.init(view, mapPixels, window.getSize());
+
     AIController aiController;
     sf::Clock clock;
 
@@ -76,7 +84,7 @@ int main() {
 
         if (mapManager.getCurrentTeam() == Team::Enemy) {
             if (!mapManager.isAnyUnitActing()) {
-                aiController.update(deltaTime, mapManager, mapManager.getTurnController());
+                aiController.update(deltaTime, mapManager, mapManager.getTurnController(), cameraController);
             }
             if (aiController.isDone() && !mapManager.isAnyUnitActing()) {
                 mapManager.endTurn();
@@ -86,9 +94,10 @@ int main() {
         }
 
         mapManager.update(deltaTime);
+        cameraController.update(deltaTime, window);
 
         window.clear();
-        window.setView(view);
+        window.setView(cameraController.getView());
         mapManager.draw(window);
         mapManager.drawUI();
         window.display();

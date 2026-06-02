@@ -23,7 +23,7 @@ static sf::Vector2i computeApproachDir(sf::Vector2f localPos, float btnW, float 
 }
 
 SelectionController::SelectionController(sf::RenderWindow& window, MapManager& mapManager, TurnController& turnController, const std::string& walkOverlayPath, const std::string& moveArrowPath, const std::string& iconsPath, const std::string& enemyOverlayPath)
-    : gui(window), mapManager(mapManager), m_turnController(turnController), selectedUnit(nullptr) {
+    : gui(window), m_window(window), mapManager(mapManager), m_turnController(turnController), selectedUnit(nullptr) {
     try {
 		if (!m_walkOverlayTexture.loadFromFile(walkOverlayPath)) {
 			throw std::runtime_error("Failed to load walk overlay texture");
@@ -234,6 +234,7 @@ SelectionController::SelectionController(sf::RenderWindow& window, MapManager& m
                 m_cursorIconCell = -1;
             });
 
+            m_tileButtons.push_back(btn);
             gui.add(btn);
         }
     }
@@ -271,27 +272,29 @@ void SelectionController::handleEvent(const sf::Event& event) {
 
         if (hoveredEnemyUnit && selectedUnit && !mapManager.isAnyUnitActing()) {
             const sf::Vector2u tileSize = mapManager.getTileSize();
-            float scaledW = tileSize.x * m_scaleX;
-            float scaledH = tileSize.y * m_scaleY;
+            const float tw = static_cast<float>(tileSize.x);
+            const float th = static_cast<float>(tileSize.y);
 
             sf::Vector2i enemyGrid(
-                static_cast<int>(std::round(hoveredEnemyUnit->getPosition().x / static_cast<float>(tileSize.x))),
-                static_cast<int>(std::round(hoveredEnemyUnit->getPosition().y / static_cast<float>(tileSize.y)))
+                static_cast<int>(std::round(hoveredEnemyUnit->getPosition().x / tw)),
+                static_cast<int>(std::round(hoveredEnemyUnit->getPosition().y / th))
             );
 
-            int tileX = static_cast<int>(mm->position.x / scaledW);
-            int tileY = static_cast<int>(mm->position.y / scaledH);
+            sf::Vector2f worldPos = m_window.mapPixelToCoords(
+                {mm->position.x, mm->position.y}, m_window.getView());
+            int tileX = static_cast<int>(worldPos.x / tw);
+            int tileY = static_cast<int>(worldPos.y / th);
 
             if (tileX == enemyGrid.x && tileY == enemyGrid.y) {
-                float localX = mm->position.x - tileX * scaledW;
-                float localY = mm->position.y - tileY * scaledH;
+                float localX = worldPos.x - tileX * tw;
+                float localY = worldPos.y - tileY * th;
 
-                sf::Vector2i newDir = computeApproachDir({localX, localY}, scaledW, scaledH);
+                sf::Vector2i newDir = computeApproachDir({localX, localY}, tw, th);
                 if (newDir != m_preferredApproachDir) {
                     m_preferredApproachDir = newDir;
                     sf::Vector2i unitGrid(
-                        static_cast<int>(std::round(selectedUnit->getPosition().x / static_cast<float>(tileSize.x))),
-                        static_cast<int>(std::round(selectedUnit->getPosition().y / static_cast<float>(tileSize.y)))
+                        static_cast<int>(std::round(selectedUnit->getPosition().x / tw)),
+                        static_cast<int>(std::round(selectedUnit->getPosition().y / th))
                     );
                     updateAttackPath(enemyGrid, unitGrid, m_preferredApproachDir);
                 }
@@ -488,7 +491,21 @@ void SelectionController::drawGui() {
         const std::string teamStr = (m_turnController.getCurrentTeam() == Team::Ally) ? "Ally" : "Enemy";
         m_turnLabel->setText("Turn " + std::to_string(m_turnController.getTurnNumber()) + " - " + teamStr);
     }
+
+    const sf::Vector2u tileSize = mapManager.getTileSize();
+    const unsigned int mapW = mapManager.getMapWidth();
+    const sf::View gameView = m_window.getView();
+    for (size_t i = 0; i < m_tileButtons.size(); ++i) {
+        unsigned int tx = static_cast<unsigned int>(i) % mapW;
+        unsigned int ty = static_cast<unsigned int>(i) / mapW;
+        sf::Vector2f worldPos(tx * static_cast<float>(tileSize.x), ty * static_cast<float>(tileSize.y));
+        sf::Vector2i screenPos = m_window.mapCoordsToPixel(worldPos, gameView);
+        m_tileButtons[i]->setPosition(static_cast<float>(screenPos.x), static_cast<float>(screenPos.y));
+    }
+
+    m_window.setView(m_window.getDefaultView());
     gui.draw();
+    m_window.setView(gameView);
 }
 
 void SelectionController::updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i unitGrid, sf::Vector2i preferredDir) {

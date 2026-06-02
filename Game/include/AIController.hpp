@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CameraController.hpp"
 #include "MapManager.hpp"
 #include "TurnController.hpp"
 #include "Unit.hpp"
@@ -8,7 +9,7 @@
 
 class AIController {
 public:
-    void update(float dt, MapManager& mapManager, TurnController& tc);
+    void update(float dt, MapManager& mapManager, TurnController& tc, CameraController& camera);
     void reset();
     bool isDone() const { return m_started && m_queue.empty(); }
 
@@ -20,7 +21,7 @@ private:
     static constexpr float ACTION_DELAY = 0.6f;
 
     void buildQueue(MapManager& mapManager);
-    void processNextUnit(MapManager& mapManager, TurnController& tc);
+    void processNextUnit(MapManager& mapManager, TurnController& tc, CameraController& camera);
 
     bool tryConquerNeutral(Unit& unit, MapManager& mapManager, TurnController& tc);
     bool tryCapturePlayerBuilding(Unit& unit, MapManager& mapManager, TurnController& tc);

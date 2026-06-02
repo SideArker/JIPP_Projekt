@@ -22,6 +22,7 @@ private:
     void updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i unitGrid, sf::Vector2i preferredDir);
 
     tgui::Gui gui;
+    sf::RenderWindow& m_window;
     MapManager& mapManager;
     TurnController& m_turnController;
     std::shared_ptr<Unit> selectedUnit;
@@ -37,5 +38,6 @@ private:
     sf::Vector2i m_preferredApproachDir{0, 0};
     float m_scaleX{1.f};
     float m_scaleY{1.f};
+    std::vector<tgui::Button::Ptr> m_tileButtons;
     tgui::Label::Ptr m_turnLabel;
 };
