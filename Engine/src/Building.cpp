@@ -13,13 +13,13 @@ const sf::Texture& Building::getTexture() const {
     return TextureManager::getTexture(texturePath, maskPath, TeamRegistry::getColor(team));
 }
 
-void Building::onTurnEnd(const Unit* occupant) {
+bool Building::onTurnEnd(const Unit* occupant) {
     if (!occupant || occupant->getTeam() == team) {
         captureProgress = 0;
         captureTeam = Team::Neutral;
-        return;
+        return false;
     }
-    if (!occupant->hasFlag(UnitFlag::Capture)) return;
+    if (!occupant->hasFlag(UnitFlag::Capture)) return false;
 
     if (occupant->getTeam() != captureTeam) {
         captureTeam     = occupant->getTeam();
@@ -31,4 +31,6 @@ void Building::onTurnEnd(const Unit* occupant) {
         setTeam(captureTeam);
         if (onCaptured) onCaptured(captureTeam);
     }
+
+    return true;
 }

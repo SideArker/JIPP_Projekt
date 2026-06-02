@@ -1,5 +1,5 @@
 #include "SoundManager.hpp"
-
+#include <iostream>
 std::unordered_map<std::string, SoundSet> SoundManager::s_sets;
 std::unordered_map<std::string, std::string> SoundManager::s_musicPaths;
 std::unique_ptr<sf::Music> SoundManager::s_music;
@@ -58,6 +58,7 @@ void SoundManager::registerMusic(const std::string& trackName, const std::string
 }
 
 void SoundManager::playMusic(const std::string& trackName) {
+    std::cout << "Playing music: " << trackName << std::endl;
     if (trackName == s_currentTrack) return;
 
     auto it = s_musicPaths.find(trackName);

@@ -28,6 +28,38 @@ struct Node {
     }
 };
 
+static constexpr float kCaptureJump1Duration = 0.34f;
+static constexpr float kCaptureJump2Duration = 0.22f;
+static constexpr float kCaptureJump3Duration = 0.15f;
+
+static constexpr float kCaptureJump1Amplitude = 13.0f;
+static constexpr float kCaptureJump2Amplitude = 7.0f;
+static constexpr float kCaptureJump3Amplitude = 3.5f;
+
+static constexpr float kCaptureBounceDuration =
+    kCaptureJump1Duration + kCaptureJump2Duration + kCaptureJump3Duration;
+static constexpr float kPi = 3.14159265f;
+
+float getCaptureBounceOffsetY(float remainingTime) {
+    if (remainingTime <= 0.f || kCaptureBounceDuration <= 0.f) {
+        return 0.f;
+    }
+
+    const float elapsed = std::clamp(kCaptureBounceDuration - remainingTime, 0.f, kCaptureBounceDuration);
+
+    if (elapsed < kCaptureJump1Duration) {
+        return -kCaptureJump1Amplitude * std::sin(kPi * elapsed / kCaptureJump1Duration);
+    }
+
+    if (elapsed < (kCaptureJump1Duration + kCaptureJump2Duration)) {
+        const float local = elapsed - kCaptureJump1Duration;
+        return -kCaptureJump2Amplitude * std::sin(kPi * local / kCaptureJump2Duration);
+    }
+
+    const float local = elapsed - kCaptureJump1Duration - kCaptureJump2Duration;
+    return -kCaptureJump3Amplitude * std::sin(kPi * local / kCaptureJump3Duration);
+}
+
 MapManager::MapManager() : mapWidth(0), mapHeight(0) {}
 
 MapManager::~MapManager() = default;
@@ -108,6 +140,8 @@ std::shared_ptr<Building> MapManager::getBuildingAtTile(sf::Vector2i gridPos) co
 
 void MapManager::setupInput(sf::RenderWindow& window) {
     selectionController = std::make_unique<SelectionController>(window, *this, m_turnController, m_walkOverlayPath, m_moveArrowPath, m_iconsPath, m_enemyOverlayPath);
+    SoundManager::playMusic("AllyTurn");
+    SoundManager::setMusicVolume(20.f);
 }
 
 void MapManager::handleEvent(const sf::Event& event) {
@@ -150,11 +184,17 @@ void MapManager::update(float deltaTime) {
         }
     }
 
-    m_captureBounceClock += deltaTime;
+    if (m_captureBounceTimer > 0.f) {
+        m_captureBounceTimer = std::max(0.f, m_captureBounceTimer - deltaTime);
+        if (m_captureBounceTimer <= 0.f) {
+            m_captureBounceTargets.clear();
+        }
+    }
 }
 
 void MapManager::draw(sf::RenderTarget& target) {
     target.draw(renderer);
+
     for (const auto& building : buildings) {
         sf::Sprite sprite(building->getTexture());
         if (building->hasTextureRect())
@@ -180,38 +220,24 @@ void MapManager::draw(sf::RenderTarget& target) {
         }
         target.draw(unitSprite);
 
-        // Start music
-        SoundManager::playMusic("AllyTurn");
+
         if (m_unitRenderCallback)
             m_unitRenderCallback(target, *unit, acting);
 
     }
 
-    // Draw capture bounce & TeamCapture overlays
     if (!m_teamCaptureTexturePath.empty()) {
-        static constexpr float kOverlayOffY = -18.f;
+        static constexpr float kOverlayOffY = -5.f;
         static constexpr int kCellW = 32;
-
-        static constexpr float kPeriod = 2.2f;
-        static constexpr float kAmp0 = 8.0f,  kDur0 = 0.55f;
-        static constexpr float kAmp1 = 4.0f,  kDur1 = 0.30f;
-        static constexpr float kAmp2 = 2.0f,  kDur2 = 0.15f;
-        static constexpr float kPi = 3.14159265f;
-
-        float bounceY = 0.f;
-        {
-            float phase = std::fmod(m_captureBounceClock, kPeriod);
-            if (phase < kDur0)
-                bounceY = -kAmp0 * std::sin(kPi * phase / kDur0);
-            else if ((phase -= kDur0) < kDur1)
-                bounceY = -kAmp1 * std::sin(kPi * phase / kDur1);
-            else if ((phase -= kDur1) < kDur2)
-                bounceY = -kAmp2 * std::sin(kPi * phase / kDur2);
-        }
 
         for (const auto& building : buildings) {
             int progress = building->getCaptureProgress();
-            if (progress <= 0) continue;  // not being captured
+            if (progress <= 0) continue;
+
+            float bounceY = 0.f;
+            if (m_captureBounceTimer > 0.f && m_captureBounceTargets.find(building.get()) != m_captureBounceTargets.end()) {
+                bounceY = getCaptureBounceOffsetY(m_captureBounceTimer);
+            }
 
             sf::Vector2i bGrid(
                 static_cast<int>(std::round(building->getPosition().x / static_cast<float>(tileSize.x))),
@@ -220,7 +246,6 @@ void MapManager::draw(sf::RenderTarget& target) {
             auto occupant = getUnitAtTile(bGrid);
             if (!occupant || occupant->isDead()) continue;
 
-            // Bounce animation
             sf::IntRect rect = occupant->getCurrentRect();
             sf::Sprite bouncedUnit(occupant->getCurrentTexture());
             bouncedUnit.setTextureRect(rect);
@@ -236,7 +261,6 @@ void MapManager::draw(sf::RenderTarget& target) {
             }
             target.draw(bouncedUnit);
 
-            // TeamCapture overlay
             const sf::Color teamColor = TeamRegistry::getColor(building->getCaptureTeam());
             const sf::Texture& capTex = TextureManager::getTexture(
                 m_teamCaptureTexturePath, m_teamCaptureMaskPath, teamColor);
@@ -278,16 +302,32 @@ void MapManager::setUnitRenderCallback(std::function<void(sf::RenderTarget&, con
 }
 
 void MapManager::endTurn() {
-    for (const auto& building : buildings) {
-        sf::Vector2i bGrid(
-            static_cast<int>(std::round(building->getPosition().x / static_cast<float>(tileSize.x))),
-            static_cast<int>(std::round(building->getPosition().y / static_cast<float>(tileSize.y)))
-        );
-        auto occupant = getUnitAtTile(bGrid);
-        building->onTurnEnd(occupant.get());
+    const bool resolveCaptureNow = (m_turnController.getCurrentTeam() == Team::Enemy);
+    std::unordered_set<const Building*> progressed;
+
+    if (resolveCaptureNow) {
+        for (const auto& building : buildings) {
+            sf::Vector2i bGrid(
+                static_cast<int>(std::round(building->getPosition().x / static_cast<float>(tileSize.x))),
+                static_cast<int>(std::round(building->getPosition().y / static_cast<float>(tileSize.y)))
+            );
+            auto occupant = getUnitAtTile(bGrid);
+            if (building->onTurnEnd(occupant.get())) {
+                progressed.insert(building.get());
+            }
+        }
     }
+
     m_turnController.endTurn(units);
-    m_captureBounceClock = 0.f;
+
+    if (!progressed.empty()) {
+        m_captureBounceTargets = std::move(progressed);
+        m_captureBounceTimer = kCaptureBounceDuration;
+    } else {
+        m_captureBounceTargets.clear();
+        m_captureBounceTimer = 0.f;
+    }
+
     if (m_turnController.getCurrentTeam() == Team::Ally)
     {
         SoundManager::playMusic("AllyTurn");

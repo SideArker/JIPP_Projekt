@@ -7,7 +7,7 @@
 		if (!m_tileset.loadFromFile(tilesetPath)) {
 			return false;
 		}
-
+		m_tileset.setSmooth(false);
 		m_vertices.resize(width * height * 6); // 6 vertices per tile (2 triangles)
 
 

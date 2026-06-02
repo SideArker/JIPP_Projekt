@@ -11,6 +11,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 class SelectionController;
@@ -47,7 +48,8 @@ private:
 	std::string m_moveArrowPath;
 	std::string m_iconsPath;
 	std::string m_enemyOverlayPath;
-	float m_captureBounceClock = 0.f;
+	float m_captureBounceTimer = 0.f;
+	std::unordered_set<const Building*> m_captureBounceTargets;
 
 	std::vector<Effect> m_effects;
 	std::vector<std::pair<float, std::function<void()>>> m_pendingActions;

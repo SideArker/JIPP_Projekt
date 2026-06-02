@@ -19,9 +19,9 @@ static constexpr const char* LEVEL1_PATH = "levels/level1.map";
 static void createDefaultLevel1() {
     MapFile map;
     map.tilesetPath = "Art/Map/map.png";
-    map.tileSize    = { 32, 32 };
-    map.width       = 8;
-    map.height      = 7;
+    map.tileSize = { 32, 32 };
+    map.width = 8;
+    map.height = 7;
     using T = TerrainType;
     map.tiles = {
         {18, T::Grass},    {19, T::Grass},    {19, T::Grass},    {19, T::Grass},    {19, T::Grass},    {19, T::Grass},    {19, T::Grass},    {9,  T::Grass},
@@ -34,8 +34,8 @@ static void createDefaultLevel1() {
     };
     map.spawns = { { "MissileTank", 1, 1, Team::Ally },{ "Tank", 3, 3, Team::Ally },{ "Soldier" , 3, 4, Team::Ally }, {"Tank", 5, 4, Team::Enemy }};
     map.buildingSpawns = {
-        { "HQ",      1, 5, Team::Ally    },
-        { "HQ",      6, 1, Team::Enemy   },
+        { "HQ", 1, 5, Team::Ally    },
+        { "HQ", 6, 1, Team::Enemy   },
         { "Factory", 2, 5, Team::Ally    },
         { "OilRig",  6, 5, Team::Neutral }
     };
@@ -43,10 +43,13 @@ static void createDefaultLevel1() {
 }
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode({ 1280, 720 }), "Map Renderer", sf::State::Windowed);
-    sf::View view(sf::FloatRect({ 0.f, 0.f }, { 400.f, 300.f }));
-    window.setView(view);
+    sf::RenderWindow window(sf::VideoMode({ 1920, 1080 }), "Map Renderer", sf::State::Windowed);
+    sf::View view(sf::FloatRect({ 0.f, 0.f }, { 640.f, 360.f }));
 
+
+    sf::Vector2f center = sf::Vector2f(0.f, 0.f);
+
+    window.setView(view);
     GameContent::init();
 
     createDefaultLevel1();
@@ -91,6 +94,7 @@ int main() {
         mapManager.draw(window);
         mapManager.drawUI();
         window.display();
+        
     }
     
     SoundManager::shutdown();

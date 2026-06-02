@@ -35,8 +35,7 @@ public:
 
     virtual void onClicked() {}
 
-    // Called at the end of each turn with the unit occupying this tile
-    void onTurnEnd(const Unit* occupant);
+    bool onTurnEnd(const Unit* occupant);
 
     std::string  getTypeName()         const { return typeName; }
     Team getTeam() const { return team; }
