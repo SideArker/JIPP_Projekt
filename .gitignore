@@ -434,3 +434,4 @@ opis_projektu.md
 build/*
 
 .vscode/*
+CMakePresets.json

@@ -38,6 +38,7 @@ void GameContent::configure(MapManager& mapManager) {
     mapManager.setHitEffect("hitEffect", "hit", "Art/Effects/hitEffect.png");
     mapManager.setTeamCaptureEffect("Art/Effects/TeamCapture.png", "Art/Effects/TeamCapture_mask.png");
     mapManager.setUnitRenderCallback([](sf::RenderTarget& target, const Unit& unit, bool anyActing) {
+        
         static sf::Texture overlayFriendly, overlayEnemy, healthTex;
         static bool loaded = false;
         if (!loaded) {

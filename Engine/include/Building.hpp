@@ -17,17 +17,17 @@ struct ENGINE_API BuildingData {
 class ENGINE_API Building {
 protected:
     std::string  typeName;
-    Team         team;
+    Team team;
     sf::Vector2f position;
 
 private:
     std::string texturePath;
     std::string maskPath;
     sf::IntRect textureRect;
-    bool        useTextureRect;
-    int         captureThreshold;
-    int         captureProgress = 0;
-    Team        captureTeam     = Team::Neutral;
+    bool useTextureRect;
+    int captureThreshold;
+    int captureProgress = 0;
+    Team captureTeam = Team::Neutral;
 
 public:
     Building(const std::string& typeName, Team team, const BuildingData& data);
@@ -39,14 +39,14 @@ public:
     void onTurnEnd(const Unit* occupant);
 
     std::string  getTypeName()         const { return typeName; }
-    Team         getTeam()             const { return team; }
-    sf::Vector2f getPosition()         const { return position; }
-    int          getCaptureProgress()  const { return captureProgress; }
-    int          getCaptureThreshold() const { return captureThreshold; }
-    Team         getCaptureTeam()      const { return captureTeam; }
+    Team getTeam() const { return team; }
+    sf::Vector2f getPosition() const { return position; }
+    int getCaptureProgress() const { return captureProgress; }
+    int getCaptureThreshold() const { return captureThreshold; }
+    Team getCaptureTeam() const { return captureTeam; }
 
     void setPosition(sf::Vector2f pos) { position = pos; }
-    void setTeam(Team t)               { team = t; }
+    void setTeam(Team t) { team = t; }
 
     const sf::Texture& getTexture() const;
     sf::IntRect getTextureRect() const { return textureRect; }

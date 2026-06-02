@@ -12,7 +12,7 @@
 #include "TextureManager.hpp"
 #include "SoundManager.hpp"
 #include "AIController.hpp"
-
+#include <iostream>
 
 static constexpr const char* LEVEL1_PATH = "levels/level1.map";
 
@@ -47,7 +47,6 @@ int main() {
     sf::View view(sf::FloatRect({ 0.f, 0.f }, { 400.f, 300.f }));
     window.setView(view);
 
-    TextureManager textures;
     GameContent::init();
 
     createDefaultLevel1();
@@ -62,9 +61,16 @@ int main() {
 
     while (window.isOpen()) {
         while (const std::optional event = window.pollEvent()) {
-            if (event->is<sf::Event::Closed>()) window.close();
+            if (event->is<sf::Event::Closed>()) {
+                window.close();
+                break;
+            }
             mapManager.handleEvent(*event);
         }
+
+        if (!window.isOpen())
+            break;
+
         float deltaTime = clock.restart().asSeconds();
 
         if (mapManager.getCurrentTeam() == Team::Enemy) {
@@ -86,7 +92,8 @@ int main() {
         mapManager.drawUI();
         window.display();
     }
-
+    
+    SoundManager::shutdown();
     TextureManager::clearCache();
     return 0;
 }

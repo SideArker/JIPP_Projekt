@@ -82,6 +82,19 @@ void SoundManager::stopMusic() {
     s_currentTrack.clear();
 }
 
+void SoundManager::shutdown() {
+    stopMusic();
+
+    for (auto& sound : s_activeSounds)
+        sound.stop();
+    s_activeSounds.clear();
+
+    s_music.reset();
+    s_currentTrack.clear();
+    s_musicPaths.clear();
+    s_sets.clear();
+}
+
 void SoundManager::setMusicVolume(float volume) {
     s_musicVolume = volume;
     if (s_music)

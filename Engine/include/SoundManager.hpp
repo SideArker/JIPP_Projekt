@@ -25,6 +25,7 @@ public:
     static void registerMusic(const std::string& trackName, const std::string& filePath);
     static void playMusic(const std::string& trackName);
     static void stopMusic();
+    static void shutdown();
 
     static void setMusicVolume(float volume);
     static void setSFXVolume(float volume);

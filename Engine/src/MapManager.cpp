@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <cmath>
 #include <algorithm>
+#include <iostream>
 
 // Core gameplay file that manages the map, units, buildings, and turn logic.
 
@@ -188,11 +189,25 @@ void MapManager::draw(sf::RenderTarget& target) {
 
     // Draw capture bounce & TeamCapture overlays
     if (!m_teamCaptureTexturePath.empty()) {
-        static constexpr float kBounceFreq = 3.0f;   // Hz
-        static constexpr float kBounceAmp  = 3.5f;   // pixels
-        static constexpr float kOverlayOffY = -18.f;  // pixels above tile top
+        static constexpr float kOverlayOffY = -18.f;
+        static constexpr int kCellW = 32;
 
-        const float bounceY = std::sin(m_captureBounceClock * kBounceFreq * 2.f * 3.14159265f) * kBounceAmp;
+        static constexpr float kPeriod = 2.2f;
+        static constexpr float kAmp0 = 8.0f,  kDur0 = 0.55f;
+        static constexpr float kAmp1 = 4.0f,  kDur1 = 0.30f;
+        static constexpr float kAmp2 = 2.0f,  kDur2 = 0.15f;
+        static constexpr float kPi = 3.14159265f;
+
+        float bounceY = 0.f;
+        {
+            float phase = std::fmod(m_captureBounceClock, kPeriod);
+            if (phase < kDur0)
+                bounceY = -kAmp0 * std::sin(kPi * phase / kDur0);
+            else if ((phase -= kDur0) < kDur1)
+                bounceY = -kAmp1 * std::sin(kPi * phase / kDur1);
+            else if ((phase -= kDur1) < kDur2)
+                bounceY = -kAmp2 * std::sin(kPi * phase / kDur2);
+        }
 
         for (const auto& building : buildings) {
             int progress = building->getCaptureProgress();
@@ -205,7 +220,7 @@ void MapManager::draw(sf::RenderTarget& target) {
             auto occupant = getUnitAtTile(bGrid);
             if (!occupant || occupant->isDead()) continue;
 
-            // --- Bounce: redraw the unit shifted upward ---
+            // Bounce animation
             sf::IntRect rect = occupant->getCurrentRect();
             sf::Sprite bouncedUnit(occupant->getCurrentTexture());
             bouncedUnit.setTextureRect(rect);
@@ -221,17 +236,19 @@ void MapManager::draw(sf::RenderTarget& target) {
             }
             target.draw(bouncedUnit);
 
-            // --- TeamCapture overlay above the tile ---
+            // TeamCapture overlay
             const sf::Color teamColor = TeamRegistry::getColor(building->getCaptureTeam());
             const sf::Texture& capTex = TextureManager::getTexture(
                 m_teamCaptureTexturePath, m_teamCaptureMaskPath, teamColor);
 
             sf::Sprite capSprite(capTex);
+            const int cellIdx = std::clamp(progress - 1, 0, 2);
+            capSprite.setTextureRect(sf::IntRect({ cellIdx * kCellW, 0 }, { kCellW, kCellW }));
+
             const float tx = building->getPosition().x;
             const float ty = building->getPosition().y;
-            // Centre the overlay horizontally over the tile; place it above
-            const float capW = static_cast<float>(capTex.getSize().x);
-            const float capX = tx + (static_cast<float>(tileSize.x) - capW) * 0.5f;
+
+            const float capX = tx + (static_cast<float>(tileSize.x) - static_cast<float>(kCellW)) * 0.5f;
             capSprite.setPosition({ capX, ty + kOverlayOffY + bounceY });
             target.draw(capSprite);
         }
@@ -270,11 +287,16 @@ void MapManager::endTurn() {
         building->onTurnEnd(occupant.get());
     }
     m_turnController.endTurn(units);
-    m_captureBounceClock = 0.f;  // reset bounce so each turn starts fresh
+    m_captureBounceClock = 0.f;
     if (m_turnController.getCurrentTeam() == Team::Ally)
+    {
         SoundManager::playMusic("AllyTurn");
+        std::cout << "Ally Turn" << std::endl;
+    }
     else
+    {std::cout << "Enemy Turn" << std::endl;
         SoundManager::playMusic("EnemyTurn");
+    }
     SoundManager::setMusicVolume(20.f);
 }
 
