@@ -14,7 +14,7 @@
 #include "AIController.hpp"
 #include <iostream>
 
-static constexpr const char* LEVEL1_PATH = "levels/level1.map";
+static constexpr const char* LEVEL1_PATH = "levels/editor.map";
 
 static void createDefaultLevel1() {
     MapFile map;
@@ -51,8 +51,6 @@ int main() {
 
     window.setView(view);
     GameContent::init();
-
-    createDefaultLevel1();
 
     MapManager mapManager;
     GameContent::configure(mapManager);
