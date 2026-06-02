@@ -8,9 +8,9 @@
 #include <vector>
 
 struct ENGINE_API TeamData {
-    Team        team  = Team::Neutral;
+    Team team  = Team::Neutral;
     std::string name;
-    sf::Color   color = sf::Color::White;
+    sf::Color color = sf::Color::White;
 };
 
 struct ENGINE_API UnitSpawnData {
@@ -22,18 +22,18 @@ struct ENGINE_API UnitSpawnData {
 
 struct ENGINE_API BuildingSpawnData {
     std::string typeName;
-    int  gridX = 0;
-    int  gridY = 0;
-    Team team  = Team::Neutral;
+    int gridX = 0;
+    int gridY = 0;
+    Team team = Team::Neutral;
 };
 
 struct ENGINE_API MapFile {
     std::string  tilesetPath;
     sf::Vector2u tileSize;
-    unsigned int width  = 0;
+    unsigned int width = 0;
     unsigned int height = 0;
-    std::vector<Tile>              tiles;
-    std::vector<UnitSpawnData>     spawns;
+    std::vector<Tile> tiles;
+    std::vector<UnitSpawnData> spawns;
     std::vector<BuildingSpawnData> buildingSpawns;
-    std::vector<TeamData>          teams;
+    std::vector<TeamData> teams;
 };

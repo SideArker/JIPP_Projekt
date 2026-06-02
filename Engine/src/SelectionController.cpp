@@ -14,7 +14,7 @@ static sf::Vector2i computeApproachDir(sf::Vector2f localPos, float btnW, float 
         return {0, 0};
     
     
-        if (ry < rx && ry < 1.f - rx) return { 0, -1 };
+    if (ry < rx && ry < 1.f - rx) return { 0, -1 };
     if (ry > rx && ry > 1.f - rx) return { 0,  1 };
     if (rx <= ry && rx <= 1.f - ry) return {-1,  0 };
     return { 1,  0 };

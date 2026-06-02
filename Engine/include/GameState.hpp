@@ -8,12 +8,12 @@
 
 struct ENGINE_API UnitSaveData {
     std::string typeName;
-    int     gridX     = 0;
-    int     gridY     = 0;
-    int     health    = 0;
-    int     damage    = 0;
-    int     moveSpeed = 0;
-    Team    team      = Team::Neutral;
+    int gridX     = 0;
+    int gridY     = 0;
+    int health    = 0;
+    int damage    = 0;
+    int moveSpeed = 0;
+    Team team     = Team::Neutral;
     uint8_t flags     = 0;
 };
 

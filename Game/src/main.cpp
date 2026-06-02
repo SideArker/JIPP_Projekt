@@ -46,10 +46,7 @@ static void createDefaultLevel1() {
 
 int main() {
     sf::RenderWindow window(sf::VideoMode({ 1920, 1080 }), "Map Renderer", sf::State::Windowed);
-    sf::View view(sf::FloatRect({ 0.f, 0.f }, { 480.f, 256.f }));
-    view.setViewport(sf::FloatRect({ 0.f, 0.f }, { 1440.f / 1920.f, 768.f / 1080.f }));
-
-
+    sf::View view(sf::FloatRect({ 0.f, 0.f }, { 640.f, 360.f }));
     sf::Vector2f center = sf::Vector2f(0.f, 0.f);
 
     window.setView(view);
@@ -59,6 +56,15 @@ int main() {
     GameContent::configure(mapManager);
     if (!mapManager.loadFromFile(LEVEL1_PATH)) return -1;
     mapManager.setupInput(window);
+
+    // set game view to 480 x 256 now
+    view.setSize({ 480.f, 256.f });
+    view.setCenter({ 240.f, 128.f });
+    view.setViewport(sf::FloatRect({ 0.f, 0.f }, { 1440.f / 1920.f, 768.f / 1080.f }));
+
+    sf::Texture overlayTex;
+    overlayTex.loadFromFile("Art/UI/screen_overlay.png");
+    sf::Sprite overlaySprite(overlayTex);
 
     CameraController cameraController;
     sf::Vector2u mapPixels(
@@ -114,6 +120,11 @@ int main() {
         window.clear();
         window.setView(cameraController.getView());
         mapManager.draw(window);
+
+        // Draw the overlay (static)
+        window.setView(view); 
+        window.draw(overlaySprite);
+
         mapManager.drawUI();
         window.display();
         
