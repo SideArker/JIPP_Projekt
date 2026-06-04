@@ -8,9 +8,27 @@ public:
     void onClicked() override;
 };
 
+class Airport : public Building {
+public:
+    Airport(Team team, const BuildingData& data) : Building("Airport", team, data) {}
+    void onClicked() override;
+};
+
 class Factory : public Building {
 public:
     Factory(Team team, const BuildingData& data) : Building("Factory", team, data) {}
+    void onClicked() override;
+};
+
+class VehicleBase : public Building {
+public:
+    VehicleBase(Team team, const BuildingData& data) : Building("VehicleBase", team, data) {}
+    void onClicked() override;
+};
+
+class LandOilRig : public Building {
+public:
+    LandOilRig(Team team, const BuildingData& data) : Building("LandOilRig", team, data) {}
     void onClicked() override;
 };
 
@@ -20,9 +38,9 @@ public:
     void onClicked() override;
 };
 
-class OilRig : public Building {
+class SeaOilRig : public Building {
 public:
-    OilRig(Team team, const BuildingData& data) : Building("OilRig", team, data) {}
+    SeaOilRig(Team team, const BuildingData& data) : Building("SeaOilRig", team, data) {}
     void onClicked() override;
 };
 

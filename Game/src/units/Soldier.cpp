@@ -36,6 +36,8 @@ void registerSoldier() {
   data.moveSpeed = 3;
   data.minAttackRange = 0;
   data.maxAttackRange = 1;
+  data.cost = 100;
+  data.hitEffectDelay = 0.0f;
   data.attackDamageDelay = 0.75f;
   data.movementCategory = MovementCategory::Infantry;
   data.deathEffectSet = "explosion";

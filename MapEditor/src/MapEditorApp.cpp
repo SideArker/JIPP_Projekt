@@ -377,13 +377,13 @@ void MapEditorApp::loadSpritePreviews() {
 }
 
 int MapEditorApp::buildingCellIndex(const std::string &typeName) const {
-  if (typeName == "HQ")
-    return 0;
-  if (typeName == "Factory")
-    return 1;
-  if (typeName == "Port")
-    return 2;
-  return 3;
+  if (typeName == "HQ") return 0;
+  if (typeName == "Airport") return 1;
+  if (typeName == "Factory") return 2;
+  if (typeName == "VehicleBase") return 3;
+  if (typeName == "LandOilRig") return 4;
+  if (typeName == "Port") return 5;
+  return 6; // SeaOilRig
 }
 
 bool MapEditorApp::loadMap(const std::string &path) {
@@ -913,6 +913,13 @@ void MapEditorApp::placeAt(int gridX, int gridY) {
     return;
   }
 
+  if (m_selectedBuildingType == "SeaOilRig") {
+    Tile &t = m_map.tiles[tileIndex(gridX, gridY)];
+    if (t.getTerrain() != TerrainType::Water) {
+      refreshStatus("SeaOilRig can only be placed on Water");
+      return;
+    }
+  }
   auto it =
       std::find_if(m_map.buildingSpawns.begin(), m_map.buildingSpawns.end(),
                    [&](const BuildingSpawnData &spawn) {

@@ -20,3 +20,11 @@ const UnitData* UnitRegistry::getData(const std::string& typeName) {
     if (it == registry().end()) return nullptr;
     return &it->second.data;
 }
+
+std::vector<std::string> UnitRegistry::getRegisteredUnitNames() {
+    std::vector<std::string> names;
+    for (const auto& pair : registry()) {
+        names.push_back(pair.first);
+    }
+    return names;
+}

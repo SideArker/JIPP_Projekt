@@ -9,10 +9,11 @@
 class MapManager;
 class Unit;
 class TurnController;
+class Building;
 
 class SelectionController {
 public:
-    SelectionController(sf::RenderWindow& window, MapManager& mapManager, TurnController& turnController, const std::string& walkOverlayPath, const std::string& moveArrowPath, const std::string& iconsPath, const std::string& enemyOverlayPath);
+    SelectionController(sf::RenderWindow& window, MapManager& mapManager, TurnController& turnController, const std::string& walkOverlayPath, const std::string& moveArrowPath, const std::string& iconsPath, const std::string& enemyOverlayPath, const std::string& friendlyOverlayPath);
     void handleEvent(const sf::Event& event);
     void drawOverlays(sf::RenderTarget& target);
     void drawCursorIcon(sf::RenderTarget& target);
@@ -20,10 +21,19 @@ public:
     void clearSelection();
     void selectUnit(std::shared_ptr<Unit> unit);
     void syncCameraView(sf::View gameView);
+    void update(float dt);
     tgui::Gui& getGui() { return gui; }
     std::shared_ptr<Unit> getSelectedUnit() const { return selectedUnit; }
 
 private:
+    struct AnimatedPreview {
+        std::vector<tgui::Picture::Ptr> frames;
+        float timer = 0.f;
+        int index = 0;
+    };
+    std::vector<AnimatedPreview> m_previews;
+
+    void openFactoryUI(std::shared_ptr<Building> factory);
     void updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i unitGrid, sf::Vector2i preferredDir);
 
     tgui::Gui gui;
@@ -38,6 +48,7 @@ private:
     sf::Texture m_moveArrowTexture;
     sf::Texture m_iconsTexture;
     sf::Texture m_enemyOverlayTexture;
+    sf::Texture m_friendlyOverlayTexture;
     sf::Vector2f m_cursorPos;
     int m_cursorIconCell{-1};
     sf::Vector2i m_preferredApproachDir{0, 0};

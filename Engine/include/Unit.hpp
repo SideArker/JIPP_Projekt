@@ -29,6 +29,7 @@ struct ENGINE_API UnitData {
 	float moveSpeed = 3.f;
 	int minAttackRange = 0;
 	int maxAttackRange = 1;
+	int cost = 100;
 	float hitEffectDelay = 0.0f;
 	float attackDamageDelay = 0.75f;
 	MovementCategory movementCategory = MovementCategory::Ground;
@@ -112,6 +113,7 @@ public:
 
 	sf::Vector2f getPosition() const { return position; }
 	std::string getName() const { return name; }
+	std::string getArtPath() const { return artPath; }
 	int getHealth() const { return health; }
 	int getMaxHealth() const { return maxHealth; }
 	int getDamage() const { return damage; }

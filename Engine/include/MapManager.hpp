@@ -51,8 +51,14 @@ private:
 	std::string m_moveArrowPath;
 	std::string m_iconsPath;
 	std::string m_enemyOverlayPath;
+	std::string m_friendlyOverlayPath;
 	float m_captureBounceTimer = 0.f;
 	std::unordered_set<const Building*> m_captureBounceTargets;
+    bool m_gameOver = false;
+    Team m_winner = Team::Neutral;
+
+	void checkWinCondition();
+	void triggerGameOver(Team winner);
 
 	std::vector<Effect> m_effects;
 	std::vector<std::pair<float, std::function<void()>>> m_pendingActions;
@@ -79,6 +85,7 @@ public:
 	MapManager();
 	~MapManager();
 
+    bool isGameOver() const { return m_gameOver; }
 	bool loadFromFile(const std::string& mapPath);
 	bool saveToFile(const std::string& mapPath) const;
 	GameState captureGameState() const;
@@ -116,8 +123,14 @@ public:
 	void setMoveArrowPath(std::string path);
 	void setIconsPath(std::string path);
 	void setEnemyOverlayPath(std::string path);
+	void setFriendlyOverlayPath(std::string path);
 
     const std::map<Team, TeamData>& getTeams() const { return m_teams; }
+    void deductTeamMoney(Team team, int amount) {
+        if (m_teams.find(team) != m_teams.end()) {
+            m_teams[team].money -= amount;
+        }
+    }
     void setOnSelectionChanged(std::function<void(std::shared_ptr<Unit>, std::shared_ptr<Building>, const Tile*)> cb) {
         m_onSelectionChanged = cb;
     }

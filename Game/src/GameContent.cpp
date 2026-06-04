@@ -38,6 +38,7 @@ void GameContent::configure(MapManager &mapManager) {
   mapManager.setMoveArrowPath("Art/Effects/map_moveArrow.png");
   mapManager.setIconsPath("Art/Effects/Icons.png");
   mapManager.setEnemyOverlayPath("Art/Effects/map_enemy_overlay.png");
+  mapManager.setFriendlyOverlayPath("Art/Effects/Unit_Overlay_Friendly.png");
   mapManager.setHitEffect("hitEffect", "hit", "Art/Effects/hitEffect.png");
   mapManager.setTeamCaptureEffect("Art/Effects/TeamCapture.png",
                                   "Art/Effects/TeamCapture_mask.png");

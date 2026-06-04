@@ -29,8 +29,8 @@ private:
 
   std::vector<std::string> m_unitTypes = {"Tank", "Soldier", "MissileTank",
                                           "Plane", "Destroyer"};
-  std::vector<std::string> m_buildingTypes = {"HQ", "Factory", "Port",
-                                              "OilRig"};
+  std::vector<std::string> m_buildingTypes = {"HQ", "Airport", "Factory",
+                                              "VehicleBase", "LandOilRig", "Port", "SeaOilRig"};
 
   EditorTool m_currentTool = EditorTool::Tiles;
   int m_selectedArtId = 1;

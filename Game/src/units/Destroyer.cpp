@@ -48,6 +48,8 @@ void registerDestroyer() {
   data.moveSpeed = 4;
   data.minAttackRange = 0;
   data.maxAttackRange = 4;
+  data.cost = 400;
+  data.hitEffectDelay = 0.0f;
   data.attackDamageDelay = 0.75f;
   data.movementCategory = MovementCategory::Naval;
   data.deathEffectSet = "explosion";

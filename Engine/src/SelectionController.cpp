@@ -1,9 +1,13 @@
 #include "SelectionController.hpp"
+#include "Building.hpp"
 #include "MapManager.hpp"
 #include "TurnController.hpp"
 #include "Unit.hpp"
+#include "UnitRegistry.hpp"
 #include <algorithm>
 #include <cmath>
+#include <iostream>
+
 
 static sf::Vector2i computeApproachDir(sf::Vector2f localPos, float btnW,
                                        float btnH) {
@@ -24,13 +28,11 @@ static sf::Vector2i computeApproachDir(sf::Vector2f localPos, float btnW,
   return {1, 0};
 }
 
-SelectionController::SelectionController(sf::RenderWindow &window,
-                                         MapManager &mapManager,
-                                         TurnController &turnController,
-                                         const std::string &walkOverlayPath,
-                                         const std::string &moveArrowPath,
-                                         const std::string &iconsPath,
-                                         const std::string &enemyOverlayPath)
+SelectionController::SelectionController(
+    sf::RenderWindow &window, MapManager &mapManager,
+    TurnController &turnController, const std::string &walkOverlayPath,
+    const std::string &moveArrowPath, const std::string &iconsPath,
+    const std::string &enemyOverlayPath, const std::string &friendlyOverlayPath)
     : gui(window), m_window(window), mapManager(mapManager),
       m_turnController(turnController), selectedUnit(nullptr) {
   try {
@@ -46,6 +48,10 @@ SelectionController::SelectionController(sf::RenderWindow &window,
     if (!enemyOverlayPath.empty() &&
         !m_enemyOverlayTexture.loadFromFile(enemyOverlayPath)) {
       throw std::runtime_error("Failed to load enemy overlay texture");
+    }
+    if (!friendlyOverlayPath.empty() &&
+        !m_friendlyOverlayTexture.loadFromFile(friendlyOverlayPath)) {
+      throw std::runtime_error("Failed to load friendly overlay texture");
     }
   } catch (const std::exception &e) {
     std::cerr << "Error loading walk overlay texture: " << e.what()
@@ -216,12 +222,13 @@ SelectionController::SelectionController(sf::RenderWindow &window,
           auto targetRef = hoveredEnemyUnit;
           auto *self = this;
           unitToMark->onAttackFinished = [self, unitToMark, targetRef]() {
-            self->mapManager.runWhenAllActionsFinished([self, unitToMark, targetRef]() {
-              if (targetRef->isDead()) {
-                  self->mapManager.clearUndoStack();
-              }
-              self->m_turnController.markActed(*unitToMark);
-            });
+            self->mapManager.runWhenAllActionsFinished(
+                [self, unitToMark, targetRef]() {
+                  if (targetRef->isDead()) {
+                    self->mapManager.clearUndoStack();
+                  }
+                  self->m_turnController.markActed(*unitToMark);
+                });
           };
 
           selectedUnit->dealDamage(hoveredEnemyUnit, shootDir);
@@ -256,8 +263,16 @@ SelectionController::SelectionController(sf::RenderWindow &window,
 
         if (!selectedUnit) {
           auto building = mapManager.getBuildingAtTile(gridPos);
-          if (building)
-            building->onClicked();
+          if (building) {
+            if (building->getTypeName() == "Factory" &&
+                building->getTeam() == m_turnController.getCurrentTeam()) {
+              if (!mapManager.getUnitAtTile(gridPos)) {
+                openFactoryUI(building);
+              }
+            } else {
+              building->onClicked();
+            }
+          }
           return;
         }
 
@@ -266,14 +281,17 @@ SelectionController::SelectionController(sf::RenderWindow &window,
             reachableTiles.end();
         if (isReachable && !previewPath.empty()) {
           sf::Vector2i unitGrid2(
-              static_cast<int>(std::round(selectedUnit->getPosition().x / static_cast<float>(tileSize.x))),
-              static_cast<int>(std::round(selectedUnit->getPosition().y / static_cast<float>(tileSize.y))));
+              static_cast<int>(std::round(selectedUnit->getPosition().x /
+                                          static_cast<float>(tileSize.x))),
+              static_cast<int>(std::round(selectedUnit->getPosition().y /
+                                          static_cast<float>(tileSize.y))));
           mapManager.pushUndoState(unitGrid2);
-          if (mapManager.onUnitMoveStart) mapManager.onUnitMoveStart(selectedUnit);
+          if (mapManager.onUnitMoveStart)
+            mapManager.onUnitMoveStart(selectedUnit);
           selectedUnit->move(previewPath);
           m_turnController.markActed(*selectedUnit);
         }
-        
+
         clearSelection();
       });
 
@@ -311,6 +329,9 @@ SelectionController::SelectionController(sf::RenderWindow &window,
 }
 
 void SelectionController::handleEvent(const sf::Event &event) {
+  if (mapManager.isGameOver())
+    return;
+
   if (auto *mm = event.getIf<sf::Event::MouseMoved>()) {
     m_cursorPos = sf::Vector2f(static_cast<float>(mm->position.x),
                                static_cast<float>(mm->position.y));
@@ -534,6 +555,20 @@ void SelectionController::drawOverlays(sf::RenderTarget &target) {
     overlay.setPosition(sf::Vector2f(enemyGrid.x * tw, enemyGrid.y * th));
     target.draw(overlay);
   }
+
+  for (const auto &building : mapManager.getBuildings()) {
+    if (building->getTypeName() == "Factory" &&
+        building->getTeam() == m_turnController.getCurrentTeam()) {
+      sf::Vector2i bGrid(
+          static_cast<int>(std::round(building->getPosition().x / tw)),
+          static_cast<int>(std::round(building->getPosition().y / th)));
+      if (!mapManager.getUnitAtTile(bGrid)) {
+        sf::Sprite friendlyOverlay(m_friendlyOverlayTexture);
+        friendlyOverlay.setPosition(sf::Vector2f(bGrid.x * tw, bGrid.y * th));
+        target.draw(friendlyOverlay);
+      }
+    }
+  }
 }
 
 void SelectionController::drawCursorIcon(sf::RenderTarget &target) {
@@ -560,16 +595,18 @@ void SelectionController::clearSelection() {
 }
 
 void SelectionController::selectUnit(std::shared_ptr<Unit> unit) {
-  if (!unit || unit->isDead() || !m_turnController.canAct(*unit)) return;
+  if (!unit || unit->isDead() || !m_turnController.canAct(*unit))
+    return;
   selectedUnit = unit;
   const sf::Vector2u tileSize = mapManager.getTileSize();
   sf::Vector2i unitGrid(
-      static_cast<int>(std::round(unit->getPosition().x / static_cast<float>(tileSize.x))),
-      static_cast<int>(std::round(unit->getPosition().y / static_cast<float>(tileSize.y)))
-  );
-  reachableTiles = mapManager.getReachableTiles(
-      unitGrid, unit->getMoveSpeed(), unit->getTeam(), unit->getMovementCategory()
-  );
+      static_cast<int>(
+          std::round(unit->getPosition().x / static_cast<float>(tileSize.x))),
+      static_cast<int>(
+          std::round(unit->getPosition().y / static_cast<float>(tileSize.y))));
+  reachableTiles = mapManager.getReachableTiles(unitGrid, unit->getMoveSpeed(),
+                                                unit->getTeam(),
+                                                unit->getMovementCategory());
   previewPath.clear();
   hoveredEnemyUnit = nullptr;
   m_cursorIconCell = -1;
@@ -591,11 +628,16 @@ void SelectionController::syncCameraView(sf::View gameView) {
 
 void SelectionController::drawGui() {
   if (m_turnLabel) {
-    const std::string teamStr =
-        (m_turnController.getCurrentTeam() == Team::Ally) ? "Ally" : "Enemy";
+    Team current = m_turnController.getCurrentTeam();
+    const std::string teamStr = (current == Team::Ally) ? "Ally" : "Enemy";
+    std::string moneyStr = "";
+    auto it = mapManager.getTeams().find(current);
+    if (it != mapManager.getTeams().end()) {
+      moneyStr = " | Money: $" + std::to_string(it->second.money);
+    }
     m_turnLabel->setText("Turn " +
                          std::to_string(m_turnController.getTurnNumber()) +
-                         " - " + teamStr);
+                         " - " + teamStr + moneyStr);
   }
   sf::View savedView = m_window.getView();
   m_window.setView(m_window.getDefaultView());
@@ -652,4 +694,214 @@ void SelectionController::updateAttackPath(sf::Vector2i enemyGrid,
     }
   }
   previewPath = bestPath;
+}
+
+void SelectionController::update(float dt) {
+  for (auto &preview : m_previews) {
+    if (preview.frames.empty())
+      continue;
+    preview.timer -= dt;
+    if (preview.timer <= 0.f) {
+      preview.timer = 0.5f;
+      preview.frames[preview.index]->setVisible(false);
+      preview.index = (preview.index + 1) % preview.frames.size();
+      preview.frames[preview.index]->setVisible(true);
+    }
+  }
+}
+
+void SelectionController::openFactoryUI(std::shared_ptr<Building> factory) {
+  m_previews.clear();
+
+  bool hasVehicleBase = false;
+  bool hasAirport = false;
+  bool hasPort = false;
+
+  for (const auto &b : mapManager.getBuildings()) {
+    if (b->getTeam() == factory->getTeam()) {
+      if (b->getTypeName() == "VehicleBase")
+        hasVehicleBase = true;
+      if (b->getTypeName() == "Airport")
+        hasAirport = true;
+      if (b->getTypeName() == "Port")
+        hasPort = true;
+    }
+  }
+
+  auto mainPanel = tgui::Panel::create();
+  mainPanel->setSize("80%", "80%");
+  mainPanel->setPosition("10%", "10%");
+  mainPanel->getRenderer()->setBackgroundColor(sf::Color(20, 20, 20, 240));
+
+  auto label = tgui::Label::create("Unit Production");
+  label->setPosition(20, 10);
+  label->setTextSize(24);
+  mainPanel->add(label);
+
+  auto closeBtn = tgui::Button::create("X");
+  closeBtn->setSize(30, 30);
+  closeBtn->setPosition("100% - 40", 10);
+  closeBtn->onClick([this, mainPanel]() {
+    gui.remove(mainPanel);
+    m_previews.clear();
+  });
+  mainPanel->add(closeBtn);
+
+  auto scrollablePanel = tgui::ScrollablePanel::create();
+  scrollablePanel->setPosition(20, 50);
+  scrollablePanel->setSize("100% - 40", "100% - 70");
+  mainPanel->add(scrollablePanel);
+
+  float yOffset = 0;
+  auto unitNames = UnitRegistry::getRegisteredUnitNames();
+  std::sort(unitNames.begin(), unitNames.end());
+
+  Team team = factory->getTeam();
+  int currentMoney = 0;
+  auto it = mapManager.getTeams().find(team);
+  if (it != mapManager.getTeams().end()) {
+    currentMoney = it->second.money;
+  }
+
+  struct Category {
+    std::string name;
+    std::vector<std::string> units;
+    bool unlocked = false;
+  };
+
+  std::vector<Category> categories = {
+      {"Infantry", {}, true}, // Infantry always available
+      {"Ground Units", {}, hasVehicleBase},
+      {"Flying Units", {}, hasAirport},
+      {"Naval Units", {}, hasPort}};
+
+  for (const auto &uName : unitNames) {
+    const UnitData *data = UnitRegistry::getData(uName);
+    if (!data)
+      continue;
+    if (data->movementCategory == MovementCategory::Infantry)
+      categories[0].units.push_back(uName);
+    else if (data->movementCategory == MovementCategory::Ground)
+      categories[1].units.push_back(uName);
+    else if (data->movementCategory == MovementCategory::Flying)
+      categories[2].units.push_back(uName);
+    else if (data->movementCategory == MovementCategory::Naval)
+      categories[3].units.push_back(uName);
+  }
+
+  for (const auto &cat : categories) {
+    if (cat.units.empty())
+      continue;
+
+    auto catLabel =
+        tgui::Label::create(cat.name + (cat.unlocked ? "" : " (Locked)"));
+    catLabel->setPosition(0, yOffset);
+    catLabel->setTextSize(18);
+    if (!cat.unlocked)
+      catLabel->getRenderer()->setTextColor(sf::Color(150, 150, 150));
+    scrollablePanel->add(catLabel);
+    yOffset += 30;
+
+    auto catPanel = tgui::ScrollablePanel::create();
+    catPanel->setPosition(0, yOffset);
+    catPanel->setSize("100%", 180);
+    catPanel->getRenderer()->setBackgroundColor(sf::Color(40, 40, 40, 100));
+    scrollablePanel->add(catPanel);
+
+    float xOffset = 10;
+    for (const auto &uName : cat.units) {
+      const UnitData *data = UnitRegistry::getData(uName);
+      auto dummyUnit = UnitRegistry::create(uName, Team::Neutral);
+      if (!data || !dummyUnit)
+        continue;
+
+      auto unitCard = tgui::Panel::create();
+      unitCard->setSize(140, 160);
+      unitCard->setPosition(xOffset, 10);
+      unitCard->getRenderer()->setBackgroundColor(sf::Color(60, 60, 60));
+      catPanel->add(unitCard);
+
+      // Animated preview
+      auto previewPanel = tgui::Panel::create();
+      previewPanel->setSize(64, 64);
+      previewPanel->setPosition(38, 5);
+      previewPanel->getRenderer()->setBackgroundColor(sf::Color::Transparent);
+      unitCard->add(previewPanel);
+
+      AnimatedPreview animPreview;
+      const AnimationSet *animSet = AnimationManager::getSet(uName);
+      if (animSet) {
+        std::vector<std::string> dirs = {"_left", "_down", "_right", "_up"};
+        for (const auto &dir : dirs) {
+          const AnimationClip *clip = animSet->getClip("idle" + dir);
+          if (!clip && dir == "_down")
+            clip = animSet->getClip("walk_down"); // fallback
+          if (!clip && dir == "_right")
+            clip = animSet->getClip("walk_right");
+          if (!clip && dir == "_up")
+            clip = animSet->getClip("walk_up");
+          if (!clip && dir == "_left")
+            clip = animSet->getClip("walk_left");
+
+          if (clip && !clip->frames.empty()) {
+            tgui::UIntRect part(clip->frames[0].position.x,
+                                clip->frames[0].position.y,
+                                clip->frames[0].size.x, clip->frames[0].size.y);
+            auto pic = tgui::Picture::create(
+                tgui::Texture(dummyUnit->getArtPath(), part));
+            pic->setSize(64, 64);
+            pic->setVisible(animPreview.frames.empty());
+            previewPanel->add(pic);
+            animPreview.frames.push_back(pic);
+          }
+        }
+      }
+      if (!animPreview.frames.empty()) {
+        m_previews.push_back(animPreview);
+      }
+
+      auto nameLabel = tgui::Label::create(uName);
+      nameLabel->setPosition(5, 75);
+      nameLabel->setTextSize(13);
+      unitCard->add(nameLabel);
+
+      auto statsLabel =
+          tgui::Label::create("HP: " + std::to_string(data->maxHealth) +
+                              " | Atk: " + std::to_string(data->damage));
+      statsLabel->setPosition(5, 95);
+      statsLabel->setTextSize(11);
+      unitCard->add(statsLabel);
+
+      auto buyBtn = tgui::Button::create("$" + std::to_string(data->cost));
+      buyBtn->setSize(120, 25);
+      buyBtn->setPosition(10, 125);
+      if (!cat.unlocked || currentMoney < data->cost) {
+        buyBtn->setEnabled(false);
+      } else {
+        buyBtn->onClick([this, uName, data, team, factory, mainPanel]() {
+          auto unit = UnitRegistry::create(uName, team);
+          if (unit) {
+            mapManager.deductTeamMoney(team, data->cost);
+            sf::Vector2i bGrid(
+                static_cast<int>(
+                    std::round(factory->getPosition().x /
+                               static_cast<float>(mapManager.getTileSize().x))),
+                static_cast<int>(std::round(
+                    factory->getPosition().y /
+                    static_cast<float>(mapManager.getTileSize().y))));
+            mapManager.spawnUnit(unit, bGrid.x, bGrid.y);
+            m_turnController.markActed(*unit);
+            gui.remove(mainPanel);
+            m_previews.clear();
+          }
+        });
+      }
+      unitCard->add(buyBtn);
+
+      xOffset += 150;
+    }
+    yOffset += 190;
+  }
+
+  gui.add(mainPanel);
 }

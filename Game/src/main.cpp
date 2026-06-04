@@ -15,8 +15,6 @@
 
 static constexpr const char *LEVEL1_PATH = "Art/levels/level1.map";
 
-
-
 int main() {
   sf::RenderWindow window(sf::VideoMode({1280, 720}), "Map Renderer",
                           sf::State::Windowed);
@@ -51,43 +49,40 @@ int main() {
         [&mapManager]() { mapManager.requestEndTurn(); });
 
     panels.undoBtn->onClick([&mapManager, &cameraController]() {
-        std::shared_ptr<Unit> outUnit;
-        if (mapManager.popUndoState(outUnit)) {
-            if (outUnit) {
-                cameraController.trackUnit(outUnit);
-                mapManager.selectUnit(outUnit);
-            }
+      std::shared_ptr<Unit> outUnit;
+      if (mapManager.popUndoState(outUnit)) {
+        if (outUnit) {
+          cameraController.trackUnit(outUnit);
+          mapManager.selectUnit(outUnit);
         }
+      }
     });
 
     panels.nextUnitBtn->onClick([&mapManager, &cameraController]() {
-        auto& units = mapManager.getUnits();
-        std::vector<std::shared_ptr<Unit>> available;
-        for (auto& u : units) {
-            if (!u->isDead() && u->getTeam() == Team::Ally && !u->hasActed()) available.push_back(u);
-        }
-        if (!available.empty()) {
-            int idx = rand() % available.size();
-            cameraController.trackUnit(available[idx]);
-            mapManager.selectUnit(available[idx]);
-        }
+      auto &units = mapManager.getUnits();
+      std::vector<std::shared_ptr<Unit>> available;
+      for (auto &u : units) {
+        if (!u->isDead() && u->getTeam() == Team::Ally && !u->hasActed())
+          available.push_back(u);
+      }
+      if (!available.empty()) {
+        int idx = rand() % available.size();
+        cameraController.trackUnit(available[idx]);
+        mapManager.selectUnit(available[idx]);
+      }
     });
 
     panels.settingsBtn->onClick([&panels]() {
-        panels.settingsPanel->setVisible(!panels.settingsPanel->isVisible());
+      panels.settingsPanel->setVisible(!panels.settingsPanel->isVisible());
     });
-    panels.closeSettingsBtn->onClick([&panels]() {
-        panels.settingsPanel->setVisible(false);
-    });
-    panels.saveGameBtn->onClick([&mapManager]() {
-        mapManager.saveToFile("savegame.sav");
-    });
-    panels.musicVolSlider->onValueChange([](float v) {
-        SoundManager::setMusicVolume(v);
-    });
-    panels.soundVolSlider->onValueChange([](float v) {
-        SoundManager::setSFXVolume(v);
-    });
+    panels.closeSettingsBtn->onClick(
+        [&panels]() { panels.settingsPanel->setVisible(false); });
+    panels.saveGameBtn->onClick(
+        [&mapManager]() { mapManager.saveToFile("savegame.sav"); });
+    panels.musicVolSlider->onValueChange(
+        [](float v) { SoundManager::setMusicVolume(v); });
+    panels.soundVolSlider->onValueChange(
+        [](float v) { SoundManager::setSFXVolume(v); });
 
     // Populate team list
     panels.teamList->removeAllWidgets();
@@ -95,7 +90,7 @@ int main() {
     for (const auto &[team, data] : mapManager.getTeams()) {
       if (team == Team::Neutral)
         continue;
-        
+
       auto teamPanel = tgui::Panel::create({"100%", 45});
       teamPanel->setPosition(0, teamY);
       teamPanel->getRenderer()->setBackgroundColor(sf::Color(30, 30, 35, 180));
@@ -125,7 +120,7 @@ int main() {
     }
 
     mapManager.onUnitMoveStart = [&cameraController](std::shared_ptr<Unit> u) {
-        cameraController.trackUnit(u);
+      cameraController.trackUnit(u);
     };
 
     // Hook up selection callback
@@ -190,15 +185,16 @@ int main() {
       }
       if (aiController.isDone() && !mapManager.isAnyUnitActing()) {
         mapManager.endTurn();
-        
-        auto& units = mapManager.getUnits();
+
+        auto &units = mapManager.getUnits();
         std::vector<std::shared_ptr<Unit>> allies;
-        for (auto& u : units) {
-            if (!u->isDead() && u->getTeam() == Team::Ally) allies.push_back(u);
+        for (auto &u : units) {
+          if (!u->isDead() && u->getTeam() == Team::Ally)
+            allies.push_back(u);
         }
         if (!allies.empty()) {
-            int idx = rand() % allies.size();
-            cameraController.trackUnit(allies[idx]);
+          int idx = rand() % allies.size();
+          cameraController.trackUnit(allies[idx]);
         }
       }
     } else {
@@ -211,20 +207,24 @@ int main() {
     mapManager.syncCameraView(cameraController.getView());
 
     if (mapManager.getGui()) {
-        panels.undoBtn->setEnabled(!mapManager.isUndoStackEmpty() && !mapManager.isAnyUnitActing());
-        bool hasNext = false;
-        for (auto& u : mapManager.getUnits()) {
-            if (!u->isDead() && u->getTeam() == Team::Ally && !u->hasActed()) { hasNext = true; break; }
+      panels.undoBtn->setEnabled(!mapManager.isUndoStackEmpty() &&
+                                 !mapManager.isAnyUnitActing());
+      bool hasNext = false;
+      for (auto &u : mapManager.getUnits()) {
+        if (!u->isDead() && u->getTeam() == Team::Ally && !u->hasActed()) {
+          hasNext = true;
+          break;
         }
-        panels.nextUnitBtn->setEnabled(hasNext && !mapManager.isAnyUnitActing());
-        
-        if (mapManager.getCurrentTeam() == Team::Enemy) {
-            panels.endTurnBtn->setText("Enemy Turn");
-            panels.endTurnBtn->setEnabled(false);
-        } else {
-            panels.endTurnBtn->setText("End Turn >>");
-            panels.endTurnBtn->setEnabled(!mapManager.isAnyUnitActing());
-        }
+      }
+      panels.nextUnitBtn->setEnabled(hasNext && !mapManager.isAnyUnitActing());
+
+      if (mapManager.getCurrentTeam() == Team::Enemy) {
+        panels.endTurnBtn->setText("Enemy Turn");
+        panels.endTurnBtn->setEnabled(false);
+      } else {
+        panels.endTurnBtn->setText("End Turn >>");
+        panels.endTurnBtn->setEnabled(!mapManager.isAnyUnitActing());
+      }
     }
 
     window.clear();

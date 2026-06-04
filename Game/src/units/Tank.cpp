@@ -47,6 +47,8 @@ void registerTank() {
   data.moveSpeed = 5;
   data.minAttackRange = 0;
   data.maxAttackRange = 1;
+  data.cost = 300;
+  data.hitEffectDelay = 0.0f;
   data.attackDamageDelay = 0.75f;
   data.movementCategory = MovementCategory::Ground;
   data.deathEffectSet = "explosion";

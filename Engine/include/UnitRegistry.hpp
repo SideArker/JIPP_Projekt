@@ -14,6 +14,7 @@ public:
     static void registerType(const std::string& typeName, UnitData data, FactoryFn factory);
     static std::shared_ptr<Unit> create(const std::string& typeName, Team team);
     static const UnitData* getData(const std::string& typeName);
+    static std::vector<std::string> getRegisteredUnitNames();
 
 private:
     struct Entry {

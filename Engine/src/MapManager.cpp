@@ -155,7 +155,7 @@ MapManager::getBuildingAtTile(sf::Vector2i gridPos) const {
 void MapManager::setupInput(sf::RenderWindow &window) {
   selectionController = std::make_unique<SelectionController>(
       window, *this, m_turnController, m_walkOverlayPath, m_moveArrowPath,
-      m_iconsPath, m_enemyOverlayPath);
+      m_iconsPath, m_enemyOverlayPath, m_friendlyOverlayPath);
   SoundManager::playMusic("AllyTurn");
   SoundManager::setMusicVolume(20.f);
 }
@@ -170,6 +170,9 @@ void MapManager::update(float deltaTime) {
   if (m_lastSelectedUnit != currentSelected) {
     m_lastSelectedUnit = currentSelected;
     notifySelectionChanged(currentSelected, nullptr, nullptr);
+  }
+  if (selectionController) {
+      selectionController->update(deltaTime);
   }
   for (auto &unit : units)
     unit->update(deltaTime);
@@ -214,6 +217,8 @@ void MapManager::update(float deltaTime) {
       m_captureBounceTargets.clear();
     }
   }
+
+  checkWinCondition();
 
   m_uiTime += deltaTime;
 }
@@ -357,6 +362,24 @@ void MapManager::drawUI(sf::RenderWindow &window) {
   if (selectionController)
     selectionController->drawGui();
 
+  if (m_gameOver) {
+    sf::View savedView = window.getView();
+    window.setView(window.getDefaultView());
+
+    sf::Text text(m_uiFont, m_winner == Team::Ally ? "ALLY WON!" : "ENEMY WON!", 60u);
+    text.setFillColor(sf::Color::Yellow);
+    text.setOutlineColor(sf::Color::Black);
+    text.setOutlineThickness(3.f);
+
+    sf::FloatRect bounds = text.getLocalBounds();
+    text.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
+    text.setPosition({window.getSize().x / 2.f, window.getSize().y / 2.f});
+
+    window.draw(text);
+    window.setView(savedView);
+    return;
+  }
+
   if (m_turnController.getCurrentTeam() == Team::Enemy) {
     sf::View savedView = window.getView();
     window.setView(window.getDefaultView());
@@ -434,6 +457,64 @@ void MapManager::endTurn() {
     SoundManager::playMusic("EnemyTurn");
   }
   SoundManager::setMusicVolume(20.f);
+
+  Team newTeam = m_turnController.getCurrentTeam();
+  if (m_turnController.getTurnNumber() > 1) {
+    for (const auto& building : buildings) {
+      if (building->getTeam() == newTeam) {
+        if (building->getTypeName() == "LandOilRig") {
+          m_teams[newTeam].money += 100;
+        } else if (building->getTypeName() == "SeaOilRig") {
+          m_teams[newTeam].money += 200;
+        }
+      }
+    }
+  }
+}
+
+void MapManager::checkWinCondition() {
+    if (m_gameOver) return;
+
+    bool allyHQExists = false;
+    bool enemyHQExists = false;
+    for (const auto& b : buildings) {
+        if (b->getTypeName() == "HQ") {
+            if (b->getTeam() == Team::Ally) allyHQExists = true;
+            if (b->getTeam() == Team::Enemy) enemyHQExists = true;
+        }
+    }
+
+    bool enemyHasUnits = false;
+    bool allyHasUnits = false;
+    for (const auto& u : units) {
+        if (!u->isDead()) {
+            if (u->getTeam() == Team::Enemy) enemyHasUnits = true;
+            if (u->getTeam() == Team::Ally) allyHasUnits = true;
+        }
+    }
+
+    bool allyWon = false;
+    bool enemyWon = false;
+
+    if (!enemyHQExists || !enemyHasUnits) allyWon = true;
+    if (!allyHQExists || !allyHasUnits) enemyWon = true;
+
+    if (allyWon && !enemyWon) {
+        triggerGameOver(Team::Ally);
+    } else if (enemyWon && !allyWon) {
+        triggerGameOver(Team::Enemy);
+    }
+}
+
+void MapManager::triggerGameOver(Team winner) {
+    m_gameOver = true;
+    m_winner = winner;
+    Team loser = (winner == Team::Ally) ? Team::Enemy : Team::Ally;
+    for (const auto& b : buildings) {
+        if (b->getTeam() == loser) {
+            spawnEffect("explosion", "default", "Art/Effects/explosion.png", b->getPosition(), 0.f);
+        }
+    }
 }
 
 Team MapManager::getCurrentTeam() const {
@@ -471,6 +552,10 @@ void MapManager::setIconsPath(std::string path) {
 
 void MapManager::setEnemyOverlayPath(std::string path) {
   m_enemyOverlayPath = std::move(path);
+}
+
+void MapManager::setFriendlyOverlayPath(std::string path) {
+  m_friendlyOverlayPath = std::move(path);
 }
 
 void MapManager::spawnEffect(const std::string &setName,
@@ -711,16 +796,17 @@ bool MapManager::loadFromFile(const std::string &mapPath) {
   m_teams.clear();
   for (const auto &td : mapFile.teams) {
     m_teams[td.team] = td;
+    m_teams[td.team].money = td.startMoney;
   }
   if (m_teams.find(Team::Ally) == m_teams.end()) {
-    m_teams[Team::Ally] = {Team::Ally, "Blue Team", sf::Color::Blue, 1000};
+    m_teams[Team::Ally] = {Team::Ally, "Blue Team", sf::Color::Blue, 1000, 1000};
   }
   if (m_teams.find(Team::Enemy) == m_teams.end()) {
-    m_teams[Team::Enemy] = {Team::Enemy, "Red Team", sf::Color::Red, 1000};
+    m_teams[Team::Enemy] = {Team::Enemy, "Red Team", sf::Color::Red, 1000, 1000};
   }
   if (m_teams.find(Team::Neutral) == m_teams.end()) {
     m_teams[Team::Neutral] = {Team::Neutral, "Neutral",
-                              sf::Color(128, 128, 128), 0};
+                              sf::Color(128, 128, 128), 0, 0};
   }
 
   if (!loadMap(mapFile.tilesetPath, mapFile.tileSize, mapFile.tiles,
