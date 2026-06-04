@@ -108,8 +108,8 @@ int main() {
 
             int flagY = 10;
             if (unit->hasFlag(UnitFlag::Capture)) {
-              auto pic = tgui::Picture::create("Art/UI/flag.png");
-              pic->getRenderer()->setTextureRect(tgui::FloatRect(0, 0, 32, 32));
+              tgui::Texture tex("Art/UI/flag.png", tgui::UIntRect(0, 0, 32, 32));
+              auto pic = tgui::Picture::create(tex);
               pic->setPosition(10, flagY);
               auto tooltip = tgui::Label::create("Can capture buildings");
               tooltip->getRenderer()->setBackgroundColor(

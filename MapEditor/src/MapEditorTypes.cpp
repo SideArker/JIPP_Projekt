@@ -35,49 +35,46 @@ std::string terrainLabel(TerrainType t) {
 
 TerrainType terrainForTileId(int id) {
     switch (id) {
-    case 6:  return TerrainType::Water;
-    case 7:  return TerrainType::Mountain;
-    case 17: return TerrainType::Mountain;
+    case 6:  return TerrainType::Grass; // "Large Rock" - Treat as Grass with obstacle or Mountain? Let's say Mountain.
+    case 7:  return TerrainType::Mountain; // Small rock cluster
+    case 8:  return TerrainType::Road;
+    case 9:  return TerrainType::Road;
     case 10: return TerrainType::Road;
-    case 11: return TerrainType::Road;
-    case 12: return TerrainType::Road;
-    case 16: return TerrainType::Road;
-    case 2: return TerrainType::Grass;
-    case 3: return TerrainType::Grass;
-    case 4: return TerrainType::Grass;
-    case 5: return TerrainType::Grass;
-    case 8: return TerrainType::Grass;
-    case 9: return TerrainType::Grass;
+    case 11: return TerrainType::Water;
+    case 12: return TerrainType::Grass; // Right water Coastline Edge
     case 13: return TerrainType::Grass;
     case 14: return TerrainType::Grass;
     case 15: return TerrainType::Grass;
+    case 16: return TerrainType::Grass;
+    case 17: return TerrainType::Grass;
     case 18: return TerrainType::Grass;
     case 19: return TerrainType::Grass;
     default:
-        return TerrainType::Grass;
+        return TerrainType::Grass; // 1 to 5 are grass
     }
 }
 
 std::string tileDescription(int id) {
     switch (id) {
-    case  2: return " - Grass";
-    case  3: return " - Grass2";
-    case  4: return " - Grass3";
-    case  5: return " - Grass right barrier";
-    case  6: return " - Water";
-    case  7: return " - Mountain";
-    case  8: return " - Grass bottom-right barrier";
-    case  9: return " - Grass top-right barrier";
-    case 10: return " - Road left/right";
-    case 11: return " - T-Road";
-    case 12: return " - Road up/down";
-    case 13: return " - Grass barrier left";
-    case 14: return " - Grass bottom-left barrier";
-    case 15: return " - Grass bottom";
-    case 16: return " - Road turn";
-    case 17: return " - Mountain2";
-    case 18: return " - Grass top-left barrier";
-    case 19: return " - Grass top barrier";
+    case  1: return " - Grey Checkerboard";
+    case  2: return " - Plain Grass";
+    case  3: return " - Grass small debris";
+    case  4: return " - Grass small craters";
+    case  5: return " - Grass dirt crater";
+    case  6: return " - Large Rock";
+    case  7: return " - Small Rock cluster";
+    case  8: return " - Asphalt Road Corner";
+    case  9: return " - Asphalt Road Center";
+    case 10: return " - Asphalt Road Horizontal";
+    case 11: return " - Pure Water";
+    case 12: return " - Coast Right Water";
+    case 13: return " - Coast Left Water";
+    case 14: return " - Coast Bottom Water";
+    case 15: return " - Coast Top Water";
+    case 16: return " - Coast Bottom-Right Water";
+    case 17: return " - Coast Top-Right Water";
+    case 18: return " - Coast Bottom-Left Water";
+    case 19: return " - Coast Top-Left Water";
     default: return "";
     }
 }
@@ -88,6 +85,20 @@ MapFile createDefaultMap() {
     map.tileSize    = {32, 32};
     map.width       = 24;
     map.height      = 16;
-    map.tiles.assign(map.width * map.height, Tile(19, TerrainType::Grass));
+    map.tiles.assign(map.width * map.height, Tile(2, TerrainType::Grass));
+    
+    TeamData td1;
+    td1.team = Team::Ally;
+    td1.name = "Blue Nation";
+    td1.color = sf::Color(50, 150, 255);
+    td1.startMoney = 1500;
+    
+    TeamData td2;
+    td2.team = Team::Enemy;
+    td2.name = "Red Empire";
+    td2.color = sf::Color(255, 50, 50);
+    td2.startMoney = 1500;
+    
+    map.teams = {td1, td2};
     return map;
 }

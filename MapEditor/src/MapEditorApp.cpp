@@ -65,6 +65,17 @@ void MapEditorApp::run() {
 
         m_window.clear(sf::Color(24, 25, 30));
         m_window.setView(m_mapView);
+        
+        // Draw map borders
+        sf::RectangleShape borderRect(sf::Vector2f(
+            static_cast<float>(m_map.width * m_map.tileSize.x),
+            static_cast<float>(m_map.height * m_map.tileSize.y)
+        ));
+        borderRect.setFillColor(sf::Color::Transparent);
+        borderRect.setOutlineColor(sf::Color(200, 50, 50, 200));
+        borderRect.setOutlineThickness(2.f);
+        m_window.draw(borderRect);
+
         m_window.draw(m_mapRenderer);
         drawSpawnOverlay();
         m_window.setView(m_window.getDefaultView());
@@ -326,12 +337,14 @@ bool MapEditorApp::saveMap(const std::string& path) {
 }
 
 void MapEditorApp::buildUi() {
-    auto panel = tgui::Panel::create();
-    panel->setPosition(mapViewportWidth(), 0.f);
-    panel->setSize(static_cast<float>(m_window.getSize().x - mapViewportWidth()),
+    auto mainPanel = tgui::ScrollablePanel::create();
+    mainPanel->setPosition(mapViewportWidth(), 0.f);
+    mainPanel->setSize(static_cast<float>(m_window.getSize().x - mapViewportWidth()),
                    static_cast<float>(m_window.getSize().y));
-    panel->getRenderer()->setBackgroundColor(sf::Color(32, 34, 40));
-    m_gui.add(panel);
+    mainPanel->getRenderer()->setBackgroundColor(sf::Color(32, 34, 40));
+    m_gui.add(mainPanel);
+
+    auto panel = mainPanel; // for compatibility with rest of the code
 
     float y = 8.f;
 
@@ -378,15 +391,46 @@ void MapEditorApp::buildUi() {
 
     lbl("Map size (W x H)");
     m_widthEdit = tgui::EditBox::create();
-    m_widthEdit->setText("24");
+    m_widthEdit->setText(std::to_string(m_map.width));
     m_widthEdit->setInputValidator(tgui::EditBox::Validator::UInt);
     m_widthEdit->setPosition(12, y); m_widthEdit->setSize("(&.w - 28) / 2", 26);
     panel->add(m_widthEdit);
     m_heightEdit = tgui::EditBox::create();
-    m_heightEdit->setText("16");
+    m_heightEdit->setText(std::to_string(m_map.height));
     m_heightEdit->setInputValidator(tgui::EditBox::Validator::UInt);
     m_heightEdit->setPosition("12 + (&.w - 28) / 2 + 4", y); m_heightEdit->setSize("(&.w - 28) / 2", 26);
-    panel->add(m_heightEdit); y += 34.f;
+    panel->add(m_heightEdit); y += 30.f;
+
+    auto updateMapBtn = tgui::Button::create("Update Map Size");
+    updateMapBtn->setPosition(12, y); updateMapBtn->setSize("&.w - 24", 26);
+    updateMapBtn->onPress([this]() {
+        const unsigned int newW = std::max(1u, static_cast<unsigned int>(std::stoul(m_widthEdit->getText().toStdString())));
+        const unsigned int newH = std::max(1u, static_cast<unsigned int>(std::stoul(m_heightEdit->getText().toStdString())));
+        
+        std::vector<Tile> newTiles(newW * newH, Tile(2, TerrainType::Grass));
+        for (unsigned int gy = 0; gy < std::min(m_map.height, newH); ++gy) {
+            for (unsigned int gx = 0; gx < std::min(m_map.width, newW); ++gx) {
+                newTiles[gy * newW + gx] = m_map.tiles[gy * m_map.width + gx];
+            }
+        }
+        m_map.tiles = std::move(newTiles);
+        m_map.width = newW;
+        m_map.height = newH;
+        
+        // Remove out of bounds spawns
+        auto removeOob = [&](auto& list) {
+            list.erase(std::remove_if(list.begin(), list.end(), [&](const auto& s) {
+                return s.gridX >= static_cast<int>(newW) || s.gridY >= static_cast<int>(newH);
+            }), list.end());
+        };
+        removeOob(m_map.spawns);
+        removeOob(m_map.buildingSpawns);
+        
+        rebuildRenderer();
+        clampMapView();
+        refreshStatus("Updated map size to " + std::to_string(newW) + "x" + std::to_string(newH));
+    });
+    panel->add(updateMapBtn); y += 34.f;
 
     lbl("Tool");
     m_toolCombo = tgui::ComboBox::create();
@@ -406,12 +450,9 @@ void MapEditorApp::buildUi() {
     lbl("Placement team");
     m_teamCombo = tgui::ComboBox::create();
     m_teamCombo->setPosition(12, y); m_teamCombo->setSize("&.w - 24", 26);
-    m_teamCombo->addItem("Ally",    "Ally");
-    m_teamCombo->addItem("Enemy",   "Enemy");
-    m_teamCombo->addItem("Neutral", "Neutral");
-    m_teamCombo->setSelectedItemById("Ally");
     m_teamCombo->onItemSelect([this](const tgui::String&) {
-        m_selectedTeam = parseTeam(m_teamCombo->getSelectedItemId().toStdString());
+        const std::string idStr = m_teamCombo->getSelectedItemId().toStdString();
+        if (!idStr.empty()) m_selectedTeam = static_cast<Team>(std::stoi(idStr));
     }); panel->add(m_teamCombo); y += 32.f;
 
     lbl("Terrain type");
@@ -453,9 +494,96 @@ void MapEditorApp::buildUi() {
 
     m_statusLabel = tgui::Label::create("Ready");
     m_statusLabel->setPosition(12, y); m_statusLabel->setTextSize(13);
-    panel->add(m_statusLabel);
+    panel->add(m_statusLabel); y += 30.f;
+
+    lbl("Teams Settings");
+    
+    auto addTeamBtn = tgui::Button::create("Add Team");
+    addTeamBtn->setPosition(12, y); addTeamBtn->setSize("&.w / 2 - 16", 26);
+    addTeamBtn->onPress([this]() {
+        TeamData t;
+        t.team = static_cast<Team>(m_map.teams.size());
+        t.name = "New Team";
+        t.startMoney = 1000;
+        t.color = sf::Color::White;
+        m_map.teams.push_back(t);
+        rebuildTeamEditor();
+    });
+    panel->add(addTeamBtn);
+    
+    auto remTeamBtn = tgui::Button::create("Remove Team");
+    remTeamBtn->setPosition("12 + &.w / 2 - 12", y); remTeamBtn->setSize("&.w / 2 - 16", 26);
+    remTeamBtn->onPress([this]() {
+        if (!m_map.teams.empty()) {
+            m_map.teams.pop_back();
+            rebuildTeamEditor();
+        }
+    });
+    panel->add(remTeamBtn); y += 34.f;
+    
+    m_teamEditorPanel = tgui::ScrollablePanel::create();
+    m_teamEditorPanel->setPosition(12, y); m_teamEditorPanel->setSize("&.w - 24", 250);
+    m_teamEditorPanel->getRenderer()->setBackgroundColor(sf::Color(20, 22, 26));
+    panel->add(m_teamEditorPanel);
+    rebuildTeamEditor();
 
     updateVisibleLists();
+}
+
+void MapEditorApp::rebuildTeamEditor() {
+    if (m_teamCombo) {
+        m_teamCombo->removeAllItems();
+        for (const auto& td : m_map.teams) {
+            m_teamCombo->addItem(td.name, std::to_string(static_cast<int>(td.team)));
+        }
+        if (!m_map.teams.empty()) {
+            m_teamCombo->setSelectedItemById(std::to_string(static_cast<int>(m_map.teams.front().team)));
+        }
+    }
+
+    if (!m_teamEditorPanel) return;
+    m_teamEditorPanel->removeAllWidgets();
+    
+    float ty = 4.f;
+    for (size_t i = 0; i < m_map.teams.size(); ++i) {
+        auto& td = m_map.teams[i];
+        
+        auto lbl = tgui::Label::create("Team " + std::to_string(i + 1));
+        lbl->setPosition(4, ty); lbl->setTextSize(14);
+        m_teamEditorPanel->add(lbl); ty += 20.f;
+        
+        auto nameEdit = tgui::EditBox::create();
+        nameEdit->setPosition(4, ty); nameEdit->setSize("&.w - 20", 22);
+        nameEdit->setText(td.name);
+        nameEdit->onTextChange([&td](const tgui::String& t) { td.name = t.toStdString(); });
+        m_teamEditorPanel->add(nameEdit); ty += 26.f;
+        
+        auto cashLbl = tgui::Label::create("Cash:");
+        cashLbl->setPosition(4, ty); m_teamEditorPanel->add(cashLbl);
+        auto cashEdit = tgui::EditBox::create();
+        cashEdit->setPosition(50, ty); cashEdit->setSize(60, 22);
+        cashEdit->setText(std::to_string(td.startMoney));
+        cashEdit->setInputValidator(tgui::EditBox::Validator::UInt);
+        cashEdit->onTextChange([&td](const tgui::String& t) { 
+            if (!t.empty()) td.startMoney = std::stoi(t.toStdString()); 
+        });
+        m_teamEditorPanel->add(cashEdit);
+        
+        auto rEdit = tgui::EditBox::create(); rEdit->setPosition(120, ty); rEdit->setSize(30, 22); rEdit->setText(std::to_string(td.color.r));
+        auto gEdit = tgui::EditBox::create(); gEdit->setPosition(155, ty); gEdit->setSize(30, 22); gEdit->setText(std::to_string(td.color.g));
+        auto bEdit = tgui::EditBox::create(); bEdit->setPosition(190, ty); bEdit->setSize(30, 22); bEdit->setText(std::to_string(td.color.b));
+        auto updateColor = [&td, rEdit, gEdit, bEdit]() {
+            if (!rEdit->getText().empty()) td.color.r = std::clamp(std::stoi(rEdit->getText().toStdString()), 0, 255);
+            if (!gEdit->getText().empty()) td.color.g = std::clamp(std::stoi(gEdit->getText().toStdString()), 0, 255);
+            if (!bEdit->getText().empty()) td.color.b = std::clamp(std::stoi(bEdit->getText().toStdString()), 0, 255);
+        };
+        rEdit->onTextChange(updateColor);
+        gEdit->onTextChange(updateColor);
+        bEdit->onTextChange(updateColor);
+        m_teamEditorPanel->add(rEdit); m_teamEditorPanel->add(gEdit); m_teamEditorPanel->add(bEdit);
+        
+        ty += 34.f;
+    }
 }
 
 void MapEditorApp::updateVisibleLists() {
@@ -477,9 +605,49 @@ void MapEditorApp::handleMapClick(const sf::Event::MouseButtonPressed& mb) {
     else if (mb.button == sf::Mouse::Button::Right) removeAt(gx, gy);
 }
 
+void MapEditorApp::runAutotile(int gx, int gy) {
+    auto processTile = [&](int x, int y) {
+        if (!inBounds(x, y)) return;
+        Tile& t = m_map.tiles[tileIndex(x, y)];
+        if (t.getTerrain() != TerrainType::Grass) return;
+        
+        bool wTop = inBounds(x, y-1) && m_map.tiles[tileIndex(x, y-1)].getTerrain() == TerrainType::Water;
+        bool wBottom = inBounds(x, y+1) && m_map.tiles[tileIndex(x, y+1)].getTerrain() == TerrainType::Water;
+        bool wLeft = inBounds(x-1, y) && m_map.tiles[tileIndex(x-1, y)].getTerrain() == TerrainType::Water;
+        bool wRight = inBounds(x+1, y) && m_map.tiles[tileIndex(x+1, y)].getTerrain() == TerrainType::Water;
+
+        int newId = t.getArtId();
+        if (newId >= 12 && newId <= 19) newId = 2; // reset edges to default grass
+        
+        int mask = (wTop ? 1 : 0) | (wBottom ? 2 : 0) | (wLeft ? 4 : 0) | (wRight ? 8 : 0);
+        switch (mask) {
+            case 1: newId = 15; break; // Top
+            case 2: newId = 14; break; // Bottom
+            case 4: newId = 13; break; // Left
+            case 8: newId = 12; break; // Right
+            case 5: newId = 19; break; // Top & Left
+            case 9: newId = 17; break; // Top & Right
+            case 6: newId = 18; break; // Bottom & Left
+            case 10: newId = 16; break; // Bottom & Right
+            default: break;
+        }
+        
+        if (newId != t.getArtId()) {
+            t = Tile(newId, TerrainType::Grass);
+        }
+    };
+
+    processTile(gx, gy);
+    processTile(gx-1, gy);
+    processTile(gx+1, gy);
+    processTile(gx, gy-1);
+    processTile(gx, gy+1);
+}
+
 void MapEditorApp::paintTileAt(int gx, int gy) {
     if (!inBounds(gx, gy)) return;
     m_map.tiles[tileIndex(gx, gy)] = Tile(m_selectedArtId, m_selectedTerrain);
+    runAutotile(gx, gy);
     rebuildRenderer();
 }
 
