@@ -13,16 +13,23 @@ void registerPlane() {
   static const std::string UNIT_NAME = "Plane";
   static const std::string ART_PATH = "Art/Units/Plane/plane_idle.png";
   static const std::string MASK_PATH = "Art/Units/Plane/plane_idle_mask.png";
-  static const std::vector<UnitFlag> FLAGS = {};
+  static const std::vector<UnitFlag> FLAGS = {
+      UnitFlag::CanAttackGround, UnitFlag::CanAttackInfantry,
+      UnitFlag::CanAttackFlying, UnitFlag::CanAttackNaval};
 
   AnimationSet unitAnimSet;
   unitAnimSet.addDirectionalClips(
-      "idle", AnimationClip::fromRow({0, 0}, {32, 32}, 4, 0.1f, false, true),
+      "idle", AnimationClip::fromRow({0, 0}, {32, 32}, 6, 1.f, true, false),
+      AnimationClip::fromRow({0, 32}, {32, 32}, 6, 1.f, true, false),
+      AnimationClip::fromRow({0, 64}, {32, 32}, 6, 1.f, true, false));
+
+  unitAnimSet.addDirectionalClips(
+      "walk", AnimationClip::fromRow({0, 0}, {32, 32}, 4, 0.1f, false, false),
       AnimationClip::fromRow({0, 32}, {32, 32}, 4, 0.1f, false, false),
       AnimationClip::fromRow({0, 64}, {32, 32}, 4, 0.1f, false, false));
 
   unitAnimSet.addDirectionalClips(
-      "shoot", AnimationClip::fromRow({0, 0}, {32, 32}, 4, 0.1f, false, true),
+      "shoot", AnimationClip::fromRow({0, 0}, {32, 32}, 4, 0.1f, false, false),
       AnimationClip::fromRow({0, 32}, {32, 32}, 4, 0.1f, false, false),
       AnimationClip::fromRow({0, 64}, {32, 32}, 4, 0.1f, false, false), {},
       "Art/Units/Plane/plane_shoot.png",

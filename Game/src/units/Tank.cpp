@@ -13,7 +13,7 @@ void registerTank() {
   static const std::string UNIT_NAME = "Tank";
   static const std::string ART_PATH = "Art/Units/Tank/tank_idle.png";
   static const std::string MASK_PATH = "Art/Units/Tank/tank_idle_mask.png";
-  static const std::vector<UnitFlag> FLAGS = {};
+  static const std::vector<UnitFlag> FLAGS = {UnitFlag::CanAttackGround, UnitFlag::CanAttackInfantry, UnitFlag::CanAttackNaval};
 
   AnimationSet unitAnimSet;
   unitAnimSet

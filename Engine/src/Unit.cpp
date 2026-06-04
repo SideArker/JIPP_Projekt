@@ -216,3 +216,13 @@ void Unit::dealDamage(std::shared_ptr<Unit> target, MoveDirection shootDir) {
     m_pendingTarget = target;
     m_shootPending = true;
 }
+
+bool Unit::canTarget(const Unit& target) const {
+    switch (target.getMovementCategory()) {
+        case MovementCategory::Ground:   return hasFlag(UnitFlag::CanAttackGround);
+        case MovementCategory::Infantry: return hasFlag(UnitFlag::CanAttackInfantry);
+        case MovementCategory::Flying:   return hasFlag(UnitFlag::CanAttackFlying);
+        case MovementCategory::Naval:    return hasFlag(UnitFlag::CanAttackNaval);
+    }
+    return false;
+}

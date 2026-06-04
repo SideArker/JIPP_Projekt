@@ -363,7 +363,10 @@ void MapEditorApp::loadSpritePreviews() {
       {"MissileTank",
        "Art/Units/MissileTank/missiletank.png",
        {{0, 0}, {32, 32}}},
-  };
+      {"Plane", "Art/Units/Plane/plane_idle.png", {{0, 0}, {32, 32}}},
+      {"Destroyer",
+       "Art/Units/Destroyer/destroyer_move.png",
+       {{0, 0}, {32, 32}}}};
   for (const auto &info : unitInfos) {
     auto &preview = m_unitPreviews[info.type];
     preview.texture.loadFromFile(info.path);

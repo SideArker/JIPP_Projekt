@@ -9,7 +9,6 @@
 #include <string>
 #include <vector>
 
-
 class MapEditorApp {
 public:
   MapEditorApp();
@@ -28,7 +27,8 @@ private:
   MapRenderer m_mapRenderer;
   sf::Texture m_tilesetTex;
 
-  std::vector<std::string> m_unitTypes = {"Tank", "Soldier", "MissileTank"};
+  std::vector<std::string> m_unitTypes = {"Tank", "Soldier", "MissileTank",
+                                          "Plane", "Destroyer"};
   std::vector<std::string> m_buildingTypes = {"HQ", "Factory", "Port",
                                               "OilRig"};
 

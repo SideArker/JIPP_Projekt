@@ -246,6 +246,7 @@ bool AIController::tryAttackUnit(Unit& unit, MapManager& mapManager, TurnControl
 
     for (const auto& ally : mapManager.getUnits()) {
         if (ally->isDead() || ally->getTeam() != Team::Ally) continue;
+        if (!unit.canTarget(*ally)) continue;
         sf::Vector2i aGrid = gridOf(*ally, ts);
 
         if (inRange(uGrid, aGrid)) {
@@ -302,6 +303,7 @@ bool AIController::tryMoveTowardPlayer(Unit& unit, MapManager& mapManager, TurnC
     size_t bestDist = 99999;
     for (const auto& ally : mapManager.getUnits()) {
         if (ally->isDead() || ally->getTeam() != Team::Ally) continue;
+        if (!unit.canTarget(*ally)) continue;
         sf::Vector2i aGrid = gridOf(*ally, ts);
         
         auto path = mapManager.findPath(uGrid, aGrid, unit.getTeam(), unit.getMovementCategory());

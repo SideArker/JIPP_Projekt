@@ -92,7 +92,8 @@ SelectionController::SelectionController(sf::RenderWindow &window,
         // Check for enemy unit on this tile
         auto unitAtTile = mapManager.getUnitAtTile(gridPos);
         if (unitAtTile && unitAtTile != selectedUnit &&
-            unitAtTile->getTeam() != selectedUnit->getTeam()) {
+            unitAtTile->getTeam() != selectedUnit->getTeam() &&
+            selectedUnit->canTarget(*unitAtTile)) {
           const int minRange = selectedUnit->getMinAttackRange();
           const int maxRange = selectedUnit->getMaxAttackRange();
           auto canAttackFrom = [&](sf::Vector2i from) {
@@ -384,6 +385,8 @@ void SelectionController::drawOverlays(sf::RenderTarget &target) {
 
     for (const auto &unit : mapManager.getUnits()) {
       if (unit->getTeam() == selectedUnit->getTeam() || unit->isDead())
+        continue;
+      if (!selectedUnit->canTarget(*unit))
         continue;
 
       const sf::Vector2i enemyGrid(

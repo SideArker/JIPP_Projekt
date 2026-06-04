@@ -14,18 +14,25 @@ void registerDestroyer() {
   static const std::string ART_PATH = "Art/Units/Destroyer/destroyer_move.png";
   static const std::string MASK_PATH =
       "Art/Units/Destroyer/destroyer_move_mask.png";
-  static const std::vector<UnitFlag> FLAGS = {};
+  static const std::vector<UnitFlag> FLAGS = {
+      UnitFlag::CanAttackGround, UnitFlag::CanAttackInfantry,
+      UnitFlag::CanAttackFlying, UnitFlag::CanAttackNaval};
 
   AnimationSet unitAnimSet;
   unitAnimSet.addDirectionalClips(
-      "move", AnimationClip::fromRow({0, 0}, {32, 32}, 4, 0.1f, false, true),
-      AnimationClip::fromRow({0, 32}, {32, 32}, 4, 0.1f, false, false),
-      AnimationClip::fromRow({0, 64}, {32, 32}, 4, 0.1f, false, false));
+      "idle", AnimationClip::fromRow({0, 0}, {32, 32}, 3, 0.1f, true, true),
+      AnimationClip::fromRow({0, 32}, {32, 32}, 3, 0.1f, true, false),
+      AnimationClip::fromRow({0, 64}, {32, 32}, 3, 0.1f, true, false));
 
   unitAnimSet.addDirectionalClips(
-      "shoot", AnimationClip::fromRow({0, 0}, {32, 32}, 4, 0.1f, false, true),
-      AnimationClip::fromRow({0, 32}, {32, 32}, 4, 0.1f, false, false),
-      AnimationClip::fromRow({0, 64}, {32, 32}, 4, 0.1f, false, false), {},
+      "walk", AnimationClip::fromRow({0, 0}, {32, 32}, 3, 0.1f, false, true),
+      AnimationClip::fromRow({0, 32}, {32, 32}, 3, 0.1f, false, false),
+      AnimationClip::fromRow({0, 64}, {32, 32}, 3, 0.1f, false, false));
+
+  unitAnimSet.addDirectionalClips(
+      "shoot", AnimationClip::fromRow({0, 0}, {32, 32}, 5, 0.1f, false, true),
+      AnimationClip::fromRow({0, 32}, {32, 32}, 5, 0.1f, false, false),
+      AnimationClip::fromRow({0, 64}, {32, 32}, 5, 0.1f, false, false), {},
       "Art/Units/Destroyer/destroyer_shoot.png",
       "Art/Units/Destroyer/destroyer_shoot_mask.png");
 
@@ -37,7 +44,7 @@ void registerDestroyer() {
 
   UnitData data;
   data.maxHealth = 40;
-  data.damage = 15;
+  data.damage = 20;
   data.moveSpeed = 4;
   data.minAttackRange = 0;
   data.maxAttackRange = 4;

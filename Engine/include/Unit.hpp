@@ -44,6 +44,11 @@ enum class UnitFlag {
 	Capture,
 	IsArmored,
 
+	CanAttackGround,
+	CanAttackInfantry,
+	CanAttackFlying,
+	CanAttackNaval,
+
 	// Always keep this last!
 	Count
 };
@@ -99,6 +104,7 @@ public:
 
 	void dealDamage(std::shared_ptr<Unit> target, MoveDirection shootDir);
 	bool isActing() const { return !m_isDead && (!path.empty() || m_isShooting || m_shootPending); }
+	bool canTarget(const Unit& target) const;
 
 	void addFlag(UnitFlag flag) { flags.set(static_cast<std::size_t>(flag)); }
 	void removeFlag(UnitFlag flag) { flags.reset(static_cast<std::size_t>(flag)); }
