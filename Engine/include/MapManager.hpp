@@ -3,6 +3,7 @@
 #include "MapRenderer.hpp"
 #include "AnimationManager.hpp"
 #include "EngineAPI.hpp"
+#include "MapFile.hpp"
 #include "GameState.hpp"
 #include "TurnController.hpp"
 #include <Unit.hpp>
@@ -57,6 +58,9 @@ private:
 	std::vector<std::pair<float, std::function<void()>>> m_pendingActions;
 	std::vector<std::function<void()>> m_whenIdleActions;
 	TurnController m_turnController;
+    std::map<Team, TeamData> m_teams;
+    std::function<void(std::shared_ptr<Unit>, std::shared_ptr<Building>, const Tile*)> m_onSelectionChanged;
+    std::shared_ptr<Unit> m_lastSelectedUnit;
 
 	void spawnEffect(const std::string& setName, const std::string& clipName, const std::string& texturePath, sf::Vector2f position, float yOffset = 0.f);
 	void spawnHitEffect(sf::Vector2f position);
@@ -98,7 +102,16 @@ public:
 	void setIconsPath(std::string path);
 	void setEnemyOverlayPath(std::string path);
 
+    const std::map<Team, TeamData>& getTeams() const { return m_teams; }
+    void setOnSelectionChanged(std::function<void(std::shared_ptr<Unit>, std::shared_ptr<Building>, const Tile*)> cb) {
+        m_onSelectionChanged = cb;
+    }
+    void notifySelectionChanged(std::shared_ptr<Unit> unit, std::shared_ptr<Building> building, const Tile* tile) {
+        if (m_onSelectionChanged) m_onSelectionChanged(unit, building, tile);
+    }
+
 	const std::vector<std::shared_ptr<Unit>>& getUnits() const { return units; }
+	std::shared_ptr<Unit> getSelectedUnit() const;
 
 	std::vector<sf::Vector2i> findPath(sf::Vector2i start, sf::Vector2i goal, Team movingTeam, MovementCategory category);
 	std::vector<sf::Vector2i> getReachableTiles(sf::Vector2i from, int moveRange, Team movingTeam, MovementCategory category) const;

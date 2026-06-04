@@ -11,6 +11,7 @@ struct ENGINE_API TeamData {
     Team team  = Team::Neutral;
     std::string name;
     sf::Color color = sf::Color::White;
+    int startMoney = 1000;
 };
 
 struct ENGINE_API UnitSpawnData {

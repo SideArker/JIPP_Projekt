@@ -20,6 +20,7 @@ public:
     void clearSelection();
     void syncCameraView(sf::View gameView);
     tgui::Gui& getGui() { return gui; }
+    std::shared_ptr<Unit> getSelectedUnit() const { return selectedUnit; }
 
 private:
     void updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i unitGrid, sf::Vector2i preferredDir);

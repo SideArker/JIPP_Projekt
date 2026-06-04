@@ -9,10 +9,7 @@
 #include "TerrainMovement.hpp"
 #include "TextureManager.hpp"
 #include "Unit.hpp"
-#include "UnitRegistry.hpp"
 #include <SFML/Graphics.hpp>
-#include <filesystem>
-#include <iostream>
 #include <memory>
 #include <optional>
 
@@ -67,11 +64,6 @@ int main() {
     return -1;
   mapManager.setupInput(window);
 
-  // Set game view to match the new UI empty space
-  // Window is 1280x720. 
-  // Right panel is 250px wide, Bottom panel is 150px tall.
-  // Remaining space: 1030 x 570.
-  // Let's use a logical view size that keeps tiles nicely sized, e.g., 515 x 285
   view.setSize({515.f, 285.f});
   view.setCenter({257.5f, 142.5f});
   view.setViewport(sf::FloatRect({0.f, 0.f}, {1030.f / 1280.f, 570.f / 720.f}));
@@ -86,6 +78,55 @@ int main() {
     auto panels = buildGameUI(*gui);
     panels.endTurnBtn->onClick(
         [&mapManager]() { mapManager.requestEndTurn(); });
+
+    // Populate team list
+    panels.teamList->removeAllWidgets();
+    int teamY = 0;
+    for (const auto &[team, data] : mapManager.getTeams()) {
+      auto lbl = tgui::Label::create();
+      lbl->setText(data.name + "      $" + std::to_string(data.startMoney));
+      lbl->getRenderer()->setTextColor(data.color);
+      lbl->setTextSize(14);
+      lbl->setPosition(5, teamY);
+      panels.teamList->add(lbl);
+      teamY += 25;
+    }
+
+    // Hook up selection callback
+    mapManager.setOnSelectionChanged(
+        [infoLabel = panels.infoLabel, flagsList = panels.flagsList](
+            std::shared_ptr<Unit> unit, std::shared_ptr<Building> building,
+            const Tile *tile) {
+          flagsList->removeAllWidgets();
+          if (unit) {
+            std::string desc = unit->getName() + "\n";
+            desc += "Type: Unit\n";
+            desc += "HP: " + std::to_string(unit->getHealth()) + "/" +
+                    std::to_string(unit->getMaxHealth()) + "\n";
+            desc += "Attack: " + std::to_string(unit->getDamage());
+            infoLabel->setText(desc);
+
+            int flagY = 10;
+            if (unit->hasFlag(UnitFlag::Capture)) {
+              auto pic = tgui::Picture::create("Art/UI/flag.png");
+              pic->getRenderer()->setTextureRect(tgui::FloatRect(0, 0, 32, 32));
+              pic->setPosition(10, flagY);
+              auto tooltip = tgui::Label::create("Can capture buildings");
+              tooltip->getRenderer()->setBackgroundColor(
+                  sf::Color(40, 40, 45, 230));
+              tooltip->getRenderer()->setTextColor(sf::Color::White);
+              tooltip->setTextSize(14);
+              pic->setToolTip(tooltip);
+              flagsList->add(pic);
+              flagY += 40;
+            }
+          } else if (building) {
+            infoLabel->setText(building->getTypeName() +
+                               "\n\nHP: --/--\nAttack: --");
+          } else {
+            infoLabel->setText("");
+          }
+        });
   }
 
   AIController aiController;

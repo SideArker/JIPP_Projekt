@@ -149,6 +149,11 @@ void MapManager::handleEvent(const sf::Event& event) {
 }
 
 void MapManager::update(float deltaTime) {
+    auto currentSelected = getSelectedUnit();
+    if (m_lastSelectedUnit != currentSelected) {
+        m_lastSelectedUnit = currentSelected;
+        notifySelectionChanged(currentSelected, nullptr, nullptr);
+    }
     for (auto& unit : units)
         unit->update(deltaTime);
     for (auto& e : m_effects) {
@@ -556,6 +561,20 @@ bool MapManager::loadFromFile(const std::string& mapPath) {
     selectionController.reset();
     currentMapPath = mapPath;
 
+    m_teams.clear();
+    for (const auto& td : mapFile.teams) {
+        m_teams[td.team] = td;
+    }
+    if (m_teams.find(Team::Ally) == m_teams.end()) {
+        m_teams[Team::Ally] = { Team::Ally, "Blue Team", sf::Color::Blue, 1000 };
+    }
+    if (m_teams.find(Team::Enemy) == m_teams.end()) {
+        m_teams[Team::Enemy] = { Team::Enemy, "Red Team", sf::Color::Red, 1000 };
+    }
+    if (m_teams.find(Team::Neutral) == m_teams.end()) {
+        m_teams[Team::Neutral] = { Team::Neutral, "Neutral", sf::Color(128, 128, 128), 0 };
+    }
+
     if (!loadMap(mapFile.tilesetPath, mapFile.tileSize, mapFile.tiles, mapFile.width, mapFile.height))
         return false;
 
@@ -577,6 +596,10 @@ bool MapManager::saveToFile(const std::string& mapPath) const {
     mapFile.width       = mapWidth;
     mapFile.height      = mapHeight;
     mapFile.tiles       = mapData;
+
+    for (const auto& [team, data] : m_teams) {
+        mapFile.teams.push_back(data);
+    }
 
     for (const auto& unit : units) {
         auto gridPos = unit->getGridPosition(tileSize);
@@ -648,4 +671,11 @@ bool MapManager::restoreGameState(const std::string& savePath) {
         if (building) building->setTeam(bData.team);
     }
     return true;
+}
+
+std::shared_ptr<Unit> MapManager::getSelectedUnit() const {
+    if (selectionController) {
+        return selectionController->getSelectedUnit();
+    }
+    return nullptr;
 }
