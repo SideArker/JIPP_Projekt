@@ -35,13 +35,14 @@ std::string terrainLabel(TerrainType t) {
 
 TerrainType terrainForTileId(int id) {
     switch (id) {
-    case 6:  return TerrainType::Grass; // "Large Rock" - Treat as Grass with obstacle or Mountain? Let's say Mountain.
-    case 7:  return TerrainType::Mountain; // Small rock cluster
+    case 5:  return TerrainType::Mountain;
+    case 6:  return TerrainType::Grass;
+    case 7:  return TerrainType::Road;
     case 8:  return TerrainType::Road;
     case 9:  return TerrainType::Road;
     case 10: return TerrainType::Road;
     case 11: return TerrainType::Water;
-    case 12: return TerrainType::Grass; // Right water Coastline Edge
+    case 12: return TerrainType::Grass; 
     case 13: return TerrainType::Grass;
     case 14: return TerrainType::Grass;
     case 15: return TerrainType::Grass;
@@ -50,7 +51,7 @@ TerrainType terrainForTileId(int id) {
     case 18: return TerrainType::Grass;
     case 19: return TerrainType::Grass;
     default:
-        return TerrainType::Grass; // 1 to 5 are grass
+        return TerrainType::Grass;
     }
 }
 
@@ -60,9 +61,9 @@ std::string tileDescription(int id) {
     case  2: return " - Plain Grass";
     case  3: return " - Grass small debris";
     case  4: return " - Grass small craters";
-    case  5: return " - Grass dirt crater";
+    case  5: return " - Mountain 1";
     case  6: return " - Large Rock";
-    case  7: return " - Small Rock cluster";
+    case  7: return " - Road left";
     case  8: return " - Asphalt Road Corner";
     case  9: return " - Asphalt Road Center";
     case 10: return " - Asphalt Road Horizontal";

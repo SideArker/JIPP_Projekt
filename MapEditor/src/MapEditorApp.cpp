@@ -382,7 +382,7 @@ void MapEditorApp::buildUi() {
         m_map = createDefaultMap();
         m_map.width  = static_cast<unsigned>(w);
         m_map.height = static_cast<unsigned>(h);
-        m_map.tiles.assign(m_map.width * m_map.height, Tile(19, TerrainType::Grass));
+        m_map.tiles.assign(m_map.width * m_map.height, Tile(2, TerrainType::Grass));
         rebuildRenderer();
         rebuildTileList();
         clampMapView();
@@ -572,10 +572,19 @@ void MapEditorApp::rebuildTeamEditor() {
         auto rEdit = tgui::EditBox::create(); rEdit->setPosition(120, ty); rEdit->setSize(30, 22); rEdit->setText(std::to_string(td.color.r));
         auto gEdit = tgui::EditBox::create(); gEdit->setPosition(155, ty); gEdit->setSize(30, 22); gEdit->setText(std::to_string(td.color.g));
         auto bEdit = tgui::EditBox::create(); bEdit->setPosition(190, ty); bEdit->setSize(30, 22); bEdit->setText(std::to_string(td.color.b));
-        auto updateColor = [&td, rEdit, gEdit, bEdit]() {
+        
+        auto colorBox = tgui::Panel::create();
+        colorBox->setPosition(225, ty); colorBox->setSize(22, 22);
+        colorBox->getRenderer()->setBackgroundColor(td.color);
+        colorBox->getRenderer()->setBorders(1);
+        colorBox->getRenderer()->setBorderColor(sf::Color::White);
+        m_teamEditorPanel->add(colorBox);
+
+        auto updateColor = [&td, rEdit, gEdit, bEdit, colorBox]() {
             if (!rEdit->getText().empty()) td.color.r = std::clamp(std::stoi(rEdit->getText().toStdString()), 0, 255);
             if (!gEdit->getText().empty()) td.color.g = std::clamp(std::stoi(gEdit->getText().toStdString()), 0, 255);
             if (!bEdit->getText().empty()) td.color.b = std::clamp(std::stoi(bEdit->getText().toStdString()), 0, 255);
+            colorBox->getRenderer()->setBackgroundColor(td.color);
         };
         rEdit->onTextChange(updateColor);
         gEdit->onTextChange(updateColor);

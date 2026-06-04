@@ -258,12 +258,10 @@ SelectionController::SelectionController(sf::RenderWindow &window,
             reachableTiles.end();
         if (isReachable && !previewPath.empty()) {
           selectedUnit->move(previewPath);
+          m_turnController.markActed(*selectedUnit);
         }
-        m_turnController.markActed(*selectedUnit);
-        selectedUnit = nullptr;
-        reachableTiles.clear();
-        previewPath.clear();
-        m_cursorIconCell = -1;
+        
+        clearSelection();
       });
 
       m_tileButtons.push_back(btn);
@@ -340,12 +338,14 @@ void SelectionController::handleEvent(const sf::Event &event) {
          kp->code == sf::Keyboard::Key::Space) &&
         m_turnController.getCurrentTeam() == Team::Ally &&
         !mapManager.isAnyUnitActing()) {
-      selectedUnit = nullptr;
-      reachableTiles.clear();
-      previewPath.clear();
-      hoveredEnemyUnit = nullptr;
-      m_cursorIconCell = -1;
+      clearSelection();
       mapManager.endTurn();
+    }
+  }
+
+  if (const auto *mp = event.getIf<sf::Event::MouseButtonPressed>()) {
+    if (mp->button == sf::Mouse::Button::Right) {
+      clearSelection();
     }
   }
 }

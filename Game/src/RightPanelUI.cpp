@@ -77,8 +77,7 @@ GameUIWidgets buildGameUI(tgui::Gui &gui) {
   result.bottomPanel->getRenderer()->setBorderColor(sf::Color(60, 85, 115));
   gui.add(result.bottomPanel);
 
-  result.infoLabel = tgui::Label::create(
-      "Selection_Name\nDescription here\nHP: --/--\nAttack: --");
+  result.infoLabel = tgui::Label::create("");
   result.infoLabel->setPosition("20px", "20px");
   result.infoLabel->getRenderer()->setTextColor(sf::Color(200, 220, 255));
   result.infoLabel->setTextSize(16);
@@ -87,7 +86,9 @@ GameUIWidgets buildGameUI(tgui::Gui &gui) {
   result.flagsList = tgui::ScrollablePanel::create();
   result.flagsList->setSize("200px", "100%");
   result.flagsList->setPosition("100% - 200px", "0px");
-  result.flagsList->getRenderer()->setBackgroundColor(sf::Color::Transparent);
+  result.flagsList->getRenderer()->setBackgroundColor(sf::Color(25, 35, 45));
+  result.flagsList->getRenderer()->setBorders(tgui::Borders(1, 0, 0, 0));
+  result.flagsList->getRenderer()->setBorderColor(sf::Color(60, 85, 115));
   result.flagsList->getRenderer()->setScrollbarWidth(0); // hidden scrollbar if any
   result.bottomPanel->add(result.flagsList);
 

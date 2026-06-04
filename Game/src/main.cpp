@@ -56,6 +56,7 @@ int main() {
   window.setView(view);
   GameContent::init();
   tgui::Texture::setDefaultSmooth(false);
+  tgui::ToolTip::setInitialDelay(std::chrono::milliseconds(0));
 
   createDefaultLevel1();
   MapManager mapManager;
@@ -83,12 +84,20 @@ int main() {
     panels.teamList->removeAllWidgets();
     int teamY = 0;
     for (const auto &[team, data] : mapManager.getTeams()) {
-      auto lbl = tgui::Label::create();
-      lbl->setText(data.name + "      $" + std::to_string(data.startMoney));
-      lbl->getRenderer()->setTextColor(data.color);
-      lbl->setTextSize(14);
-      lbl->setPosition(5, teamY);
-      panels.teamList->add(lbl);
+      if (team == Team::Neutral) continue;
+      auto nameLbl = tgui::Label::create();
+      nameLbl->setText(data.name);
+      nameLbl->getRenderer()->setTextColor(data.color);
+      nameLbl->setTextSize(14);
+      nameLbl->setPosition(5, teamY);
+      panels.teamList->add(nameLbl);
+
+      auto moneyLbl = tgui::Label::create();
+      moneyLbl->setText("$" + std::to_string(data.startMoney));
+      moneyLbl->getRenderer()->setTextColor(sf::Color(220, 220, 220)); // slightly distinct color for money
+      moneyLbl->setTextSize(14);
+      moneyLbl->setPosition("100% - 65", teamY);
+      panels.teamList->add(moneyLbl);
       teamY += 25;
     }
 
