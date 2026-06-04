@@ -673,7 +673,7 @@ std::vector<sf::Vector2i> MapManager::findPath(sf::Vector2i start,
       if (!isValid(neighborPos.x, neighborPos.y))
         continue;
       auto occupant = getUnitAtTile(neighborPos);
-      if (occupant != nullptr && occupant->getTeam() != movingTeam)
+      if (occupant != nullptr && occupant->getTeam() != movingTeam && neighborPos != goal)
         continue;
 
       auto terrain = mapData[neighborPos.x + neighborPos.y * static_cast<int>(mapWidth)].getTerrain();

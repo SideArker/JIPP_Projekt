@@ -45,6 +45,7 @@ int main() {
 
   GameUIWidgets panels;
   if (tgui::Gui *gui = mapManager.getGui()) {
+    gui->setFont("Art/Fonts/joystixMonospace.ttf");
     panels = buildGameUI(*gui);
     panels.endTurnBtn->onClick(
         [&mapManager]() { mapManager.requestEndTurn(); });
@@ -95,7 +96,7 @@ int main() {
       if (team == Team::Neutral)
         continue;
         
-      auto teamPanel = tgui::Panel::create({"100%", 25});
+      auto teamPanel = tgui::Panel::create({"100%", 45});
       teamPanel->setPosition(0, teamY);
       teamPanel->getRenderer()->setBackgroundColor(sf::Color(30, 30, 35, 180));
       panels.teamList->add(teamPanel);
@@ -109,7 +110,8 @@ int main() {
       nameLbl->setText(data.name);
       nameLbl->getRenderer()->setTextColor(sf::Color::White);
       nameLbl->setTextSize(14);
-      nameLbl->setPosition(12, "50% - 7");
+      nameLbl->setMaximumTextWidth(140.f);
+      nameLbl->setPosition(12, "50% - 15");
       teamPanel->add(nameLbl);
 
       auto moneyLbl = tgui::Label::create();
@@ -119,7 +121,7 @@ int main() {
       moneyLbl->setPosition("100% - width - 10", "50% - 7");
       teamPanel->add(moneyLbl);
 
-      teamY += 28;
+      teamY += 50;
     }
 
     mapManager.onUnitMoveStart = [&cameraController](std::shared_ptr<Unit> u) {

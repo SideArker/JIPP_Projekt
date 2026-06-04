@@ -1909,9 +1909,21 @@
 },
 {
   "directory": "C:/GitHub/JIPP_Projekt/out/build/Debug x64",
+  "command": "C:\\PROGRA~1\\MICROS~3\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DTGUI_DYNAMIC -IC:\\GitHub\\JIPP_Projekt\\Game\\include -IC:\\GitHub\\JIPP_Projekt\\Engine\\include -I\"C:\\GitHub\\JIPP_Projekt\\out\\build\\Debug x64\\_deps\\sfml-src\\include\" -I\"C:\\GitHub\\JIPP_Projekt\\out\\build\\Debug x64\\_deps\\tgui-src\\include\" /DWIN32 /D_WINDOWS /W3 /GR /EHsc /MDd /Zi /Ob0 /Od /RTC1 -std:c++17 /FoGame\\CMakeFiles\\Game.dir\\src\\units\\Destroyer.cpp.obj /FdGame\\CMakeFiles\\Game.dir\\ /FS -c C:\\GitHub\\JIPP_Projekt\\Game\\src\\units\\Destroyer.cpp",
+  "file": "C:/GitHub/JIPP_Projekt/Game/src/units/Destroyer.cpp",
+  "output": "C:/GitHub/JIPP_Projekt/out/build/Debug x64/Game/CMakeFiles/Game.dir/src/units/Destroyer.cpp.obj"
+},
+{
+  "directory": "C:/GitHub/JIPP_Projekt/out/build/Debug x64",
   "command": "C:\\PROGRA~1\\MICROS~3\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DTGUI_DYNAMIC -IC:\\GitHub\\JIPP_Projekt\\Game\\include -IC:\\GitHub\\JIPP_Projekt\\Engine\\include -I\"C:\\GitHub\\JIPP_Projekt\\out\\build\\Debug x64\\_deps\\sfml-src\\include\" -I\"C:\\GitHub\\JIPP_Projekt\\out\\build\\Debug x64\\_deps\\tgui-src\\include\" /DWIN32 /D_WINDOWS /W3 /GR /EHsc /MDd /Zi /Ob0 /Od /RTC1 -std:c++17 /FoGame\\CMakeFiles\\Game.dir\\src\\units\\MissileTank.cpp.obj /FdGame\\CMakeFiles\\Game.dir\\ /FS -c C:\\GitHub\\JIPP_Projekt\\Game\\src\\units\\MissileTank.cpp",
   "file": "C:/GitHub/JIPP_Projekt/Game/src/units/MissileTank.cpp",
   "output": "C:/GitHub/JIPP_Projekt/out/build/Debug x64/Game/CMakeFiles/Game.dir/src/units/MissileTank.cpp.obj"
+},
+{
+  "directory": "C:/GitHub/JIPP_Projekt/out/build/Debug x64",
+  "command": "C:\\PROGRA~1\\MICROS~3\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DTGUI_DYNAMIC -IC:\\GitHub\\JIPP_Projekt\\Game\\include -IC:\\GitHub\\JIPP_Projekt\\Engine\\include -I\"C:\\GitHub\\JIPP_Projekt\\out\\build\\Debug x64\\_deps\\sfml-src\\include\" -I\"C:\\GitHub\\JIPP_Projekt\\out\\build\\Debug x64\\_deps\\tgui-src\\include\" /DWIN32 /D_WINDOWS /W3 /GR /EHsc /MDd /Zi /Ob0 /Od /RTC1 -std:c++17 /FoGame\\CMakeFiles\\Game.dir\\src\\units\\Plane.cpp.obj /FdGame\\CMakeFiles\\Game.dir\\ /FS -c C:\\GitHub\\JIPP_Projekt\\Game\\src\\units\\Plane.cpp",
+  "file": "C:/GitHub/JIPP_Projekt/Game/src/units/Plane.cpp",
+  "output": "C:/GitHub/JIPP_Projekt/out/build/Debug x64/Game/CMakeFiles/Game.dir/src/units/Plane.cpp.obj"
 },
 {
   "directory": "C:/GitHub/JIPP_Projekt/out/build/Debug x64",

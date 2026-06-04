@@ -3,12 +3,12 @@
 #include <algorithm>
 #include <filesystem>
 
-
 MapEditorApp::MapEditorApp()
     : m_window(sf::VideoMode({1600, 900}), "Map Editor",
                sf::Style::Titlebar | sf::Style::Close),
       m_gui(m_window), m_mapView(sf::FloatRect({0.f, 0.f}, {1200.f, 900.f})) {
   m_window.setFramerateLimit(60);
+  m_gui.setFont("Art/Fonts/joystixMonospace.ttf");
 
   TeamRegistry::setColor(Team::Ally, sf::Color(50, 255, 50));
   TeamRegistry::setColor(Team::Enemy, sf::Color(255, 7, 58));
@@ -172,7 +172,8 @@ void MapEditorApp::updateMapView(float dt) {
 }
 
 void MapEditorApp::clampMapView() {
-  m_mapView.setSize({mapViewportWidth() * m_zoom, mapViewportHeight() * m_zoom});
+  m_mapView.setSize(
+      {mapViewportWidth() * m_zoom, mapViewportHeight() * m_zoom});
 
   const float worldW = static_cast<float>(mapPixelWidth());
   const float worldH = static_cast<float>(mapPixelHeight());
@@ -666,8 +667,6 @@ void MapEditorApp::buildUi() {
   m_teamEditorPanel->getRenderer()->setBackgroundColor(sf::Color(20, 22, 26));
   panel->add(m_teamEditorPanel);
   rebuildTeamEditor();
-
-  updateVisibleLists();
 }
 
 void MapEditorApp::rebuildTeamEditor() {
@@ -768,11 +767,6 @@ void MapEditorApp::rebuildTeamEditor() {
   }
 }
 
-void MapEditorApp::updateVisibleLists() {
-  // No longer toggling visibility based on m_currentTool.
-  // All lists are always visible now.
-}
-
 void MapEditorApp::handleMapClick(const sf::Event::MouseButtonPressed &mb) {
   const sf::Vector2i g = pixelToGrid(mb.position);
   const int gx = g.x;
@@ -815,32 +809,29 @@ void MapEditorApp::runAutotile(int gx, int gy) {
     switch (mask) {
     case 1:
       newId = 15;
-      break; // Top
+      break;
     case 2:
       newId = 14;
-      break; // Bottom
+      break;
     case 4:
       newId = 13;
-      break; // Left
+      break;
     case 8:
       newId = 12;
-      break; // Right
-    // Outer corners (water on two cardinal sides). Just pick a straight edge
-    // since we don't have dedicated outer corner tiles
+      break;
     case 5:
       newId = 15;
-      break; // Top & Left -> Pick Top
+      break;
     case 9:
       newId = 15;
-      break; // Top & Right -> Pick Top
+      break;
     case 6:
       newId = 14;
-      break; // Bottom & Left -> Pick Bottom
+      break;
     case 10:
       newId = 14;
-      break; // Bottom & Right -> Pick Bottom
+      break;
     case 0: {
-      // Inner corners: No cardinal water, but diagonal water
       bool wTopLeft = inBounds(x - 1, y - 1) &&
                       m_map.tiles[tileIndex(x - 1, y - 1)].getTerrain() ==
                           TerrainType::Water;

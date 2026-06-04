@@ -1,4 +1,4 @@
-#include "units/Soldier.hpp"
+#include "units/Plane.hpp"
 #include "AnimationManager.hpp"
 #include "SoundManager.hpp"
 #include "Unit.hpp"
@@ -7,22 +7,26 @@
 #include <memory>
 #include <vector>
 
-void registerSoldier() {
+void registerPlane() {
 
   ////////////////// VARIABLES
-  static const std::string UNIT_NAME = "Soldier";
-  static const std::string ART_PATH = "Art/Units/Soldier/soldier_walk.png";
-  static const std::string MASK_PATH =
-      "Art/Units/Soldier/soldier_walk_mask.png";
-  static const std::vector<UnitFlag> FLAGS = {UnitFlag::Capture};
+  static const std::string UNIT_NAME = "Plane";
+  static const std::string ART_PATH = "Art/Units/Plane/plane_idle.png";
+  static const std::string MASK_PATH = "Art/Units/Plane/plane_idle_mask.png";
+  static const std::vector<UnitFlag> FLAGS = {};
 
   AnimationSet unitAnimSet;
   unitAnimSet.addDirectionalClips(
-      "walk",
-      AnimationClip::fromRow({0, 0}, {32, 32}, 4, 0.1f, false,
-                             true), // Soldier is facing right
+      "idle", AnimationClip::fromRow({0, 0}, {32, 32}, 4, 0.1f, false, true),
       AnimationClip::fromRow({0, 32}, {32, 32}, 4, 0.1f, false, false),
       AnimationClip::fromRow({0, 64}, {32, 32}, 4, 0.1f, false, false));
+
+  unitAnimSet.addDirectionalClips(
+      "shoot", AnimationClip::fromRow({0, 0}, {32, 32}, 4, 0.1f, false, true),
+      AnimationClip::fromRow({0, 32}, {32, 32}, 4, 0.1f, false, false),
+      AnimationClip::fromRow({0, 64}, {32, 32}, 4, 0.1f, false, false), {},
+      "Art/Units/Plane/plane_shoot.png",
+      "Art/Units/Plane/plane_shoot_mask.png");
 
   AnimationManager::registerSet(UNIT_NAME, std::move(unitAnimSet));
 
@@ -31,13 +35,13 @@ void registerSoldier() {
   SoundManager::registerSet(UNIT_NAME, std::move(unitSounds));
 
   UnitData data;
-  data.maxHealth = 30;
+  data.maxHealth = 20;
   data.damage = 10;
-  data.moveSpeed = 3;
+  data.moveSpeed = 5;
   data.minAttackRange = 0;
   data.maxAttackRange = 1;
   data.attackDamageDelay = 0.75f;
-  data.movementCategory = MovementCategory::Infantry;
+  data.movementCategory = MovementCategory::Flying;
   data.deathEffectSet = "explosion";
   data.deathEffectClip = "explode";
   data.deathEffectTexturePath = "Art/Effects/Explosion.png";

@@ -88,7 +88,6 @@ private:
 
   void buildUi();
   void rebuildTeamEditor();
-  void updateVisibleLists();
   void handleMapClick(const sf::Event::MouseButtonPressed &mb);
   void paintTileAt(int gridX, int gridY);
   void runAutotile(int gx, int gy);
