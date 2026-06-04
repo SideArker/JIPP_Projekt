@@ -4,22 +4,18 @@
 #include <TGUI/Backend/SFML-Graphics.hpp>
 #include <vector>
 
-struct RightPanelWidgets {
-    std::vector<tgui::Panel::Ptr> infoBoxes;
+struct GameUIWidgets {
+    tgui::Panel::Ptr rightPanel;
+    tgui::Panel::Ptr bottomPanel;
+    tgui::Panel::Ptr screenOverlay;
+
+    tgui::ListBox::Ptr teamList;
+    tgui::Label::Ptr infoLabel;
+
     tgui::Button::Ptr undoBtn;
     tgui::Button::Ptr nextUnitBtn;
     tgui::Button::Ptr settingsBtn;
     tgui::Button::Ptr endTurnBtn;
 };
 
-RightPanelWidgets buildRightPanelUI(
-    tgui::Gui& gui,
-    float panelOriginXGU,
-    float panelOriginYGU,
-    float scaleX,
-    float scaleY,
-    int   numBoxes,
-    float boxHeightGU,
-    float btnHeightGU     = 18.f,
-    float endTurnHeightGU = 22.f
-);
+GameUIWidgets buildGameUI(tgui::Gui& gui);

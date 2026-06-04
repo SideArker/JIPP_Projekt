@@ -67,15 +67,14 @@ int main() {
     return -1;
   mapManager.setupInput(window);
 
-  // set game view to 480 x 256 now
-  view.setSize({480.f, 256.f});
-  view.setCenter({240.f, 128.f});
-  view.setViewport(
-      sf::FloatRect({0.f, 0.f}, {1440.f / 1920.f, 768.f / 1080.f}));
-
-  sf::Texture overlayTex;
-  overlayTex.loadFromFile("Art/UI/screen_overlay.png");
-  sf::Sprite overlaySprite(overlayTex);
+  // Set game view to match the new UI empty space
+  // Window is 1280x720. 
+  // Right panel is 250px wide, Bottom panel is 150px tall.
+  // Remaining space: 1030 x 570.
+  // Let's use a logical view size that keeps tiles nicely sized, e.g., 515 x 285
+  view.setSize({515.f, 285.f});
+  view.setCenter({257.5f, 142.5f});
+  view.setViewport(sf::FloatRect({0.f, 0.f}, {1030.f / 1280.f, 570.f / 720.f}));
 
   CameraController cameraController;
   sf::Vector2u mapPixels(mapManager.getMapWidth() * mapManager.getTileSize().x,
@@ -84,18 +83,9 @@ int main() {
   cameraController.init(view, mapPixels, window.getSize());
 
   if (tgui::Gui *gui = mapManager.getGui()) {
-    float sx = static_cast<float>(window.getSize().x) / 640.f;
-    float sy = static_cast<float>(window.getSize().y) / 360.f;
-
-    auto panels = buildRightPanelUI(*gui, 480.f, 0.f, sx, sy, 0, 60.f);
+    auto panels = buildGameUI(*gui);
     panels.endTurnBtn->onClick(
         [&mapManager]() { mapManager.requestEndTurn(); });
-
-    auto bottomPanelBg =
-        tgui::Picture::create(tgui::Texture("Art/UI/bottom_panel.png"));
-    bottomPanelBg->setPosition(0.f, 256.f * sy);
-    bottomPanelBg->setSize(480.f * sx, 104.f * sy);
-    gui->add(bottomPanelBg);
   }
 
   AIController aiController;
@@ -138,8 +128,6 @@ int main() {
 
     // Draw the overlay (static)
     window.setView(view);
-    window.draw(overlaySprite);
-
     mapManager.drawUI();
     window.display();
   }

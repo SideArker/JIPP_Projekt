@@ -1,102 +1,90 @@
 #include "RightPanelUI.hpp"
 
-static constexpr float PANEL_W = 160.f;
-static constexpr float PANEL_H = 360.f;
-static constexpr float PADDING = 12.f;
-static constexpr float GAP_BOX = 4.f;
-static constexpr float GAP_BTN_H = 8.f;
-static constexpr float GAP_BTN_V = 8.f;
+GameUIWidgets buildGameUI(tgui::Gui& gui) {
+  GameUIWidgets result;
 
-static tgui::Button::Ptr makeImageButton(const std::string &texturePath) {
-  auto btn = tgui::Button::create();
-  btn->setText("");
-  auto r = btn->getRenderer();
-  tgui::Texture tex(texturePath);
-  r->setTexture(tex);
-  r->setTextureHover(tex);
-  r->setTextureDown(tex);
-  r->setBackgroundColor(sf::Color::Transparent);
-  r->setBackgroundColorHover(sf::Color(255, 255, 255, 18));
-  r->setBackgroundColorDown(sf::Color(0, 0, 0, 30));
-  r->setBorderColor(sf::Color::Transparent);
-  r->setBorderColorHover(sf::Color::Transparent);
-  r->setBorderColorDown(sf::Color::Transparent);
-  r->setBorders(tgui::Borders(0));
-  return btn;
-}
+  // 1. Screen Overlay (Background layer for game view)
+  result.screenOverlay = tgui::Panel::create();
+  result.screenOverlay->setSize("100% - 250px", "100% - 150px");
+  result.screenOverlay->setPosition("0", "0");
+  // Simple transparent overlay, effectively darkening the edges or just providing a frame
+  result.screenOverlay->getRenderer()->setBackgroundColor(sf::Color(0, 0, 0, 50));
+  result.screenOverlay->getRenderer()->setBorders(tgui::Borders(0, 0, 2, 2));
+  result.screenOverlay->getRenderer()->setBorderColor(sf::Color(40, 60, 80));
+  gui.add(result.screenOverlay);
 
-RightPanelWidgets buildRightPanelUI(tgui::Gui &gui, float panelOriginXGU,
-                                    float panelOriginYGU, float scaleX,
-                                    float scaleY, int numBoxes,
-                                    float boxHeightGU, float btnHeightGU,
-                                    float endTurnHeightGU) {
-  RightPanelWidgets result;
+  // 2. Right Panel (TeamList & Action Buttons)
+  result.rightPanel = tgui::Panel::create();
+  result.rightPanel->setSize("250px", "100%");
+  result.rightPanel->setPosition("100% - 250px", "0");
+  result.rightPanel->getRenderer()->setBackgroundColor(sf::Color(15, 25, 35));
+  result.rightPanel->getRenderer()->setBorders(tgui::Borders(2, 0, 0, 0));
+  result.rightPanel->getRenderer()->setBorderColor(sf::Color(60, 85, 115));
+  gui.add(result.rightPanel);
 
-  const float ox = panelOriginXGU * scaleX;
-  const float oy = panelOriginYGU * scaleY;
-  const float sx = scaleX;
-  const float sy = scaleY;
+  // TeamList ListBox inside Right Panel
+  result.teamList = tgui::ListBox::create();
+  result.teamList->setSize("100% - 20px", "40%");
+  result.teamList->setPosition("10px", "10px");
+  result.teamList->getRenderer()->setBackgroundColor(sf::Color(8, 16, 28));
+  result.teamList->getRenderer()->setTextColor(sf::Color::White);
+  result.teamList->getRenderer()->setSelectedBackgroundColor(sf::Color(30, 60, 90));
+  result.teamList->getRenderer()->setBorders(tgui::Borders(1));
+  result.teamList->getRenderer()->setBorderColor(sf::Color(55, 85, 115));
+  result.teamList->addItem("Ally Team");
+  result.teamList->addItem("Enemy Team");
+  result.rightPanel->add(result.teamList);
 
-  auto panelBg = tgui::Picture::create(tgui::Texture("Art/UI/right_panel.png"));
-  panelBg->setPosition(ox, oy);
-  panelBg->setSize(PANEL_W * sx, PANEL_H * sy);
-  gui.add(panelBg);
+  // Helper lambda for native TGUI buttons
+  auto createBtn = [](const std::string& text) {
+      auto btn = tgui::Button::create(text);
+      btn->getRenderer()->setBackgroundColor(sf::Color(30, 45, 60));
+      btn->getRenderer()->setBackgroundColorHover(sf::Color(40, 60, 80));
+      btn->getRenderer()->setBackgroundColorDown(sf::Color(20, 30, 40));
+      btn->getRenderer()->setTextColor(sf::Color(200, 220, 255));
+      btn->getRenderer()->setBorders(tgui::Borders(1));
+      btn->getRenderer()->setBorderColor(sf::Color(60, 85, 115));
+      return btn;
+  };
 
-  const float innerW = PANEL_W - 2.f * PADDING;
-  const float halfBtnW = (innerW - GAP_BTN_H) / 2.f;
+  // Buttons inside Right Panel
+  result.undoBtn = createBtn("Undo Move");
+  result.undoBtn->setSize("100% - 20px", "35px");
+  result.undoBtn->setPosition("10px", "100% - 190px");
+  result.rightPanel->add(result.undoBtn);
 
-  float curY = PADDING;
+  result.nextUnitBtn = createBtn("Next Unit");
+  result.nextUnitBtn->setSize("100% - 20px", "35px");
+  result.nextUnitBtn->setPosition("10px", "100% - 145px");
+  result.rightPanel->add(result.nextUnitBtn);
 
-  for (int i = 0; i < numBoxes; ++i) {
-    auto box = tgui::Panel::create();
-    box->setPosition(ox + PADDING * sx, oy + curY * sy);
-    box->setSize(innerW * sx, boxHeightGU * sy);
-    box->getRenderer()->setBackgroundColor(sf::Color(8, 16, 28, 180));
-    box->getRenderer()->setBorderColor(sf::Color(55, 85, 115, 200));
-    box->getRenderer()->setBorders(tgui::Borders(1));
-    result.infoBoxes.push_back(box);
-    gui.add(box);
-    curY += boxHeightGU + GAP_BOX;
-  }
-  if (numBoxes > 0)
-    curY -= GAP_BOX;
+  result.settingsBtn = createBtn("Settings");
+  result.settingsBtn->setSize("100% - 20px", "35px");
+  result.settingsBtn->setPosition("10px", "100% - 100px");
+  result.rightPanel->add(result.settingsBtn);
 
-  curY += 100.f;
+  result.endTurnBtn = createBtn("End Turn >>");
+  result.endTurnBtn->setSize("100% - 20px", "50px");
+  result.endTurnBtn->setPosition("10px", "100% - 60px");
+  result.endTurnBtn->getRenderer()->setBackgroundColor(sf::Color(60, 30, 30));
+  result.endTurnBtn->getRenderer()->setBackgroundColorHover(sf::Color(90, 40, 40));
+  result.endTurnBtn->getRenderer()->setTextColor(sf::Color(255, 200, 200));
+  result.rightPanel->add(result.endTurnBtn);
 
-  const float smallBtnW = 54.f;
-  const float smallBtnH = 38.f;
-  const float largeBtnW = 119.f;
+  // 3. Bottom Panel (Info Tab)
+  result.bottomPanel = tgui::Panel::create();
+  result.bottomPanel->setSize("100% - 250px", "150px");
+  result.bottomPanel->setPosition("0", "100% - 150px");
+  result.bottomPanel->getRenderer()->setBackgroundColor(sf::Color(15, 25, 35));
+  result.bottomPanel->getRenderer()->setBorders(tgui::Borders(0, 2, 0, 0));
+  result.bottomPanel->getRenderer()->setBorderColor(sf::Color(60, 85, 115));
+  gui.add(result.bottomPanel);
 
-  float gapBetweenSmallBtns = PANEL_W - (2.f * smallBtnW);
-  float startXSmall = ox + (gapBetweenSmallBtns / 3.f) * sx;
-  float secondXSmall = ox + (gapBetweenSmallBtns / 3.f * 2.f + smallBtnW) * sx;
-
-  result.undoBtn = makeImageButton("Art/UI/undo_btn.png");
-  result.undoBtn->setPosition(startXSmall, oy + curY * sy);
-  result.undoBtn->setSize(smallBtnW * sx, smallBtnH * sy);
-  gui.add(result.undoBtn);
-
-  result.nextUnitBtn = makeImageButton("Art/UI/next_unit_btn.png");
-  result.nextUnitBtn->setPosition(secondXSmall, oy + curY * sy);
-  result.nextUnitBtn->setSize(smallBtnW * sx, smallBtnH * sy);
-  gui.add(result.nextUnitBtn);
-
-  curY += smallBtnH + 6.f; // 184 + 38 + 6 = 228.f
-
-  float settingsBtnHeight = 37.f;
-  float centerLargeX = ox + ((PANEL_W - largeBtnW) / 2.f) * sx;
-
-  result.settingsBtn = makeImageButton("Art/UI/settings_btn.png");
-  result.settingsBtn->setPosition(centerLargeX, oy + curY * sy);
-  result.settingsBtn->setSize(largeBtnW * sx, settingsBtnHeight * sy);
-  gui.add(result.settingsBtn);
-
-  float endTurnBtnHeight = 49.f;
-  const float endTurnY = 283.f;
-  result.endTurnBtn = makeImageButton("Art/UI/end_turn_btn.png");
-  result.endTurnBtn->setPosition(centerLargeX, oy + endTurnY * sy);
-  result.endTurnBtn->setSize(largeBtnW * sx, endTurnBtnHeight * sy);
-  gui.add(result.endTurnBtn);
+  result.infoLabel = tgui::Label::create("Selected Unit Stats:\nHP: 10/10\nAttack: 5\n\nTile Stats:\nGrass (Def +1)\n\nBuilding Info:\nNone");
+  result.infoLabel->setPosition("20px", "20px");
+  result.infoLabel->getRenderer()->setTextColor(sf::Color(200, 220, 255));
+  result.infoLabel->setTextSize(14);
+  result.bottomPanel->add(result.infoLabel);
 
   return result;
 }
