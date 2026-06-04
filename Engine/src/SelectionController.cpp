@@ -175,6 +175,7 @@ SelectionController::SelectionController(sf::RenderWindow &window,
             // The enemy is completely out of range.
 
             if (!previewPath.empty()) {
+              mapManager.pushUndoState(attackerGrid);
               selectedUnit->move(previewPath);
               m_turnController.markActed(*selectedUnit);
             }
@@ -194,6 +195,7 @@ SelectionController::SelectionController(sf::RenderWindow &window,
 
           // Ranged units cannot move and attack in the same action.
           if (!previewPath.empty() && selectedUnit->getMaxAttackRange() > 1) {
+            mapManager.pushUndoState(attackerGrid);
             selectedUnit->move(previewPath);
             m_turnController.markActed(*selectedUnit);
             selectedUnit = nullptr;
@@ -204,14 +206,19 @@ SelectionController::SelectionController(sf::RenderWindow &window,
             return;
           }
 
+          mapManager.pushUndoState(attackerGrid);
           if (!previewPath.empty()) {
             selectedUnit->move(previewPath);
           }
 
           auto unitToMark = selectedUnit; // Capture the smart pointer safely
+          auto targetRef = hoveredEnemyUnit;
           auto *self = this;
-          unitToMark->onAttackFinished = [self, unitToMark]() {
-            self->mapManager.runWhenAllActionsFinished([self, unitToMark]() {
+          unitToMark->onAttackFinished = [self, unitToMark, targetRef]() {
+            self->mapManager.runWhenAllActionsFinished([self, unitToMark, targetRef]() {
+              if (targetRef->isDead()) {
+                  self->mapManager.clearUndoStack();
+              }
               self->m_turnController.markActed(*unitToMark);
             });
           };
@@ -257,6 +264,10 @@ SelectionController::SelectionController(sf::RenderWindow &window,
             std::find(reachableTiles.begin(), reachableTiles.end(), gridPos) !=
             reachableTiles.end();
         if (isReachable && !previewPath.empty()) {
+          sf::Vector2i unitGrid2(
+              static_cast<int>(std::round(selectedUnit->getPosition().x / static_cast<float>(tileSize.x))),
+              static_cast<int>(std::round(selectedUnit->getPosition().y / static_cast<float>(tileSize.y))));
+          mapManager.pushUndoState(unitGrid2);
           selectedUnit->move(previewPath);
           m_turnController.markActed(*selectedUnit);
         }
@@ -540,6 +551,21 @@ void SelectionController::drawCursorIcon(sf::RenderTarget &target) {
 void SelectionController::clearSelection() {
   selectedUnit = nullptr;
   reachableTiles.clear();
+  hoveredEnemyUnit = nullptr;
+  m_cursorIconCell = -1;
+}
+
+void SelectionController::selectUnit(std::shared_ptr<Unit> unit) {
+  if (!unit || unit->isDead() || !m_turnController.canAct(*unit)) return;
+  selectedUnit = unit;
+  const sf::Vector2u tileSize = mapManager.getTileSize();
+  sf::Vector2i unitGrid(
+      static_cast<int>(std::round(unit->getPosition().x / static_cast<float>(tileSize.x))),
+      static_cast<int>(std::round(unit->getPosition().y / static_cast<float>(tileSize.y)))
+  );
+  reachableTiles = mapManager.getReachableTiles(
+      unitGrid, unit->getMoveSpeed(), unit->getTeam(), unit->getMovementCategory()
+  );
   previewPath.clear();
   hoveredEnemyUnit = nullptr;
   m_cursorIconCell = -1;

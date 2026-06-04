@@ -18,6 +18,7 @@ public:
     void drawCursorIcon(sf::RenderTarget& target);
     void drawGui();
     void clearSelection();
+    void selectUnit(std::shared_ptr<Unit> unit);
     void syncCameraView(sf::View gameView);
     tgui::Gui& getGui() { return gui; }
     std::shared_ptr<Unit> getSelectedUnit() const { return selectedUnit; }

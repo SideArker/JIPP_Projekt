@@ -15,6 +15,7 @@ struct ENGINE_API UnitSaveData {
   int moveSpeed = 0;
   Team team = Team::Neutral;
   uint8_t flags = 0;
+  bool hasActed = false;
 };
 
 struct ENGINE_API BuildingSaveData {

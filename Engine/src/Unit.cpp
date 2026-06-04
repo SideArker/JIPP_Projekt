@@ -48,6 +48,16 @@ const sf::Texture& Unit::getCurrentTexture() const {
     return *texture;
 }
 
+void Unit::setDirection(MoveDirection dir) {
+    currentDirection = dir;
+    const std::string directionalIdle = clipName("idle", currentDirection);
+    if (this->animSet->getClip(directionalIdle)) {
+        animState.play(directionalIdle, *this->animSet);
+    } else if (this->animSet->getClip("idle")) {
+        animState.play("idle", *this->animSet);
+    }
+}
+
 MoveDirection castMoveDirection(sf::Vector2f& direction)
 {
     if (std::abs(direction.x) > std::abs(direction.y)) {

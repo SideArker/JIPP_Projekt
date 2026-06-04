@@ -39,7 +39,9 @@ GameUIWidgets buildGameUI(tgui::Gui &gui) {
     btn->getRenderer()->setBackgroundColorHover(
         sf::Color(50, 75, 100)); // Lighter on hover
     btn->getRenderer()->setBackgroundColorDown(sf::Color(20, 30, 40));
+    btn->getRenderer()->setBackgroundColorDisabled(sf::Color(20, 25, 30)); // Darker background
     btn->getRenderer()->setTextColor(sf::Color(200, 220, 255));
+    btn->getRenderer()->setTextColorDisabled(sf::Color(100, 110, 130)); // Darker text
     btn->getRenderer()->setBorders(tgui::Borders(1));
     btn->getRenderer()->setBorderColor(sf::Color(60, 85, 115));
     return btn;
@@ -66,7 +68,9 @@ GameUIWidgets buildGameUI(tgui::Gui &gui) {
   result.endTurnBtn->getRenderer()->setBackgroundColor(sf::Color(70, 35, 35));
   result.endTurnBtn->getRenderer()->setBackgroundColorHover(
       sf::Color(100, 50, 50));
+  result.endTurnBtn->getRenderer()->setBackgroundColorDisabled(sf::Color(35, 20, 20));
   result.endTurnBtn->getRenderer()->setTextColor(sf::Color(255, 200, 200));
+  result.endTurnBtn->getRenderer()->setTextColorDisabled(sf::Color(130, 100, 100));
   result.rightPanel->add(result.endTurnBtn);
 
   result.bottomPanel = tgui::Panel::create();
@@ -92,5 +96,71 @@ GameUIWidgets buildGameUI(tgui::Gui &gui) {
   result.flagsList->getRenderer()->setScrollbarWidth(0); // hidden scrollbar if any
   result.bottomPanel->add(result.flagsList);
 
+  buildSettingsPanel(gui, &result);
+
   return result;
+}
+
+tgui::Panel::Ptr buildSettingsPanel(tgui::Gui& gui, GameUIWidgets* outWidgets) {
+  auto panel = tgui::Panel::create();
+  panel->setSize("400px", "300px");
+  panel->setPosition("50% - 200px", "50% - 150px");
+  panel->getRenderer()->setBackgroundColor(sf::Color(25, 35, 45, 240));
+  panel->getRenderer()->setBorders(tgui::Borders(2));
+  panel->getRenderer()->setBorderColor(sf::Color(60, 85, 115));
+  panel->setVisible(false); // Hidden by default
+  gui.add(panel);
+
+  auto title = tgui::Label::create("Settings");
+  title->setPosition("50% - 40px", "10px");
+  title->setTextSize(20);
+  title->getRenderer()->setTextColor(sf::Color::White);
+  panel->add(title);
+
+  auto createLabel = [](const std::string& txt, const std::string& y) {
+      auto lbl = tgui::Label::create(txt);
+      lbl->setPosition("20px", y.c_str());
+      lbl->getRenderer()->setTextColor(sf::Color::White);
+      return lbl;
+  };
+  
+  panel->add(createLabel("Music Volume:", "60px"));
+  auto musicSlider = tgui::Slider::create(0, 100);
+  musicSlider->setPosition("150px", "60px");
+  musicSlider->setSize("200px", "16px");
+  musicSlider->setValue(20);
+  panel->add(musicSlider);
+
+  panel->add(createLabel("Sound Volume:", "100px"));
+  auto soundSlider = tgui::Slider::create(0, 100);
+  soundSlider->setPosition("150px", "100px");
+  soundSlider->setSize("200px", "16px");
+  soundSlider->setValue(100);
+  panel->add(soundSlider);
+
+  auto saveBtn = tgui::Button::create("Save Game");
+  saveBtn->setPosition("20px", "160px");
+  saveBtn->setSize("360px", "40px");
+  panel->add(saveBtn);
+
+  auto quitBtn = tgui::Button::create("Quit to Title");
+  quitBtn->setPosition("20px", "220px");
+  quitBtn->setSize("170px", "40px");
+  panel->add(quitBtn);
+
+  auto closeBtn = tgui::Button::create("Close");
+  closeBtn->setPosition("210px", "220px");
+  closeBtn->setSize("170px", "40px");
+  panel->add(closeBtn);
+
+  if (outWidgets) {
+      outWidgets->settingsPanel = panel;
+      outWidgets->musicVolSlider = musicSlider;
+      outWidgets->soundVolSlider = soundSlider;
+      outWidgets->saveGameBtn = saveBtn;
+      outWidgets->quitBtn = quitBtn;
+      outWidgets->closeSettingsBtn = closeBtn;
+  }
+
+  return panel;
 }

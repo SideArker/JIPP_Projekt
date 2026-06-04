@@ -37,17 +37,17 @@ void GameContent::configure(MapManager& mapManager) {
     mapManager.setEnemyOverlayPath("Art/Effects/map_enemy_overlay.png");
     mapManager.setHitEffect("hitEffect", "hit", "Art/Effects/hitEffect.png");
     mapManager.setTeamCaptureEffect("Art/Effects/TeamCapture.png", "Art/Effects/TeamCapture_mask.png");
-    mapManager.setUnitRenderCallback([](sf::RenderTarget& target, const Unit& unit, bool anyActing) {
+    mapManager.setUnitRenderCallback([&mapManager](sf::RenderTarget& target, const Unit& unit, bool anyActing) {
         
         static sf::Texture overlayFriendly, overlayEnemy, healthTex;
         static bool loaded = false;
         if (!loaded) {
-            overlayFriendly.loadFromFile("Art/Effects/Unit_Overlay_Friendly.png");
-            overlayEnemy.loadFromFile("Art/Effects/Unit_Overlay_Enemy.png");
-            healthTex.loadFromFile("Art/Effects/Unit_Health.png");
+            (void)overlayFriendly.loadFromFile("Art/Effects/Unit_Overlay_Friendly.png");
+            (void)overlayEnemy.loadFromFile("Art/Effects/Unit_Overlay_Enemy.png");
+            (void)healthTex.loadFromFile("Art/Effects/Unit_Health.png");
             loaded = true;
         }
-        if (!anyActing) {
+        if (!anyActing && mapManager.getCurrentTeam() == Team::Ally) {
             const bool showFriendlyOverlay = unit.getTeam() == Team::Ally && !unit.hasActed();
             const bool showEnemyOverlay = unit.getTeam() == Team::Enemy;
             if (showFriendlyOverlay || showEnemyOverlay) {

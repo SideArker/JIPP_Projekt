@@ -13,40 +13,9 @@
 #include <memory>
 #include <optional>
 
-static constexpr const char *LEVEL1_PATH = "levels/editor.map";
+static constexpr const char *LEVEL1_PATH = "Art/levels/level1.map";
 
-static void createDefaultLevel1() {
-  MapFile map;
-  map.tilesetPath = "Art/Map/map.png";
-  map.tileSize = {32, 32};
-  map.width = 8;
-  map.height = 7;
-  using T = TerrainType;
-  map.tiles = {
-      {18, T::Grass},    {19, T::Grass},    {19, T::Grass},   {19, T::Grass},
-      {19, T::Grass},    {19, T::Grass},    {19, T::Grass},   {9, T::Grass},
-      {13, T::Grass},    {2, T::Grass},     {3, T::Grass},    {17, T::Mountain},
-      {7, T::Mountain},  {17, T::Mountain}, {3, T::Grass},    {5, T::Grass},
-      {13, T::Grass},    {2, T::Grass},     {7, T::Mountain}, {7, T::Mountain},
-      {17, T::Mountain}, {7, T::Mountain},  {7, T::Mountain}, {5, T::Grass},
-      {13, T::Grass},    {2, T::Grass},     {3, T::Grass},    {12, T::Road},
-      {2, T::Grass},     {2, T::Grass},     {4, T::Grass},    {5, T::Grass},
-      {13, T::Grass},    {10, T::Road},     {10, T::Road},    {11, T::Road},
-      {10, T::Road},     {10, T::Road},     {16, T::Road},    {5, T::Grass},
-      {13, T::Grass},    {2, T::Grass},     {2, T::Grass},    {2, T::Grass},
-      {2, T::Grass},     {2, T::Grass},     {2, T::Grass},    {5, T::Grass},
-      {14, T::Grass},    {15, T::Grass},    {15, T::Grass},   {15, T::Grass},
-      {15, T::Grass},    {15, T::Grass},    {15, T::Grass},   {8, T::Grass}};
-  map.spawns = {{"MissileTank", 1, 1, Team::Ally},
-                {"Tank", 3, 3, Team::Ally},
-                {"Soldier", 3, 4, Team::Ally},
-                {"Tank", 5, 4, Team::Enemy}};
-  map.buildingSpawns = {{"HQ", 1, 5, Team::Ally},
-                        {"HQ", 6, 1, Team::Enemy},
-                        {"Factory", 2, 5, Team::Ally},
-                        {"OilRig", 6, 5, Team::Neutral}};
-  FileManager::saveMap(map, LEVEL1_PATH);
-}
+
 
 int main() {
   sf::RenderWindow window(sf::VideoMode({1280, 720}), "Map Renderer",
@@ -58,7 +27,6 @@ int main() {
   tgui::Texture::setDefaultSmooth(false);
   tgui::ToolTip::setInitialDelay(std::chrono::milliseconds(0));
 
-  createDefaultLevel1();
   MapManager mapManager;
   GameContent::configure(mapManager);
   if (!mapManager.loadFromFile(LEVEL1_PATH))
@@ -75,16 +43,57 @@ int main() {
                              mapManager.getTileSize().y);
   cameraController.init(view, mapPixels, window.getSize());
 
+  GameUIWidgets panels;
   if (tgui::Gui *gui = mapManager.getGui()) {
-    auto panels = buildGameUI(*gui);
+    panels = buildGameUI(*gui);
     panels.endTurnBtn->onClick(
         [&mapManager]() { mapManager.requestEndTurn(); });
+
+    panels.undoBtn->onClick([&mapManager, &cameraController]() {
+        std::shared_ptr<Unit> outUnit;
+        if (mapManager.popUndoState(outUnit)) {
+            if (outUnit) {
+                cameraController.trackUnit(outUnit);
+                mapManager.selectUnit(outUnit);
+            }
+        }
+    });
+
+    panels.nextUnitBtn->onClick([&mapManager, &cameraController]() {
+        auto& units = mapManager.getUnits();
+        std::vector<std::shared_ptr<Unit>> available;
+        for (auto& u : units) {
+            if (!u->isDead() && u->getTeam() == Team::Ally && !u->hasActed()) available.push_back(u);
+        }
+        if (!available.empty()) {
+            int idx = rand() % available.size();
+            cameraController.trackUnit(available[idx]);
+            mapManager.selectUnit(available[idx]);
+        }
+    });
+
+    panels.settingsBtn->onClick([&panels]() {
+        panels.settingsPanel->setVisible(!panels.settingsPanel->isVisible());
+    });
+    panels.closeSettingsBtn->onClick([&panels]() {
+        panels.settingsPanel->setVisible(false);
+    });
+    panels.saveGameBtn->onClick([&mapManager]() {
+        mapManager.saveToFile("savegame.sav");
+    });
+    panels.musicVolSlider->onValueChange([](float v) {
+        SoundManager::setMusicVolume(v);
+    });
+    panels.soundVolSlider->onValueChange([](float v) {
+        SoundManager::setSFXVolume(v);
+    });
 
     // Populate team list
     panels.teamList->removeAllWidgets();
     int teamY = 0;
     for (const auto &[team, data] : mapManager.getTeams()) {
-      if (team == Team::Neutral) continue;
+      if (team == Team::Neutral)
+        continue;
       auto nameLbl = tgui::Label::create();
       nameLbl->setText(data.name);
       nameLbl->getRenderer()->setTextColor(data.color);
@@ -94,7 +103,8 @@ int main() {
 
       auto moneyLbl = tgui::Label::create();
       moneyLbl->setText("$" + std::to_string(data.startMoney));
-      moneyLbl->getRenderer()->setTextColor(sf::Color(220, 220, 220)); // slightly distinct color for money
+      moneyLbl->getRenderer()->setTextColor(
+          sf::Color(220, 220, 220)); // slightly distinct color for money
       moneyLbl->setTextSize(14);
       moneyLbl->setPosition("100% - 65", teamY);
       panels.teamList->add(moneyLbl);
@@ -117,7 +127,8 @@ int main() {
 
             int flagY = 10;
             if (unit->hasFlag(UnitFlag::Capture)) {
-              tgui::Texture tex("Art/UI/flag.png", tgui::UIntRect(0, 0, 32, 32));
+              tgui::Texture tex("Art/UI/flag.png",
+                                tgui::UIntRect(0, 0, 32, 32));
               auto pic = tgui::Picture::create(tex);
               pic->setPosition(10, flagY);
               auto tooltip = tgui::Label::create("Can capture buildings");
@@ -162,6 +173,16 @@ int main() {
       }
       if (aiController.isDone() && !mapManager.isAnyUnitActing()) {
         mapManager.endTurn();
+        
+        auto& units = mapManager.getUnits();
+        std::vector<std::shared_ptr<Unit>> allies;
+        for (auto& u : units) {
+            if (!u->isDead() && u->getTeam() == Team::Ally) allies.push_back(u);
+        }
+        if (!allies.empty()) {
+            int idx = rand() % allies.size();
+            cameraController.trackUnit(allies[idx]);
+        }
       }
     } else {
       cameraController.release();
@@ -172,13 +193,30 @@ int main() {
     cameraController.update(deltaTime, window);
     mapManager.syncCameraView(cameraController.getView());
 
+    if (mapManager.getGui()) {
+        panels.undoBtn->setEnabled(!mapManager.isUndoStackEmpty() && !mapManager.isAnyUnitActing());
+        bool hasNext = false;
+        for (auto& u : mapManager.getUnits()) {
+            if (!u->isDead() && u->getTeam() == Team::Ally && !u->hasActed()) { hasNext = true; break; }
+        }
+        panels.nextUnitBtn->setEnabled(hasNext && !mapManager.isAnyUnitActing());
+        
+        if (mapManager.getCurrentTeam() == Team::Enemy) {
+            panels.endTurnBtn->setText("Enemy Turn");
+            panels.endTurnBtn->setEnabled(false);
+        } else {
+            panels.endTurnBtn->setText("End Turn >>");
+            panels.endTurnBtn->setEnabled(!mapManager.isAnyUnitActing());
+        }
+    }
+
     window.clear();
     window.setView(cameraController.getView());
     mapManager.draw(window);
 
     // Draw the overlay (static)
     window.setView(view);
-    mapManager.drawUI();
+    mapManager.drawUI(window);
     window.display();
   }
 

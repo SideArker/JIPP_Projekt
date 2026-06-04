@@ -39,6 +39,16 @@ private:
   std::string m_selectedBuildingType = "HQ";
   Team m_selectedTeam = Team::Ally;
 
+  unsigned char m_currentRotation{0};
+  tgui::Label::Ptr m_rotationLabel;
+
+  bool m_dragging{false};
+  sf::Vector2i m_dragStartPos;
+  sf::Vector2f m_cameraViewCenter;
+  float m_zoom{1.0f};
+
+  sf::Vector2i m_hoveredGrid{-1, -1};
+
   tgui::ComboBox::Ptr m_toolCombo;
   tgui::ComboBox::Ptr m_teamCombo;
   tgui::ComboBox::Ptr m_terrainCombo;
@@ -51,6 +61,7 @@ private:
   tgui::EditBox::Ptr m_widthEdit;
   tgui::EditBox::Ptr m_heightEdit;
   tgui::Label::Ptr m_statusLabel;
+  tgui::CheckBox::Ptr m_autotileCheckbox;
 
   std::map<std::string, SpritePreview> m_unitPreviews;
   SpritePreview m_buildingPreview;

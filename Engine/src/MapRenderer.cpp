@@ -14,7 +14,7 @@
 		for (unsigned int i = 0; i < width; ++i) {
 			for (unsigned int j = 0; j < height; ++j) {
 				int tileNumber = tiles[i + (j * width)].getArtId();
-				int rotation = 0; // 0 = 0 deg, 1 = 90 deg CW, 2 = 180 deg, 3 = 270 deg CW
+				uint8_t rotation = tiles[i + (j * width)].getRotation();
 
 				if (tileNumber == 0) continue; // Skip empty tiles
 
@@ -38,15 +38,31 @@
 				float tu1 = (tu + 1) * tileSize.x;
 				float tv1 = (tv + 1) * tileSize.y;
 
+                sf::Vector2f tl(tu0, tv0);
+                sf::Vector2f tr(tu1, tv0);
+                sf::Vector2f bl(tu0, tv1);
+                sf::Vector2f br(tu1, tv1);
+
+                sf::Vector2f t_tl, t_tr, t_bl, t_br;
+                if (rotation == 0) {
+                    t_tl = tl; t_tr = tr; t_bl = bl; t_br = br;
+                } else if (rotation == 1) { // 90 CW
+                    t_tl = bl; t_tr = tl; t_bl = br; t_br = tr;
+                } else if (rotation == 2) { // 180 CW
+                    t_tl = br; t_tr = bl; t_bl = tr; t_br = tl;
+                } else { // 270 CW
+                    t_tl = tr; t_tr = br; t_bl = tl; t_br = bl;
+                }
+
 				// Texture Coords: Triangle 1
-				triangles[0].texCoords = sf::Vector2f(tu0, tv0); // Top-Left
-				triangles[1].texCoords = sf::Vector2f(tu1, tv0); // Top-Right
-				triangles[2].texCoords = sf::Vector2f(tu0, tv1); // Bottom-Left
+				triangles[0].texCoords = t_tl; // Top-Left
+				triangles[1].texCoords = t_tr; // Top-Right
+				triangles[2].texCoords = t_bl; // Bottom-Left
 
 				// Texture Coords: Triangle 2
-				triangles[3].texCoords = sf::Vector2f(tu0, tv1); // Bottom-Left
-				triangles[4].texCoords = sf::Vector2f(tu1, tv0); // Top-Right
-				triangles[5].texCoords = sf::Vector2f(tu1, tv1); // Bottom-Right
+				triangles[3].texCoords = t_bl; // Bottom-Left
+				triangles[4].texCoords = t_tr; // Top-Right
+				triangles[5].texCoords = t_br; // Bottom-Right
 
 			}
 		}

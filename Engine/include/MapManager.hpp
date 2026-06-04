@@ -62,6 +62,15 @@ private:
     std::function<void(std::shared_ptr<Unit>, std::shared_ptr<Building>, const Tile*)> m_onSelectionChanged;
     std::shared_ptr<Unit> m_lastSelectedUnit;
 
+	float m_uiTime = 0.f;
+	sf::Font m_uiFont;
+
+    struct UndoState {
+        GameState state;
+        sf::Vector2i unitGrid;
+    };
+    std::vector<UndoState> m_undoStack;
+
 	void spawnEffect(const std::string& setName, const std::string& clipName, const std::string& texturePath, sf::Vector2f position, float yOffset = 0.f);
 	void spawnHitEffect(sf::Vector2f position);
 	void spawnDeathEffect(const std::string& setName, const std::string& clipName, const std::string& texturePath, const std::string& soundSet, const std::string& soundName, sf::Vector2f position, std::shared_ptr<Unit> unit);
@@ -74,6 +83,7 @@ public:
 	bool saveToFile(const std::string& mapPath) const;
 	GameState captureGameState() const;
 	bool restoreGameState(const std::string& savePath);
+	bool restoreGameState(const GameState& state);
 
 	bool loadMap(const std::string& tileset, sf::Vector2u tileSize, const std::vector<Tile>& tiles, unsigned int w, unsigned int h);
 	void spawnUnit(std::shared_ptr<Unit> unit, int gridX, int gridY);
@@ -84,7 +94,7 @@ public:
 	void handleEvent(const sf::Event& event);
 	void update(float deltaTime);
 	void draw(sf::RenderTarget& target);
-	void drawUI();
+	void drawUI(sf::RenderWindow& window);
 	bool isAnyUnitActing() const;
 	void runWhenAllActionsFinished(std::function<void()> action);
 	void endTurn();
@@ -93,6 +103,11 @@ public:
 	TurnController& getTurnController();
 	tgui::Gui* getGui();
 	void syncCameraView(const sf::View& gameView);
+
+	void pushUndoState(sf::Vector2i unitGrid);
+	bool popUndoState(std::shared_ptr<Unit>& outSelectedUnit);
+	void clearUndoStack();
+	bool isUndoStackEmpty() const { return m_undoStack.empty(); }
 
 	void setHitEffect(std::string setName, std::string clipName, std::string texturePath);
 	void setTeamCaptureEffect(std::string texturePath, std::string maskPath);
@@ -112,7 +127,7 @@ public:
 
 	const std::vector<std::shared_ptr<Unit>>& getUnits() const { return units; }
 	std::shared_ptr<Unit> getSelectedUnit() const;
-
+	void selectUnit(std::shared_ptr<Unit> unit);
 	std::vector<sf::Vector2i> findPath(sf::Vector2i start, sf::Vector2i goal, Team movingTeam, MovementCategory category);
 	std::vector<sf::Vector2i> getReachableTiles(sf::Vector2i from, int moveRange, Team movingTeam, MovementCategory category) const;
 	std::shared_ptr<Unit> getUnitAtTile(sf::Vector2i gridPos) const;

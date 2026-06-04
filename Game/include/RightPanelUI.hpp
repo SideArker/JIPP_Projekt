@@ -16,6 +16,14 @@ struct GameUIWidgets {
   tgui::Button::Ptr nextUnitBtn;
   tgui::Button::Ptr settingsBtn;
   tgui::Button::Ptr endTurnBtn;
+
+  tgui::Panel::Ptr settingsPanel;
+  tgui::Button::Ptr closeSettingsBtn;
+  tgui::Button::Ptr saveGameBtn;
+  tgui::Button::Ptr quitBtn;
+  tgui::Slider::Ptr musicVolSlider;
+  tgui::Slider::Ptr soundVolSlider;
 };
 
 GameUIWidgets buildGameUI(tgui::Gui &gui);
+tgui::Panel::Ptr buildSettingsPanel(tgui::Gui& gui, GameUIWidgets* outWidgets = nullptr);

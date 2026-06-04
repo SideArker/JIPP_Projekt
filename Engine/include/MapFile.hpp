@@ -8,33 +8,34 @@
 #include <vector>
 
 struct ENGINE_API TeamData {
-    Team team  = Team::Neutral;
-    std::string name;
-    sf::Color color = sf::Color::White;
-    int startMoney = 1000;
+  Team team = Team::Neutral;
+  std::string name;
+  sf::Color color = sf::Color::White;
+  int startMoney = 1000;
 };
 
 struct ENGINE_API UnitSpawnData {
-    std::string typeName;
-    int gridX;
-    int gridY;
-    Team team;
+  std::string typeName;
+  int gridX;
+  int gridY;
+  Team team;
+  MoveDirection facingDirection = MoveDirection::Right;
 };
 
 struct ENGINE_API BuildingSpawnData {
-    std::string typeName;
-    int gridX = 0;
-    int gridY = 0;
-    Team team = Team::Neutral;
+  std::string typeName;
+  int gridX = 0;
+  int gridY = 0;
+  Team team = Team::Neutral;
 };
 
 struct ENGINE_API MapFile {
-    std::string  tilesetPath;
-    sf::Vector2u tileSize;
-    unsigned int width = 0;
-    unsigned int height = 0;
-    std::vector<Tile> tiles;
-    std::vector<UnitSpawnData> spawns;
-    std::vector<BuildingSpawnData> buildingSpawns;
-    std::vector<TeamData> teams;
+  std::string tilesetPath;
+  sf::Vector2u tileSize;
+  unsigned int width = 0;
+  unsigned int height = 0;
+  std::vector<Tile> tiles;
+  std::vector<UnitSpawnData> spawns;
+  std::vector<BuildingSpawnData> buildingSpawns;
+  std::vector<TeamData> teams;
 };

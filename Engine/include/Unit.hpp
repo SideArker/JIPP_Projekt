@@ -91,6 +91,8 @@ public:
 
 	void move(const std::vector<sf::Vector2i>& newPath);
 	void update(float deltaTime);
+    void setDirection(MoveDirection dir);
+    MoveDirection getDirection() const { return currentDirection; }
 
 	int takeDamage(int damage);
 	int heal(int healAmount);

@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <fstream>
 
-static constexpr uint32_t FILE_VERSION = 2;
+static constexpr uint32_t FILE_VERSION = 4;
 static constexpr char MAP_MAGIC[4] = {'J', 'M', 'A', 'P'};
 static constexpr char SAVE_MAGIC[4] = {'J', 'S', 'A', 'V'};
 
@@ -50,6 +50,7 @@ static void writeMapBlock(std::ostream &out, const MapFile &map) {
   for (const auto &tile : map.tiles) {
     writeVal(out, static_cast<int32_t>(tile.getArtId()));
     writeVal(out, static_cast<uint8_t>(tile.getTerrain()));
+    writeVal(out, tile.getRotation());
   }
 
   writeVal(out, static_cast<uint32_t>(map.spawns.size()));
@@ -58,6 +59,7 @@ static void writeMapBlock(std::ostream &out, const MapFile &map) {
     writeVal(out, static_cast<int32_t>(spawn.gridX));
     writeVal(out, static_cast<int32_t>(spawn.gridY));
     writeVal(out, static_cast<uint8_t>(spawn.team));
+    writeVal(out, static_cast<uint8_t>(spawn.facingDirection));
   }
 
   writeVal(out, static_cast<uint32_t>(map.buildingSpawns.size()));
@@ -99,26 +101,39 @@ static bool readMapBlock(std::istream &in, MapFile &map, uint32_t version) {
   for (uint32_t i = 0; i < tileCount; ++i) {
     int32_t artId;
     uint8_t terrain;
+    unsigned char rotation = 0;
     if (!readVal(in, artId) || !readVal(in, terrain))
       return false;
+    if (version >= 3) {
+      if (!readVal(in, rotation)) return false;
+    }
     map.tiles.emplace_back(static_cast<int>(artId),
-                           static_cast<TerrainType>(terrain));
+                           static_cast<TerrainType>(terrain), rotation);
   }
 
   uint32_t spawnCount;
   if (!readVal(in, spawnCount))
     return false;
-  map.spawns.resize(spawnCount);
-  for (auto &spawn : map.spawns) {
-    if (!readString(in, spawn.typeName))
+  map.spawns.reserve(spawnCount);
+  for (uint32_t i = 0; i < spawnCount; ++i) {
+    UnitSpawnData s;
+    int32_t gx, gy;
+    uint8_t t;
+    if (!readString(in, s.typeName))
       return false;
-    int32_t gridX, gridY;
-    uint8_t team;
-    if (!readVal(in, gridX) || !readVal(in, gridY) || !readVal(in, team))
+    if (!readVal(in, gx) || !readVal(in, gy) || !readVal(in, t))
       return false;
-    spawn.gridX = gridX;
-    spawn.gridY = gridY;
-    spawn.team = static_cast<Team>(team);
+    s.gridX = gx;
+    s.gridY = gy;
+    s.team = static_cast<Team>(t);
+    if (version >= 4) {
+      uint8_t dir;
+      if (!readVal(in, dir)) return false;
+      s.facingDirection = static_cast<MoveDirection>(dir);
+    } else {
+      s.facingDirection = MoveDirection::Right;
+    }
+    map.spawns.push_back(s);
   }
 
   uint32_t buildingCount;
