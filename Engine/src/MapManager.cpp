@@ -538,6 +538,11 @@ void MapManager::syncCameraView(const sf::View &gameView) {
     selectionController->syncCameraView(gameView);
 }
 
+void MapManager::setOnOpenFactory(std::function<void(std::shared_ptr<Building>)> cb) {
+  if (selectionController)
+    selectionController->setOnOpenFactory(std::move(cb));
+}
+
 void MapManager::setWalkOverlayPath(std::string path) {
   m_walkOverlayPath = std::move(path);
 }

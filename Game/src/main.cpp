@@ -4,6 +4,7 @@
 #include "GameContent.hpp"
 #include "MapFile.hpp"
 #include "MapManager.hpp"
+#include "ProductionUI.hpp"
 #include "RightPanelUI.hpp"
 #include "SoundManager.hpp"
 #include "TerrainMovement.hpp"
@@ -30,6 +31,16 @@ int main() {
   if (!mapManager.loadFromFile(LEVEL1_PATH))
     return -1;
   mapManager.setupInput(window);
+
+  // ── Production UI (Game-layer) ────────────────────────────────────────
+  // Must be created AFTER setupInput so the gui exists.
+  std::unique_ptr<ProductionUI> productionUI;
+  if (tgui::Gui* gui = mapManager.getGui()) {
+    productionUI = std::make_unique<ProductionUI>(*gui, mapManager, mapManager.getTurnController());
+    mapManager.setOnOpenFactory([&productionUI](std::shared_ptr<Building> factory) {
+      if (productionUI) productionUI->open(factory);
+    });
+  }
 
   view.setSize({515.f, 285.f});
   view.setCenter({257.5f, 142.5f});
@@ -170,6 +181,13 @@ int main() {
         window.close();
         break;
       }
+      // Close production panel on Escape
+      if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
+        if (key->code == sf::Keyboard::Key::Escape && productionUI && productionUI->isOpen()) {
+          productionUI->close();
+          continue;
+        }
+      }
       mapManager.handleEvent(*event);
     }
 
@@ -203,6 +221,7 @@ int main() {
     }
 
     mapManager.update(deltaTime);
+    if (productionUI) productionUI->update(deltaTime);
     cameraController.update(deltaTime, window);
     mapManager.syncCameraView(cameraController.getView());
 

@@ -5,6 +5,7 @@
 #include <SFML/Graphics.hpp>
 #include <memory>
 #include <vector>
+#include <functional>
 
 class MapManager;
 class Unit;
@@ -22,19 +23,15 @@ public:
     void selectUnit(std::shared_ptr<Unit> unit);
     void syncCameraView(sf::View gameView);
     void update(float dt);
+    void setOnOpenFactory(std::function<void(std::shared_ptr<Building>)> cb) { m_onOpenFactory = std::move(cb); }
     tgui::Gui& getGui() { return gui; }
     std::shared_ptr<Unit> getSelectedUnit() const { return selectedUnit; }
 
 private:
-    struct AnimatedPreview {
-        std::vector<tgui::Picture::Ptr> frames;
-        float timer = 0.f;
-        int index = 0;
-    };
-    std::vector<AnimatedPreview> m_previews;
-
     void openFactoryUI(std::shared_ptr<Building> factory);
     void updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i unitGrid, sf::Vector2i preferredDir);
+
+    std::function<void(std::shared_ptr<Building>)> m_onOpenFactory;
 
     tgui::Gui gui;
     sf::RenderWindow& m_window;

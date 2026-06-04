@@ -110,6 +110,7 @@ public:
 	TurnController& getTurnController();
 	tgui::Gui* getGui();
 	void syncCameraView(const sf::View& gameView);
+	void setOnOpenFactory(std::function<void(std::shared_ptr<Building>)> cb);
 
 	void pushUndoState(sf::Vector2i unitGrid);
 	bool popUndoState(std::shared_ptr<Unit>& outSelectedUnit);
