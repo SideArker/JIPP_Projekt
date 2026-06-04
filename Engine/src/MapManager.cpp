@@ -17,9 +17,9 @@
 
 struct Node {
   sf::Vector2i pos;
-  int gCost = 0;
-  int hCost = 0;
-  int fCost = 0;
+  float gCost = 0.f;
+  float hCost = 0.f;
+  float fCost = 0.f;
   sf::Vector2i parent;
 
   bool operator>(const Node &other) const {
@@ -551,22 +551,41 @@ std::shared_ptr<Unit> MapManager::getUnitAtTile(sf::Vector2i gridPos) const {
   return nullptr;
 }
 
+static float getTerrainCost(TerrainType type) {
+  switch (type) {
+  case TerrainType::Road: return 0.5f;
+  case TerrainType::Mountain: return 2.0f;
+  case TerrainType::Grass:
+  case TerrainType::Forest:
+  case TerrainType::Water:
+  default: return 1.0f;
+  }
+}
+
 std::vector<sf::Vector2i>
-MapManager::getReachableTiles(sf::Vector2i from, int moveRange, Team movingTeam,
+MapManager::getReachableTiles(sf::Vector2i from, float moveRange, Team movingTeam,
                               MovementCategory category) const {
   std::vector<sf::Vector2i> reachable;
-  std::unordered_map<int, int> visited;
-  std::queue<std::pair<sf::Vector2i, int>> bfsQueue;
+  std::unordered_map<int, float> minCost;
+  struct PQNode {
+    float cost;
+    sf::Vector2i pos;
+    bool operator>(const PQNode& other) const { return cost > other.cost; }
+  };
+  std::priority_queue<PQNode, std::vector<PQNode>, std::greater<PQNode>> pq;
 
-  bfsQueue.push({from, 0});
-  visited[from.x + from.y * static_cast<int>(mapWidth)] = 0;
+  pq.push({0.f, from});
+  minCost[from.x + from.y * static_cast<int>(mapWidth)] = 0.f;
 
   const std::vector<sf::Vector2i> directions = {
       {0, -1}, {0, 1}, {-1, 0}, {1, 0}};
 
-  while (!bfsQueue.empty()) {
-    auto [pos, steps] = bfsQueue.front();
-    bfsQueue.pop();
+  while (!pq.empty()) {
+    auto [cost, pos] = pq.top();
+    pq.pop();
+
+    if (cost > minCost[pos.x + pos.y * static_cast<int>(mapWidth)])
+      continue;
 
     if (pos != from) {
       auto occupant = getUnitAtTile(pos);
@@ -575,33 +594,34 @@ MapManager::getReachableTiles(sf::Vector2i from, int moveRange, Team movingTeam,
       }
     }
 
-    if (steps >= moveRange)
-      continue;
-
     for (const auto &dir : directions) {
       sf::Vector2i next = pos + dir;
       if (next.x < 0 || next.y < 0 || next.x >= static_cast<int>(mapWidth) ||
           next.y >= static_cast<int>(mapHeight))
         continue;
-      if (!canTraverse(mapData[next.x + next.y * static_cast<int>(mapWidth)]
-                           .getTerrain(),
-                       category))
+      auto terrain = mapData[next.x + next.y * static_cast<int>(mapWidth)].getTerrain();
+      if (!canTraverse(terrain, category))
         continue;
       auto occupant = getUnitAtTile(next);
       if (occupant != nullptr && occupant->getTeam() != movingTeam)
         continue;
+
+      float nextCost = cost + getTerrainCost(terrain);
+      if (nextCost > moveRange)
+        continue;
+
       int key = next.x + next.y * static_cast<int>(mapWidth);
-      if (visited.find(key) == visited.end()) {
-        visited[key] = steps + 1;
-        bfsQueue.push({next, steps + 1});
+      if (minCost.find(key) == minCost.end() || nextCost < minCost[key]) {
+        minCost[key] = nextCost;
+        pq.push({nextCost, next});
       }
     }
   }
   return reachable;
 }
 
-static int getManhattanDistance(sf::Vector2i a, sf::Vector2i b) {
-  return std::abs(a.x - b.x) + std::abs(a.y - b.y);
+static float getManhattanDistance(sf::Vector2i a, sf::Vector2i b) {
+  return static_cast<float>(std::abs(a.x - b.x) + std::abs(a.y - b.y));
 }
 
 std::vector<sf::Vector2i> MapManager::findPath(sf::Vector2i start,
@@ -624,7 +644,7 @@ std::vector<sf::Vector2i> MapManager::findPath(sf::Vector2i start,
   std::priority_queue<Node, std::vector<Node>, std::greater<Node>> openSet;
   std::unordered_map<int, Node> allNodes;
 
-  Node startNode = {start, 0, getManhattanDistance(start, goal), 0, start};
+  Node startNode = {start, 0.f, getManhattanDistance(start, goal), 0.f, start};
   startNode.fCost = startNode.gCost + startNode.hCost;
 
   openSet.push(startNode);
@@ -656,7 +676,8 @@ std::vector<sf::Vector2i> MapManager::findPath(sf::Vector2i start,
       if (occupant != nullptr && occupant->getTeam() != movingTeam)
         continue;
 
-      int newGCost = current.gCost + 10;
+      auto terrain = mapData[neighborPos.x + neighborPos.y * static_cast<int>(mapWidth)].getTerrain();
+      float newGCost = current.gCost + getTerrainCost(terrain);
       int neighborKey =
           neighborPos.x + neighborPos.y * static_cast<int>(mapWidth);
 
@@ -665,9 +686,10 @@ std::vector<sf::Vector2i> MapManager::findPath(sf::Vector2i start,
         Node neighborNode;
         neighborNode.pos = neighborPos;
         neighborNode.gCost = newGCost;
-        neighborNode.hCost = getManhattanDistance(neighborPos, goal) * 10;
+        neighborNode.hCost = getManhattanDistance(neighborPos, goal);
         neighborNode.fCost = neighborNode.gCost + neighborNode.hCost;
         neighborNode.parent = current.pos;
+
         allNodes[neighborKey] = neighborNode;
         openSet.push(neighborNode);
       }
@@ -757,7 +779,7 @@ GameState MapManager::captureGameState() const {
     auto gridPos = unit->getGridPosition(tileSize);
     state.units.push_back(
         {unit->getName(), gridPos.x, gridPos.y, unit->getHealth(),
-         unit->getDamage(), static_cast<int>(unit->getMoveSpeed()),
+         unit->getDamage(), unit->getMoveSpeed(),
          unit->getTeam(), unit->getFlags(), unit->hasActed()});
   }
   for (const auto &building : buildings) {

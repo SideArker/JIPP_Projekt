@@ -12,7 +12,7 @@ struct ENGINE_API UnitSaveData {
   int gridY = 0;
   int health = 0;
   int damage = 0;
-  int moveSpeed = 0;
+  float moveSpeed = 0.f;
   Team team = Team::Neutral;
   uint8_t flags = 0;
   bool hasActed = false;

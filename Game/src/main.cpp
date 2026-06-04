@@ -94,22 +94,37 @@ int main() {
     for (const auto &[team, data] : mapManager.getTeams()) {
       if (team == Team::Neutral)
         continue;
+        
+      auto teamPanel = tgui::Panel::create({"100%", 25});
+      teamPanel->setPosition(0, teamY);
+      teamPanel->getRenderer()->setBackgroundColor(sf::Color(30, 30, 35, 180));
+      panels.teamList->add(teamPanel);
+
+      auto colorStrip = tgui::Panel::create({5, "100%"});
+      colorStrip->setPosition(0, 0);
+      colorStrip->getRenderer()->setBackgroundColor(data.color);
+      teamPanel->add(colorStrip);
+
       auto nameLbl = tgui::Label::create();
       nameLbl->setText(data.name);
-      nameLbl->getRenderer()->setTextColor(data.color);
+      nameLbl->getRenderer()->setTextColor(sf::Color::White);
       nameLbl->setTextSize(14);
-      nameLbl->setPosition(5, teamY);
-      panels.teamList->add(nameLbl);
+      nameLbl->setPosition(12, "50% - 7");
+      teamPanel->add(nameLbl);
 
       auto moneyLbl = tgui::Label::create();
       moneyLbl->setText("$" + std::to_string(data.startMoney));
-      moneyLbl->getRenderer()->setTextColor(
-          sf::Color(220, 220, 220)); // slightly distinct color for money
+      moneyLbl->getRenderer()->setTextColor(sf::Color(220, 220, 220));
       moneyLbl->setTextSize(14);
-      moneyLbl->setPosition("100% - 65", teamY);
-      panels.teamList->add(moneyLbl);
-      teamY += 25;
+      moneyLbl->setPosition("100% - width - 10", "50% - 7");
+      teamPanel->add(moneyLbl);
+
+      teamY += 28;
     }
+
+    mapManager.onUnitMoveStart = [&cameraController](std::shared_ptr<Unit> u) {
+        cameraController.trackUnit(u);
+    };
 
     // Hook up selection callback
     mapManager.setOnSelectionChanged(

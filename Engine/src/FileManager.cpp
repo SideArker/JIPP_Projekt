@@ -230,7 +230,7 @@ bool FileManager::saveGame(const GameState &state, const std::string &path) {
     writeVal(out, static_cast<int32_t>(unit.gridY));
     writeVal(out, static_cast<int32_t>(unit.health));
     writeVal(out, static_cast<int32_t>(unit.damage));
-    writeVal(out, static_cast<int32_t>(unit.moveSpeed));
+    writeVal(out, static_cast<float>(unit.moveSpeed));
     writeVal(out, static_cast<uint8_t>(unit.team));
     writeVal(out, unit.flags);
   }
@@ -270,7 +270,8 @@ bool FileManager::loadGame(const std::string &path, GameState &out) {
   for (auto &unit : out.units) {
     if (!readString(in, unit.typeName))
       return false;
-    int32_t gridX, gridY, health, damage, moveSpeed;
+    int32_t gridX, gridY, health, damage;
+    float moveSpeed;
     uint8_t team, flags;
     if (!readVal(in, gridX) || !readVal(in, gridY))
       return false;

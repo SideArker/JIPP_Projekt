@@ -121,6 +121,7 @@ public:
     void setOnSelectionChanged(std::function<void(std::shared_ptr<Unit>, std::shared_ptr<Building>, const Tile*)> cb) {
         m_onSelectionChanged = cb;
     }
+	std::function<void(std::shared_ptr<Unit>)> onUnitMoveStart;
     void notifySelectionChanged(std::shared_ptr<Unit> unit, std::shared_ptr<Building> building, const Tile* tile) {
         if (m_onSelectionChanged) m_onSelectionChanged(unit, building, tile);
     }
@@ -129,7 +130,7 @@ public:
 	std::shared_ptr<Unit> getSelectedUnit() const;
 	void selectUnit(std::shared_ptr<Unit> unit);
 	std::vector<sf::Vector2i> findPath(sf::Vector2i start, sf::Vector2i goal, Team movingTeam, MovementCategory category);
-	std::vector<sf::Vector2i> getReachableTiles(sf::Vector2i from, int moveRange, Team movingTeam, MovementCategory category) const;
+	std::vector<sf::Vector2i> getReachableTiles(sf::Vector2i from, float moveRange, Team movingTeam, MovementCategory category) const;
 	std::shared_ptr<Unit> getUnitAtTile(sf::Vector2i gridPos) const;
 	sf::Vector2u getTileSize() const;
 	unsigned int getMapWidth() const;

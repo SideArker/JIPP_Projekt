@@ -35,17 +35,30 @@ bool AIController::moveUnitToward(Unit& unit, sf::Vector2i from, sf::Vector2i ta
         return true;
     }
 
-    // Direct path to target if reachable
-    if (std::find(reachable.begin(), reachable.end(), target) != reachable.end()) {
-        auto path = mapManager.findPath(from, target, unit.getTeam(), unit.getMovementCategory());
-        if (!path.empty()) {
-            unit.move(path);
+    auto fullPath = mapManager.findPath(from, target, unit.getTeam(), unit.getMovementCategory());
+    if (!fullPath.empty()) {
+        if (std::find(reachable.begin(), reachable.end(), target) != reachable.end()) {
+            unit.move(fullPath);
             tc.markActed(unit);
             return true;
+        } else {
+            // Find furthest reachable tile along the path
+            std::vector<sf::Vector2i> bestPath;
+            for (int i = static_cast<int>(fullPath.size()) - 1; i >= 0; --i) {
+                if (std::find(reachable.begin(), reachable.end(), fullPath[i]) != reachable.end()) {
+                    bestPath = std::vector<sf::Vector2i>(fullPath.begin(), fullPath.begin() + i + 1);
+                    break;
+                }
+            }
+            if (!bestPath.empty()) {
+                unit.move(bestPath);
+                tc.markActed(unit);
+                return true;
+            }
         }
     }
 
-    // Pick closest reachable tile to target
+    // Fallback if no valid path exists at all
     sf::Vector2i best = from;
     int bestDist = INT_MAX;
     for (const auto& tile : reachable) {
@@ -126,15 +139,18 @@ bool AIController::tryConquerNeutral(Unit& unit, MapManager& mapManager, TurnCon
     auto reachable = mapManager.getReachableTiles(uGrid, unit.getMoveSpeed(), unit.getTeam(), unit.getMovementCategory());
 
     const std::shared_ptr<Building>* best = nullptr;
-    int bestDist = INT_MAX;
+    size_t bestDist = 99999;
 
     for (const auto& b : mapManager.getBuildings()) {
         if (b->getTeam() != Team::Neutral) continue;
         sf::Vector2i bGrid = buildingGridOf(*b, ts);
         auto occupant = mapManager.getUnitAtTile(bGrid);
         if (occupant && occupant->getTeam() == Team::Enemy) continue;
-        int dist = std::abs(bGrid.x - uGrid.x) + std::abs(bGrid.y - uGrid.y);
-        if (dist < bestDist) { bestDist = dist; best = &b; }
+        
+        auto path = mapManager.findPath(uGrid, bGrid, unit.getTeam(), unit.getMovementCategory());
+        if (path.empty()) continue;
+        
+        if (path.size() < bestDist) { bestDist = path.size(); best = &b; }
     }
 
     if (!best) return false;
@@ -150,15 +166,18 @@ bool AIController::tryCapturePlayerBuilding(Unit& unit, MapManager& mapManager, 
     auto reachable = mapManager.getReachableTiles(uGrid, unit.getMoveSpeed(), unit.getTeam(), unit.getMovementCategory());
 
     const std::shared_ptr<Building>* best = nullptr;
-    int bestDist = INT_MAX;
+    size_t bestDist = 99999;
 
     for (const auto& b : mapManager.getBuildings()) {
         if (b->getTeam() != Team::Ally) continue;
         sf::Vector2i bGrid = buildingGridOf(*b, ts);
         auto occupant = mapManager.getUnitAtTile(bGrid);
         if (occupant && occupant->getTeam() == Team::Enemy) continue;
-        int dist = std::abs(bGrid.x - uGrid.x) + std::abs(bGrid.y - uGrid.y);
-        if (dist < bestDist) { bestDist = dist; best = &b; }
+        
+        auto path = mapManager.findPath(uGrid, bGrid, unit.getTeam(), unit.getMovementCategory());
+        if (path.empty()) continue;
+        
+        if (path.size() < bestDist) { bestDist = path.size(); best = &b; }
     }
 
     if (!best) return false;
@@ -182,7 +201,7 @@ bool AIController::tryBlockProductionBuilding(Unit& unit, MapManager& mapManager
     auto reachable = mapManager.getReachableTiles(uGrid, unit.getMoveSpeed(), unit.getTeam(), unit.getMovementCategory());
 
     const std::shared_ptr<Building>* best = nullptr;
-    int bestDist = INT_MAX;
+    size_t bestDist = 99999;
 
     for (const auto& b : mapManager.getBuildings()) {
         if (b->getTeam() != Team::Ally) continue;
@@ -191,8 +210,11 @@ bool AIController::tryBlockProductionBuilding(Unit& unit, MapManager& mapManager
         sf::Vector2i bGrid = buildingGridOf(*b, ts);
         auto occupant = mapManager.getUnitAtTile(bGrid);
         if (occupant && occupant->getTeam() == Team::Enemy) continue;
-        int dist = std::abs(bGrid.x - uGrid.x) + std::abs(bGrid.y - uGrid.y);
-        if (dist < bestDist) { bestDist = dist; best = &b; }
+        
+        auto path = mapManager.findPath(uGrid, bGrid, unit.getTeam(), unit.getMovementCategory());
+        if (path.empty()) continue;
+        
+        if (path.size() < bestDist) { bestDist = path.size(); best = &b; }
     }
 
     if (!best) return false;
@@ -275,14 +297,20 @@ bool AIController::tryMoveTowardPlayer(Unit& unit, MapManager& mapManager, TurnC
     sf::Vector2i uGrid = gridOf(unit, ts);
     auto reachable = mapManager.getReachableTiles(uGrid, unit.getMoveSpeed(), unit.getTeam(), unit.getMovementCategory());
 
-    // Find nearest ally unit
+    // Find nearest ally unit by path distance
     const std::shared_ptr<Unit>* nearest = nullptr;
-    int bestDist = INT_MAX;
+    size_t bestDist = 99999;
     for (const auto& ally : mapManager.getUnits()) {
         if (ally->isDead() || ally->getTeam() != Team::Ally) continue;
         sf::Vector2i aGrid = gridOf(*ally, ts);
-        int dist = std::abs(aGrid.x - uGrid.x) + std::abs(aGrid.y - uGrid.y);
-        if (dist < bestDist) { bestDist = dist; nearest = &ally; }
+        
+        auto path = mapManager.findPath(uGrid, aGrid, unit.getTeam(), unit.getMovementCategory());
+        if (path.empty()) continue; // No path available
+        
+        if (path.size() < bestDist) { 
+            bestDist = path.size(); 
+            nearest = &ally; 
+        }
     }
 
     if (!nearest) {

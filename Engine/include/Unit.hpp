@@ -26,7 +26,7 @@ enum class Team {
 struct ENGINE_API UnitData {
 	int maxHealth = 1;
 	int damage = 1;
-	int moveSpeed = 3;
+	float moveSpeed = 3.f;
 	int minAttackRange = 0;
 	int maxAttackRange = 1;
 	float hitEffectDelay = 0.0f;
@@ -64,7 +64,7 @@ protected:
 	int health;
 	int maxHealth;
 	int damage;
-	int moveSpeed;
+	float moveSpeed;
 	int minAttackRange;
 	int maxAttackRange;
 	float hitEffectDelay;
@@ -108,6 +108,7 @@ public:
 	std::string getName() const { return name; }
 	int getHealth() const { return health; }
 	int getMaxHealth() const { return maxHealth; }
+	int getDamage() const { return damage; }
 
 	float getMoveSpeed() const { return moveSpeed; }
 	MovementCategory getMovementCategory() const { return movementCategory; }
@@ -120,20 +121,20 @@ public:
 	bool shouldFlipX() const { return animState.shouldFlipX(); }
 	MoveDirection getMoveDirection() const { return currentDirection; }
 	Team getTeam() const { return team; }
-	int getDamage() const { return damage; }
 	uint8_t getFlags() const { return static_cast<uint8_t>(flags.to_ulong()); }
 	sf::Vector2i getGridPosition(sf::Vector2u tileSize) const;
 
 	void setPosition(sf::Vector2f pos) { position = pos; }
 	void setTeam(Team t);
-	void setHealth(int h) { health = h; }
+	void setHealth(int h) { health = std::clamp(h, 0, maxHealth); }
 	void setDamage(int d) { damage = d; }
-	void setMoveSpeed(int s) { moveSpeed = s; }
-	void setFlags(uint8_t f) { flags = std::bitset<static_cast<std::size_t>(UnitFlag::Count)>(f); }
+	void setMoveSpeed(float speed) { moveSpeed = speed; }
+
+	void setActed(bool acted) { m_hasActed = acted; }
 
 	bool isDead() const { return m_isDead; }
 	bool hasActed() const { return m_hasActed; }
-	void setActed(bool acted) { m_hasActed = acted; }
+	void setFlags(uint8_t f) { flags = std::bitset<static_cast<std::size_t>(UnitFlag::Count)>(f); }
 
 	std::function<void(sf::Vector2f, int health)> onDamaged;	
 	std::function<void(std::shared_ptr<Unit>, int)> onAttackStart;

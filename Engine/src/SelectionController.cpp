@@ -268,6 +268,7 @@ SelectionController::SelectionController(sf::RenderWindow &window,
               static_cast<int>(std::round(selectedUnit->getPosition().x / static_cast<float>(tileSize.x))),
               static_cast<int>(std::round(selectedUnit->getPosition().y / static_cast<float>(tileSize.y))));
           mapManager.pushUndoState(unitGrid2);
+          if (mapManager.onUnitMoveStart) mapManager.onUnitMoveStart(selectedUnit);
           selectedUnit->move(previewPath);
           m_turnController.markActed(*selectedUnit);
         }
