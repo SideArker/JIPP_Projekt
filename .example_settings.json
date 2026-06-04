@@ -1,0 +1,8 @@
+{
+    "INFO": "this is for clangd",
+    "securecoder.enabled": true,
+    "clangd.path": "c:\\Users\\darks\\AppData\\Roaming\\Antigravity IDE\\User\\globalStorage\\llvm-vs-code-extensions.vscode-clangd\\install\\22.1.0\\clangd_22.1.0\\bin\\clangd.exe",
+    "cmake.configureOnOpen": true,
+    "cmake.exportCompileCommandsFile": true,
+    "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json"
+}
