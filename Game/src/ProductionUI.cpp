@@ -1,11 +1,13 @@
 #include "ProductionUI.hpp"
 #include "AnimationManager.hpp"
 #include "UnitRegistry.hpp"
+#include "Unit.hpp"
 #include <SFML/Graphics.hpp>
 #include <algorithm>
+#include <map>
 #include <string>
 
-static const sf::Color BG_DARK(15, 25, 35);
+static const sf::Color BG_DARK(15, 25, 35, 210);
 static const sf::Color BG_CARD(8, 16, 28);
 static const sf::Color BG_CAT(20, 32, 48);
 static const sf::Color BORDER_COL(60, 85, 115);
@@ -44,17 +46,45 @@ void ProductionUI::close() {
 }
 
 void ProductionUI::update(float dt) {
+  const std::vector<MoveDirection> dirs = {
+      MoveDirection::Left, MoveDirection::Down, MoveDirection::Right,
+      MoveDirection::Up};
+
   for (auto &preview : m_previews) {
-    if (preview.frames.empty())
+    if (!preview.unit || !preview.rt)
       continue;
+
     preview.timer -= dt;
     if (preview.timer <= 0.f) {
       preview.timer = 1.f;
-      preview.frames[preview.index]->setVisible(false);
-      preview.index =
-          (preview.index + 1) % static_cast<int>(preview.frames.size());
-      preview.frames[preview.index]->setVisible(true);
+      preview.dirIndex =
+          (preview.dirIndex + 1) % static_cast<int>(dirs.size());
+      preview.unit->setDirection(dirs[preview.dirIndex]);
     }
+
+    // Step the animation
+    preview.unit->update(dt);
+
+    // Redraw to the render texture
+    preview.rt->clear(sf::Color::Transparent);
+
+    sf::Sprite sprite(preview.unit->getCurrentTexture());
+    sf::IntRect rect = preview.unit->getCurrentRect();
+    sprite.setTextureRect(rect);
+
+    sf::Vector2f centerOffset((64.f - rect.width) / 2.f, (64.f - rect.height) / 2.f);
+    sprite.setPosition(centerOffset);
+
+    if (preview.unit->shouldFlipX()) {
+      sprite.setScale({-1.f, 1.f});
+      sprite.setOrigin({static_cast<float>(rect.width), 0.f});
+    } else {
+      sprite.setScale({1.f, 1.f});
+      sprite.setOrigin({0.f, 0.f});
+    }
+
+    preview.rt->draw(sprite);
+    preview.rt->display();
   }
 }
 
@@ -112,17 +142,16 @@ void ProductionUI::open(std::shared_ptr<Building> factory) {
       break;
     }
   }
-
   categories.erase(
       std::remove_if(categories.begin(), categories.end(),
                      [](const Category &c) { return c.units.empty(); }),
       categories.end());
 
   m_panel = tgui::Panel::create();
-  m_panel->setSize("100% - 250px", "100% - 152px");
-  m_panel->setPosition(0, 0);
+  m_panel->setSize("80% - 200", "80% - 120");
+  m_panel->setPosition("10%", "10%");
   m_panel->getRenderer()->setBackgroundColor(BG_DARK);
-  m_panel->getRenderer()->setBorders(tgui::Borders(0, 0, 2, 2));
+  m_panel->getRenderer()->setBorders(tgui::Borders(2));
   m_panel->getRenderer()->setBorderColor(BORDER_COL);
   m_gui.add(m_panel);
 
@@ -132,32 +161,40 @@ void ProductionUI::open(std::shared_ptr<Building> factory) {
   titleLabel->getRenderer()->setTextColor(TEXT_NORMAL);
   m_panel->add(titleLabel);
 
-  auto moneyLabel = tgui::Label::create("$" + std::to_string(currentMoney));
-  moneyLabel->setPosition("100% - 140", 10);
-  moneyLabel->setTextSize(16);
+  auto moneyLabel =
+      tgui::Label::create("Funds: $" + std::to_string(currentMoney));
+  moneyLabel->setPosition(260, 12);
+  moneyLabel->setTextSize(14);
   moneyLabel->getRenderer()->setTextColor(sf::Color(80, 220, 80));
   m_panel->add(moneyLabel);
 
   auto closeBtn = makeStyledBtn("Close [Esc]");
-  closeBtn->setSize(110, 28);
-  closeBtn->setPosition("100% - 126", 8);
+  closeBtn->setSize(135, 28);
+  closeBtn->setPosition("100% - 145", 8);
   closeBtn->onClick([this]() { close(); });
   m_panel->add(closeBtn);
-  // Divider line
+
   auto divider = tgui::Panel::create();
   divider->setSize("100%", 2);
-  divider->setPosition(0, 40);
+  divider->setPosition(0, 42);
   divider->getRenderer()->setBackgroundColor(BORDER_COL);
   m_panel->add(divider);
 
+  auto scrollable = tgui::ScrollablePanel::create();
+  scrollable->setPosition(0, 46);
+  scrollable->setSize("100%", "100% - 50");
+  scrollable->getRenderer()->setBackgroundColor(sf::Color::Transparent);
+  scrollable->getRenderer()->setBorders(tgui::Borders(0));
+  scrollable->getRenderer()->setScrollbarWidth(8);
+  m_panel->add(scrollable);
+
   const float CARD_W = 130.f;
-  const float CARD_H = 150.f;
+  const float CARD_H = 160.f;
   const float CARD_PAD = 10.f;
   const float CAT_LABEL_H = 26.f;
   const float CAT_PAD = 8.f;
-  const float START_Y = 50.f;
 
-  float curY = START_Y;
+  float curY = 4.f;
   for (const auto &cat : categories) {
     auto catStrip = tgui::Panel::create();
     catStrip->setSize("100%", CAT_LABEL_H);
@@ -165,10 +202,10 @@ void ProductionUI::open(std::shared_ptr<Building> factory) {
     catStrip->getRenderer()->setBackgroundColor(BG_CAT);
     catStrip->getRenderer()->setBorders(tgui::Borders(0, 1, 0, 1));
     catStrip->getRenderer()->setBorderColor(BORDER_COL);
-    m_panel->add(catStrip);
+    scrollable->add(catStrip);
 
-    std::string catTitle = cat.name + (cat.unlocked ? "" : "  [Locked]");
-    auto catLabel = tgui::Label::create(catTitle);
+    auto catLabel =
+        tgui::Label::create(cat.name + (cat.unlocked ? "" : "  [Locked]"));
     catLabel->setPosition(12, 4);
     catLabel->setTextSize(13);
     catLabel->getRenderer()->setTextColor(cat.unlocked ? TEXT_NORMAL
@@ -187,10 +224,11 @@ void ProductionUI::open(std::shared_ptr<Building> factory) {
 
       auto card = tgui::Panel::create();
       card->setSize(CARD_W, CARD_H);
-      card->setPosition(curX, CAT_PAD);
+      card->setPosition(curX, curY + CAT_PAD);
       card->getRenderer()->setBackgroundColor(BG_CARD);
       card->getRenderer()->setBorders(tgui::Borders(1));
       card->getRenderer()->setBorderColor(BORDER_COL);
+      scrollable->add(card);
 
       const float IMG_SIZE = 64.f;
       auto imgPanel = tgui::Panel::create();
@@ -202,40 +240,27 @@ void ProductionUI::open(std::shared_ptr<Building> factory) {
 
       AnimatedPreview preview;
       const AnimationSet *animSet = AnimationManager::getSet(uName);
-      if (animSet) {
-        const std::vector<std::pair<std::string, bool>> dirs = {
-            {"_left", false},
-            {"_down", false},
-            {"_right", false},
-            {"_up", false},
-        };
-        for (const auto &[suffix, _] : dirs) {
-          const AnimationClip *clip = animSet->getClip("idle" + suffix);
-          if (!clip)
-            clip = animSet->getClip("walk" + suffix);
-          if (!clip || clip->frames.empty())
-            continue;
+      if (animSet && dummy) {
+        dummy->setDirection(MoveDirection::Left);
 
-          const sf::IntRect &fr = clip->frames[0];
-          tgui::UIntRect part(static_cast<unsigned>(fr.position.x),
-                              static_cast<unsigned>(fr.position.y),
-                              static_cast<unsigned>(fr.size.x),
-                              static_cast<unsigned>(fr.size.y));
+        auto rt = std::make_shared<sf::RenderTexture>();
+        if (rt->resize({static_cast<unsigned>(IMG_SIZE), static_cast<unsigned>(IMG_SIZE)})) {
+          rt->clear(sf::Color::Transparent);
+          rt->display();
 
-          std::string artPath = clip->texturePath.empty() ? dummy->getArtPath()
-                                                          : clip->texturePath;
-
-          auto pic = tgui::Picture::create(tgui::Texture(artPath, part));
+          auto pic = tgui::Picture::create(tgui::Texture(rt->getTexture()));
           pic->setSize(IMG_SIZE, IMG_SIZE);
-          pic->setVisible(preview.frames.empty());
           imgPanel->add(pic);
-          preview.frames.push_back(pic);
+
+          preview.unit = dummy;
+          preview.rt = rt;
+          preview.pic = pic;
+          preview.timer = 1.f;
+          preview.dirIndex = 0;
+          m_previews.push_back(std::move(preview));
         }
       }
-      if (!preview.frames.empty()) {
-        preview.timer = 1.f;
-        m_previews.push_back(preview);
-      }
+
 
       auto nameLabel = tgui::Label::create(uName);
       nameLabel->setPosition(6, IMG_SIZE + 10);
@@ -244,8 +269,8 @@ void ProductionUI::open(std::shared_ptr<Building> factory) {
       card->add(nameLabel);
 
       auto statsLabel =
-          tgui::Label::create("HP " + std::to_string(data->maxHealth) +
-                              "  \u2694 " + std::to_string(data->damage));
+          tgui::Label::create("HP:" + std::to_string(data->maxHealth) +
+                              " Atk:" + std::to_string(data->damage));
       statsLabel->setPosition(6, IMG_SIZE + 28);
       statsLabel->setTextSize(11);
       statsLabel->getRenderer()->setTextColor(TEXT_GREY);
@@ -274,9 +299,6 @@ void ProductionUI::open(std::shared_ptr<Building> factory) {
         });
       }
       card->add(buyBtn);
-
-      card->setPosition(curX, curY + CAT_PAD);
-      m_panel->add(card);
 
       curX += CARD_W + CARD_PAD;
     }

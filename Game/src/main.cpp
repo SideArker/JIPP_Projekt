@@ -11,6 +11,7 @@
 #include "TextureManager.hpp"
 #include "Unit.hpp"
 #include <SFML/Graphics.hpp>
+#include <map>
 #include <memory>
 #include <optional>
 
@@ -32,14 +33,15 @@ int main() {
     return -1;
   mapManager.setupInput(window);
 
-  // ── Production UI (Game-layer) ────────────────────────────────────────
-  // Must be created AFTER setupInput so the gui exists.
   std::unique_ptr<ProductionUI> productionUI;
-  if (tgui::Gui* gui = mapManager.getGui()) {
-    productionUI = std::make_unique<ProductionUI>(*gui, mapManager, mapManager.getTurnController());
-    mapManager.setOnOpenFactory([&productionUI](std::shared_ptr<Building> factory) {
-      if (productionUI) productionUI->open(factory);
-    });
+  if (tgui::Gui *gui = mapManager.getGui()) {
+    productionUI = std::make_unique<ProductionUI>(
+        *gui, mapManager, mapManager.getTurnController());
+    mapManager.setOnOpenFactory(
+        [&productionUI](std::shared_ptr<Building> factory) {
+          if (productionUI)
+            productionUI->open(factory);
+        });
   }
 
   view.setSize({515.f, 285.f});
@@ -53,6 +55,7 @@ int main() {
   cameraController.init(view, mapPixels, window.getSize());
 
   GameUIWidgets panels;
+  std::map<Team, tgui::Label::Ptr> teamMoneyLabels;
   if (tgui::Gui *gui = mapManager.getGui()) {
     gui->setFont("Art/Fonts/joystixMonospace.ttf");
     panels = buildGameUI(*gui);
@@ -95,7 +98,6 @@ int main() {
     panels.soundVolSlider->onValueChange(
         [](float v) { SoundManager::setSFXVolume(v); });
 
-    // Populate team list
     panels.teamList->removeAllWidgets();
     int teamY = 0;
     for (const auto &[team, data] : mapManager.getTeams()) {
@@ -121,11 +123,12 @@ int main() {
       teamPanel->add(nameLbl);
 
       auto moneyLbl = tgui::Label::create();
-      moneyLbl->setText("$" + std::to_string(data.startMoney));
+      moneyLbl->setText("$" + std::to_string(data.money));
       moneyLbl->getRenderer()->setTextColor(sf::Color(220, 220, 220));
       moneyLbl->setTextSize(14);
       moneyLbl->setPosition("100% - width - 10", "50% - 7");
       teamPanel->add(moneyLbl);
+      teamMoneyLabels[team] = moneyLbl;
 
       teamY += 50;
     }
@@ -134,7 +137,6 @@ int main() {
       cameraController.trackUnit(u);
     };
 
-    // Hook up selection callback
     mapManager.setOnSelectionChanged(
         [infoLabel = panels.infoLabel, flagsList = panels.flagsList](
             std::shared_ptr<Unit> unit, std::shared_ptr<Building> building,
@@ -181,9 +183,9 @@ int main() {
         window.close();
         break;
       }
-      // Close production panel on Escape
-      if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
-        if (key->code == sf::Keyboard::Key::Escape && productionUI && productionUI->isOpen()) {
+      if (const auto *key = event->getIf<sf::Event::KeyPressed>()) {
+        if (key->code == sf::Keyboard::Key::Escape && productionUI &&
+            productionUI->isOpen()) {
           productionUI->close();
           continue;
         }
@@ -221,11 +223,17 @@ int main() {
     }
 
     mapManager.update(deltaTime);
-    if (productionUI) productionUI->update(deltaTime);
+    if (productionUI)
+      productionUI->update(deltaTime);
     cameraController.update(deltaTime, window);
     mapManager.syncCameraView(cameraController.getView());
 
     if (mapManager.getGui()) {
+      for (auto &[t, lbl] : teamMoneyLabels) {
+        auto it = mapManager.getTeams().find(t);
+        if (it != mapManager.getTeams().end())
+          lbl->setText("$" + std::to_string(it->second.money));
+      }
       panels.undoBtn->setEnabled(!mapManager.isUndoStackEmpty() &&
                                  !mapManager.isAnyUnitActing());
       bool hasNext = false;
@@ -250,10 +258,10 @@ int main() {
     window.setView(cameraController.getView());
     mapManager.draw(window);
 
-    // Draw the overlay (static)
     window.setView(view);
     mapManager.drawUI(window);
     window.display();
+    std::cout << deltaTime << std::endl;
   }
 
   SoundManager::shutdown();

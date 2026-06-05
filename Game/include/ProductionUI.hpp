@@ -3,6 +3,7 @@
 #include "Building.hpp"
 #include "MapManager.hpp"
 #include "TurnController.hpp"
+#include <SFML/Graphics.hpp>
 #include <TGUI/Backend/SFML-Graphics.hpp>
 #include <TGUI/TGUI.hpp>
 #include <memory>
@@ -12,9 +13,11 @@
 class ProductionUI {
 public:
   struct AnimatedPreview {
-    std::vector<tgui::Picture::Ptr> frames;
+    std::shared_ptr<Unit> unit;
+    std::shared_ptr<sf::RenderTexture> rt;
+    tgui::Picture::Ptr pic;
     float timer = 0.f;
-    int index = 0;
+    int dirIndex = 0;
   };
 
   ProductionUI(tgui::Gui &gui, MapManager &mapManager,
