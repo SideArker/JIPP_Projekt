@@ -1,11 +1,17 @@
 #include "ProductionUI.hpp"
 #include "AnimationManager.hpp"
-#include "UnitRegistry.hpp"
 #include "Unit.hpp"
+#include "UnitRegistry.hpp"
 #include <SFML/Graphics.hpp>
 #include <algorithm>
 #include <map>
 #include <string>
+
+struct Category {
+  std::string name;
+  std::vector<std::string> units;
+  bool unlocked = false;
+};
 
 static const sf::Color BG_DARK(15, 25, 35, 210);
 static const sf::Color BG_CARD(8, 16, 28);
@@ -51,40 +57,37 @@ void ProductionUI::update(float dt) {
       MoveDirection::Up};
 
   for (auto &preview : m_previews) {
-    if (!preview.unit || !preview.rt)
+    if (!preview.unit || !preview.canvas)
       continue;
 
     preview.timer -= dt;
     if (preview.timer <= 0.f) {
       preview.timer = 1.f;
-      preview.dirIndex =
-          (preview.dirIndex + 1) % static_cast<int>(dirs.size());
+      preview.dirIndex = (preview.dirIndex + 1) % static_cast<int>(dirs.size());
       preview.unit->setDirection(dirs[preview.dirIndex]);
     }
 
-    // Step the animation
-    preview.unit->update(dt);
-
-    // Redraw to the render texture
-    preview.rt->clear(sf::Color::Transparent);
+    // Redraw to the canvas
+    preview.canvas->clear(sf::Color::Transparent);
 
     sf::Sprite sprite(preview.unit->getCurrentTexture());
     sf::IntRect rect = preview.unit->getCurrentRect();
     sprite.setTextureRect(rect);
 
-    sf::Vector2f centerOffset((64.f - rect.width) / 2.f, (64.f - rect.height) / 2.f);
+    sf::Vector2f centerOffset((64.f - rect.size.x * 2.f) / 2.f,
+                              (64.f - rect.size.y * 2.f) / 2.f);
     sprite.setPosition(centerOffset);
 
     if (preview.unit->shouldFlipX()) {
-      sprite.setScale({-1.f, 1.f});
-      sprite.setOrigin({static_cast<float>(rect.width), 0.f});
+      sprite.setScale({-2.f, 2.f});
+      sprite.setOrigin({static_cast<float>(rect.size.x), 0.f});
     } else {
-      sprite.setScale({1.f, 1.f});
+      sprite.setScale({2.f, 2.f});
       sprite.setOrigin({0.f, 0.f});
     }
 
-    preview.rt->draw(sprite);
-    preview.rt->display();
+    preview.canvas->draw(sprite);
+    preview.canvas->display();
   }
 }
 
@@ -94,13 +97,19 @@ void ProductionUI::open(std::shared_ptr<Building> factory) {
   bool hasVehicleBase = false;
   bool hasAirport = false;
   bool hasPort = false;
+
+  bool sitsOnWater =
+      m_mapManager.getTerrainAt(sf::Vector2i(factory->getPosition().x / 32,
+                                             factory->getPosition().y / 32)) ==
+      TerrainType::Water;
+
   for (const auto &b : m_mapManager.getBuildings()) {
     if (b->getTeam() == factory->getTeam()) {
       if (b->getTypeName() == "VehicleBase")
         hasVehicleBase = true;
       if (b->getTypeName() == "Airport")
         hasAirport = true;
-      if (b->getTypeName() == "Port")
+      if (b->getTypeName() == "Port" && sitsOnWater)
         hasPort = true;
     }
   }
@@ -111,11 +120,6 @@ void ProductionUI::open(std::shared_ptr<Building> factory) {
   if (moneyIt != m_mapManager.getTeams().end())
     currentMoney = moneyIt->second.money;
 
-  struct Category {
-    std::string name;
-    std::vector<std::string> units;
-    bool unlocked = false;
-  };
   std::vector<Category> categories = {{"Infantry", {}, true},
                                       {"Ground", {}, hasVehicleBase},
                                       {"Flying", {}, hasAirport},
@@ -216,7 +220,7 @@ void ProductionUI::open(std::shared_ptr<Building> factory) {
     float curX = CARD_PAD;
     for (const auto &uName : cat.units) {
       const UnitData *data = UnitRegistry::getData(uName);
-      auto dummy = UnitRegistry::create(uName, Team::Neutral);
+      auto dummy = UnitRegistry::create(uName, Team::Ally);
       if (!data || !dummy)
         continue;
 
@@ -243,24 +247,17 @@ void ProductionUI::open(std::shared_ptr<Building> factory) {
       if (animSet && dummy) {
         dummy->setDirection(MoveDirection::Left);
 
-        auto rt = std::make_shared<sf::RenderTexture>();
-        if (rt->resize({static_cast<unsigned>(IMG_SIZE), static_cast<unsigned>(IMG_SIZE)})) {
-          rt->clear(sf::Color::Transparent);
-          rt->display();
+        auto canvas = tgui::CanvasSFML::create({IMG_SIZE, IMG_SIZE});
+        canvas->clear(sf::Color::Transparent);
+        canvas->display();
+        imgPanel->add(canvas);
 
-          auto pic = tgui::Picture::create(tgui::Texture(rt->getTexture()));
-          pic->setSize(IMG_SIZE, IMG_SIZE);
-          imgPanel->add(pic);
-
-          preview.unit = dummy;
-          preview.rt = rt;
-          preview.pic = pic;
-          preview.timer = 1.f;
-          preview.dirIndex = 0;
-          m_previews.push_back(std::move(preview));
-        }
+        preview.unit = dummy;
+        preview.canvas = canvas;
+        preview.timer = 1.f;
+        preview.dirIndex = 0;
+        m_previews.push_back(std::move(preview));
       }
-
 
       auto nameLabel = tgui::Label::create(uName);
       nameLabel->setPosition(6, IMG_SIZE + 10);

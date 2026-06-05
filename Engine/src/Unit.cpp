@@ -29,10 +29,15 @@ Unit::Unit(const std::string& name, const std::string& artPath, const std::strin
 {
     texture = &TextureManager::getTexture(artPath, maskPath, TeamRegistry::getColor(team));
     const std::string directionalIdle = clipName("idle", currentDirection);
+    const std::string directionalWalk = clipName("walk", currentDirection);
     if (this->animSet->getClip(directionalIdle)) {
         animState.play(directionalIdle, *this->animSet);
     } else if (this->animSet->getClip("idle")) {
         animState.play("idle", *this->animSet);
+    } else if (this->animSet->getClip(directionalWalk)) {
+        animState.play(directionalWalk, *this->animSet);
+    } else if (this->animSet->getClip("walk")) {
+        animState.play("walk", *this->animSet);
     }
 }
 
@@ -51,10 +56,15 @@ const sf::Texture& Unit::getCurrentTexture() const {
 void Unit::setDirection(MoveDirection dir) {
     currentDirection = dir;
     const std::string directionalIdle = clipName("idle", currentDirection);
+    const std::string directionalWalk = clipName("walk", currentDirection);
     if (this->animSet->getClip(directionalIdle)) {
         animState.play(directionalIdle, *this->animSet);
     } else if (this->animSet->getClip("idle")) {
         animState.play("idle", *this->animSet);
+    } else if (this->animSet->getClip(directionalWalk)) {
+        animState.play(directionalWalk, *this->animSet);
+    } else if (this->animSet->getClip("walk")) {
+        animState.play("walk", *this->animSet);
     }
 }
 
@@ -120,15 +130,23 @@ void Unit::update(float deltaTime) {
         currentSpeed = 0.0f;
 
         const std::string directionalIdle = clipName("idle", currentDirection);
+        const std::string directionalWalk = clipName("walk", currentDirection);
         const AnimationClip* targetIdleClip = animSet->getClip(directionalIdle);
         if (targetIdleClip) {
             if (animState.getCurrentClip() != targetIdleClip) {
                 animState.play(directionalIdle, *animSet);
             }
-        } else {
-            targetIdleClip = animSet->getClip("idle");
-            if (targetIdleClip && animState.getCurrentClip() != targetIdleClip) {
+        } else if ((targetIdleClip = animSet->getClip("idle")) != nullptr) {
+            if (animState.getCurrentClip() != targetIdleClip) {
                 animState.play("idle", *animSet);
+            }
+        } else if ((targetIdleClip = animSet->getClip(directionalWalk)) != nullptr) {
+            if (animState.getCurrentClip() != targetIdleClip) {
+                animState.play(directionalWalk, *animSet);
+            }
+        } else if ((targetIdleClip = animSet->getClip("walk")) != nullptr) {
+            if (animState.getCurrentClip() != targetIdleClip) {
+                animState.play("walk", *animSet);
             }
         }
 

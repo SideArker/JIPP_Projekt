@@ -14,7 +14,9 @@ void registerSoldier() {
   static const std::string ART_PATH = "Art/Units/Soldier/soldier_walk.png";
   static const std::string MASK_PATH =
       "Art/Units/Soldier/soldier_walk_mask.png";
-  static const std::vector<UnitFlag> FLAGS = {UnitFlag::Capture, UnitFlag::CanAttackGround, UnitFlag::CanAttackInfantry};
+  static const std::vector<UnitFlag> FLAGS = {UnitFlag::Capture,
+                                              UnitFlag::CanAttackGround,
+                                              UnitFlag::CanAttackInfantry};
 
   AnimationSet unitAnimSet;
   unitAnimSet.addDirectionalClips(

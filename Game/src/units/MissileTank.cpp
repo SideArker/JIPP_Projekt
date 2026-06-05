@@ -13,7 +13,9 @@ void registerMissileTank() {
   static const std::string ART_PATH = "Art/Units/MissileTank/missiletank.png";
   static const std::string MASK_PATH =
       "Art/Units/MissileTank/missiletank_mask.png";
-  static const std::vector<UnitFlag> FLAGS = {UnitFlag::CanAttackGround, UnitFlag::CanAttackInfantry, UnitFlag::CanAttackFlying, UnitFlag::CanAttackNaval};
+  static const std::vector<UnitFlag> FLAGS = {
+      UnitFlag::CanAttackGround, UnitFlag::CanAttackInfantry,
+      UnitFlag::CanAttackFlying, UnitFlag::CanAttackNaval};
 
   AnimationSet unitAnimSet;
   unitAnimSet

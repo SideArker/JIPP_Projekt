@@ -4,6 +4,7 @@
 #include "MapManager.hpp"
 #include "TurnController.hpp"
 #include <SFML/Graphics.hpp>
+#include <TGUI/Backend/Renderer/SFML-Graphics/CanvasSFML.hpp>
 #include <TGUI/Backend/SFML-Graphics.hpp>
 #include <TGUI/TGUI.hpp>
 #include <memory>
@@ -14,8 +15,7 @@ class ProductionUI {
 public:
   struct AnimatedPreview {
     std::shared_ptr<Unit> unit;
-    std::shared_ptr<sf::RenderTexture> rt;
-    tgui::Picture::Ptr pic;
+    tgui::CanvasSFML::Ptr canvas;
     float timer = 0.f;
     int dirIndex = 0;
   };

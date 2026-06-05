@@ -606,7 +606,16 @@ void MapManager::spawnDeathEffect(const std::string &setName,
 
 sf::Vector2u MapManager::getTileSize() const { return tileSize; }
 unsigned int MapManager::getMapWidth() const { return mapWidth; }
-unsigned int MapManager::getMapHeight() const { return mapHeight; }
+unsigned int MapManager::getMapHeight() const {
+  return mapHeight;
+}
+
+TerrainType MapManager::getTerrainAt(sf::Vector2i gridPos) const {
+  if (gridPos.x < 0 || gridPos.x >= static_cast<int>(mapWidth) ||
+      gridPos.y < 0 || gridPos.y >= static_cast<int>(mapHeight))
+    return TerrainType::Grass;
+  return mapData[gridPos.x + gridPos.y * static_cast<int>(mapWidth)].getTerrain();
+}
 
 bool MapManager::isAnyUnitActing() const {
   return std::any_of(

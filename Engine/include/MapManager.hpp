@@ -146,6 +146,7 @@ public:
 	std::vector<sf::Vector2i> findPath(sf::Vector2i start, sf::Vector2i goal, Team movingTeam, MovementCategory category);
 	std::vector<sf::Vector2i> getReachableTiles(sf::Vector2i from, float moveRange, Team movingTeam, MovementCategory category) const;
 	std::shared_ptr<Unit> getUnitAtTile(sf::Vector2i gridPos) const;
+	TerrainType getTerrainAt(sf::Vector2i gridPos) const;
 	sf::Vector2u getTileSize() const;
 	unsigned int getMapWidth() const;
 	unsigned int getMapHeight() const;
