@@ -36,8 +36,10 @@ Unit::Unit(const std::string& name, const std::string& artPath, const std::strin
         animState.play("idle", *this->animSet);
     } else if (this->animSet->getClip(directionalWalk)) {
         animState.play(directionalWalk, *this->animSet);
+        animState.resetToFrameZero();
     } else if (this->animSet->getClip("walk")) {
         animState.play("walk", *this->animSet);
+        animState.resetToFrameZero();
     }
 }
 
@@ -63,8 +65,10 @@ void Unit::setDirection(MoveDirection dir) {
         animState.play("idle", *this->animSet);
     } else if (this->animSet->getClip(directionalWalk)) {
         animState.play(directionalWalk, *this->animSet);
+        animState.resetToFrameZero();
     } else if (this->animSet->getClip("walk")) {
         animState.play("walk", *this->animSet);
+        animState.resetToFrameZero();
     }
 }
 
@@ -129,6 +133,7 @@ void Unit::update(float deltaTime) {
         }
         currentSpeed = 0.0f;
 
+        bool isFallbackWalk = false;
         const std::string directionalIdle = clipName("idle", currentDirection);
         const std::string directionalWalk = clipName("walk", currentDirection);
         const AnimationClip* targetIdleClip = animSet->getClip(directionalIdle);
@@ -144,13 +149,19 @@ void Unit::update(float deltaTime) {
             if (animState.getCurrentClip() != targetIdleClip) {
                 animState.play(directionalWalk, *animSet);
             }
+            isFallbackWalk = true;
         } else if ((targetIdleClip = animSet->getClip("walk")) != nullptr) {
             if (animState.getCurrentClip() != targetIdleClip) {
                 animState.play("walk", *animSet);
             }
+            isFallbackWalk = true;
         }
 
-        animState.update(deltaTime);
+        if (isFallbackWalk) {
+            animState.resetToFrameZero();
+        } else {
+            animState.update(deltaTime);
+        }
         return;
     }
     float acceleration = 350.0f;

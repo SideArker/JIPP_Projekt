@@ -79,6 +79,11 @@ private:
 public:
     void play(const std::string& name, const AnimationSet& set, std::function<void()> onFinished = {});
     void update(float deltaTime);
+    void resetToFrameZero() {
+        currentFrame = 0;
+        elapsed = 0.0f;
+        m_finished = false;
+    }
     sf::IntRect getCurrentRect() const;
     bool shouldFlipX() const;
     bool isFinished() const { return m_finished; }

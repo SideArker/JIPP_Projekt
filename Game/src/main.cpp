@@ -261,7 +261,6 @@ int main() {
     window.setView(view);
     mapManager.drawUI(window);
     window.display();
-    std::cout << deltaTime << std::endl;
   }
 
   SoundManager::shutdown();

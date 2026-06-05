@@ -71,14 +71,38 @@ void ProductionUI::update(float dt) {
     preview.canvas->clear(sf::Color::Transparent);
 
     sf::Sprite sprite(preview.unit->getCurrentTexture());
+    
     sf::IntRect rect = preview.unit->getCurrentRect();
+    bool flipX = preview.unit->shouldFlipX();
+    
+    const AnimationSet *animSet = AnimationManager::getSet(preview.unit->getName());
+    if (animSet) {
+      std::string dirStr = "";
+      switch (dirs[preview.dirIndex]) {
+        case MoveDirection::Left:  dirStr = "_left"; break;
+        case MoveDirection::Right: dirStr = "_right"; break;
+        case MoveDirection::Down:  dirStr = "_down"; break;
+        case MoveDirection::Up:    dirStr = "_up"; break;
+      }
+      
+      const AnimationClip* clip = animSet->getClip("idle" + dirStr);
+      if (!clip) clip = animSet->getClip("idle");
+      if (!clip) clip = animSet->getClip("walk" + dirStr);
+      if (!clip) clip = animSet->getClip("walk");
+      
+      if (clip && !clip->frames.empty()) {
+        rect = clip->frames[0];
+        flipX = clip->flipX;
+      }
+    }
+
     sprite.setTextureRect(rect);
 
     sf::Vector2f centerOffset((64.f - rect.size.x * 2.f) / 2.f,
                               (64.f - rect.size.y * 2.f) / 2.f);
     sprite.setPosition(centerOffset);
 
-    if (preview.unit->shouldFlipX()) {
+    if (flipX) {
       sprite.setScale({-2.f, 2.f});
       sprite.setOrigin({static_cast<float>(rect.size.x), 0.f});
     } else {
