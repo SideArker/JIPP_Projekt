@@ -11,3 +11,9 @@ target_include_directories(Engine PUBLIC include)
 
 # Link SFML 3 targets to the Engine
 target_link_libraries(Engine PUBLIC SFML::Graphics SFML::Window SFML::System SFML::Audio TGUI::TGUI)
+
+install(TARGETS Engine
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)

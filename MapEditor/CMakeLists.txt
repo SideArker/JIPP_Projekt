@@ -1,6 +1,6 @@
 file(GLOB_RECURSE MAPEDITOR_SOURCES CONFIGURE_DEPENDS "src/*.cpp")
 
-add_executable(MapEditor ${MAPEDITOR_SOURCES})
+add_executable(MapEditor WIN32 ${MAPEDITOR_SOURCES})
 
 target_include_directories(MapEditor PRIVATE include)
 
@@ -18,4 +18,8 @@ add_custom_command(TARGET MapEditor POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/Art"
         "$<TARGET_FILE_DIR:MapEditor>/Art"
+)
+
+install(TARGETS MapEditor
+    RUNTIME DESTINATION bin
 )
