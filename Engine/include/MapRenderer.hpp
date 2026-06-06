@@ -5,8 +5,11 @@
 #include <vector>
 #include <string>
 #include <Tile.hpp>
+class MapManager;
 
 class ENGINE_API MapRenderer : public sf::Drawable, public sf::Transformable {
+public:
+    static constexpr float kCaptureBounceDuration = 0.71f;
 private:
 	sf::VertexArray m_vertices;
 	sf::Texture m_tileset;
@@ -16,4 +19,6 @@ public:
 	MapRenderer();
 
 	bool load(const std::string& tilesetPath, sf::Vector2u tileSize, const std::vector<Tile>& tiles, unsigned int width, unsigned int height);
+	void drawScene(sf::RenderTarget& target, const MapManager& mapManager) const;
+	void drawUI(sf::RenderWindow& window, const MapManager& mapManager) const;
 };

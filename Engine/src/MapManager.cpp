@@ -4,8 +4,6 @@
 #include "MapFile.hpp"
 #include "SelectionController.hpp"
 #include "SoundManager.hpp"
-#include "TeamRegistry.hpp"
-#include "TextureManager.hpp"
 #include "UnitRegistry.hpp"
 #include <algorithm>
 #include <cmath>
@@ -28,42 +26,6 @@ struct Node {
     return fCost > other.fCost;
   }
 };
-
-static constexpr float kCaptureJump1Duration = 0.34f;
-static constexpr float kCaptureJump2Duration = 0.22f;
-static constexpr float kCaptureJump3Duration = 0.15f;
-
-static constexpr float kCaptureJump1Amplitude = 13.0f;
-static constexpr float kCaptureJump2Amplitude = 7.0f;
-static constexpr float kCaptureJump3Amplitude = 3.5f;
-
-static constexpr float kCaptureBounceDuration =
-    kCaptureJump1Duration + kCaptureJump2Duration + kCaptureJump3Duration;
-static constexpr float kPi = 3.14159265f;
-
-float getCaptureBounceOffsetY(float remainingTime) {
-  if (remainingTime <= 0.f || kCaptureBounceDuration <= 0.f) {
-    return 0.f;
-  }
-
-  const float elapsed = std::clamp(kCaptureBounceDuration - remainingTime, 0.f,
-                                   kCaptureBounceDuration);
-
-  if (elapsed < kCaptureJump1Duration) {
-    return -kCaptureJump1Amplitude *
-           std::sin(kPi * elapsed / kCaptureJump1Duration);
-  }
-
-  if (elapsed < (kCaptureJump1Duration + kCaptureJump2Duration)) {
-    const float local = elapsed - kCaptureJump1Duration;
-    return -kCaptureJump2Amplitude *
-           std::sin(kPi * local / kCaptureJump2Duration);
-  }
-
-  const float local = elapsed - kCaptureJump1Duration - kCaptureJump2Duration;
-  return -kCaptureJump3Amplitude *
-         std::sin(kPi * local / kCaptureJump3Duration);
-}
 
 MapManager::MapManager() : mapWidth(0), mapHeight(0) {
   if (!m_uiFont.openFromFile("Art/Fonts/joystixMonospace.ttf")) {
@@ -172,7 +134,7 @@ void MapManager::update(float deltaTime) {
     notifySelectionChanged(currentSelected, nullptr, nullptr);
   }
   if (selectionController) {
-      selectionController->update(deltaTime);
+    selectionController->update(deltaTime);
   }
   for (auto &unit : units)
     unit->update(deltaTime);
@@ -218,187 +180,21 @@ void MapManager::update(float deltaTime) {
     }
   }
 
-  checkWinCondition();
+  if (!m_gameOver) {
+    if (auto winner = m_turnController.checkWinCondition(units, buildings)) {
+      triggerGameOver(*winner);
+    }
+  }
 
   m_uiTime += deltaTime;
 }
 
 void MapManager::draw(sf::RenderTarget &target) {
-  target.draw(renderer);
-
-  // Draw Game Border (Black and Orange striped)
-  float bw = static_cast<float>(mapWidth * tileSize.x);
-  float bh = static_cast<float>(mapHeight * tileSize.y);
-  float t = 4.f;       // border thickness
-  float segLen = 16.f; // stripe segment length
-
-  auto addRect = [&](float x, float y, float w, float h, sf::Color c) {
-    sf::RectangleShape rect({w, h});
-    rect.setPosition({x, y});
-    rect.setFillColor(c);
-    target.draw(rect);
-  };
-
-  // Top and Bottom edges
-  for (float x = 0; x < bw; x += segLen) {
-    sf::Color c = (static_cast<int>(x / segLen) % 2 == 0)
-                      ? sf::Color::Black
-                      : sf::Color(255, 128, 0);
-    float w = std::min(segLen, bw - x);
-    addRect(x, -t, w, t, c); // Top
-    addRect(x, bh, w, t, c); // Bottom
-  }
-  // Left and Right edges
-  for (float y = 0; y < bh; y += segLen) {
-    sf::Color c = (static_cast<int>(y / segLen) % 2 == 0)
-                      ? sf::Color::Black
-                      : sf::Color(255, 128, 0);
-    float h = std::min(segLen, bh - y);
-    addRect(-t, y, t, h, c); // Left
-    addRect(bw, y, t, h, c); // Right
-  }
-
-  for (const auto &building : buildings) {
-    sf::Sprite sprite(building->getTexture());
-    if (building->hasTextureRect())
-      sprite.setTextureRect(building->getTextureRect());
-    sprite.setPosition(building->getPosition());
-    target.draw(sprite);
-  }
-  if (selectionController)
-    selectionController->drawOverlays(target);
-
-  bool acting = isAnyUnitActing();
-  for (const auto &unit : units) {
-    if (unit->isDead())
-      continue;
-    sf::Sprite unitSprite(unit->getCurrentTexture());
-    sf::IntRect rect = unit->getCurrentRect();
-    unitSprite.setTextureRect(rect);
-    if (unit->hasActed() && !unit->isActing())
-      unitSprite.setColor(sf::Color(150, 150, 150));
-    if (unit->shouldFlipX()) {
-      unitSprite.setScale({-1.f, 1.f});
-      unitSprite.setPosition(
-          {unit->getPosition().x + static_cast<float>(rect.size.x),
-           unit->getPosition().y});
-    } else {
-      unitSprite.setPosition(unit->getPosition());
-    }
-    target.draw(unitSprite);
-
-    if (m_unitRenderCallback)
-      m_unitRenderCallback(target, *unit, acting);
-  }
-
-  if (!m_teamCaptureTexturePath.empty()) {
-    static constexpr float kOverlayOffY = -5.f;
-    static constexpr int kCellW = 32;
-
-    for (const auto &building : buildings) {
-      int progress = building->getCaptureProgress();
-      if (progress <= 0)
-        continue;
-
-      float bounceY = 0.f;
-      if (m_captureBounceTimer > 0.f &&
-          m_captureBounceTargets.find(building.get()) !=
-              m_captureBounceTargets.end()) {
-        bounceY = getCaptureBounceOffsetY(m_captureBounceTimer);
-      }
-
-      sf::Vector2i bGrid(
-          static_cast<int>(std::round(building->getPosition().x /
-                                      static_cast<float>(tileSize.x))),
-          static_cast<int>(std::round(building->getPosition().y /
-                                      static_cast<float>(tileSize.y))));
-      auto occupant = getUnitAtTile(bGrid);
-      if (!occupant || occupant->isDead())
-        continue;
-
-      sf::IntRect rect = occupant->getCurrentRect();
-      sf::Sprite bouncedUnit(occupant->getCurrentTexture());
-      bouncedUnit.setTextureRect(rect);
-      if (occupant->hasActed() && !occupant->isActing())
-        bouncedUnit.setColor(sf::Color(150, 150, 150));
-      const float ux = occupant->getPosition().x;
-      const float uy = occupant->getPosition().y + bounceY;
-      if (occupant->shouldFlipX()) {
-        bouncedUnit.setScale({-1.f, 1.f});
-        bouncedUnit.setPosition({ux + static_cast<float>(rect.size.x), uy});
-      } else {
-        bouncedUnit.setPosition({ux, uy});
-      }
-      target.draw(bouncedUnit);
-
-      const sf::Color teamColor =
-          TeamRegistry::getColor(building->getCaptureTeam());
-      const sf::Texture &capTex = TextureManager::getTexture(
-          m_teamCaptureTexturePath, m_teamCaptureMaskPath, teamColor);
-
-      sf::Sprite capSprite(capTex);
-      const int cellIdx = std::clamp(progress - 1, 0, 2);
-      capSprite.setTextureRect(
-          sf::IntRect({cellIdx * kCellW, 0}, {kCellW, kCellW}));
-
-      const float tx = building->getPosition().x;
-      const float ty = building->getPosition().y;
-
-      const float capX =
-          tx +
-          (static_cast<float>(tileSize.x) - static_cast<float>(kCellW)) * 0.5f;
-      capSprite.setPosition({capX, ty + kOverlayOffY + bounceY});
-      target.draw(capSprite);
-    }
-  }
-
-  for (const auto &e : m_effects)
-    target.draw(e.sprite);
-  if (selectionController)
-    selectionController->drawCursorIcon(target);
+  renderer.drawScene(target, *this);
 }
 
 void MapManager::drawUI(sf::RenderWindow &window) {
-  if (selectionController)
-    selectionController->drawGui();
-
-  if (m_gameOver) {
-    sf::View savedView = window.getView();
-    window.setView(window.getDefaultView());
-
-    sf::Text text(m_uiFont, m_winner == Team::Ally ? "ALLY WON!" : "ENEMY WON!", 60u);
-    text.setFillColor(sf::Color::Yellow);
-    text.setOutlineColor(sf::Color::Black);
-    text.setOutlineThickness(3.f);
-
-    sf::FloatRect bounds = text.getLocalBounds();
-    text.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
-    text.setPosition({window.getSize().x / 2.f, window.getSize().y / 2.f});
-
-    window.draw(text);
-    window.setView(savedView);
-    return;
-  }
-
-  if (m_turnController.getCurrentTeam() == Team::Enemy) {
-    sf::View savedView = window.getView();
-    window.setView(window.getDefaultView());
-
-    sf::Text text(m_uiFont, "ENEMY TURN", 40u);
-
-    // oscillating alpha
-    float alpha = (std::sin(m_uiTime * 4.f) + 1.f) * 0.5f * 255.f;
-    text.setFillColor(sf::Color(255, 50, 50, static_cast<std::uint8_t>(alpha)));
-    text.setOutlineColor(sf::Color(0, 0, 0, static_cast<std::uint8_t>(alpha)));
-    text.setOutlineThickness(2.f);
-
-    sf::FloatRect bounds = text.getLocalBounds();
-    text.setOrigin({bounds.size.x / 1.5f, bounds.size.y / 2.f});
-    text.setPosition({window.getSize().x / 2.f, 60.f});
-
-    window.draw(text);
-    window.setView(savedView);
-  }
+  renderer.drawUI(window, *this);
 }
 
 void MapManager::setHitEffect(std::string setName, std::string clipName,
@@ -422,7 +218,8 @@ void MapManager::setUnitRenderCallback(
 void MapManager::endTurn() {
   const bool resolveCaptureNow =
       (m_turnController.getCurrentTeam() == Team::Enemy);
-  std::unordered_set<const Building *> progressed;
+
+  std::vector<std::shared_ptr<Building>> capturingBuildings;
 
   if (resolveCaptureNow) {
     for (const auto &building : buildings) {
@@ -432,89 +229,89 @@ void MapManager::endTurn() {
           static_cast<int>(std::round(building->getPosition().y /
                                       static_cast<float>(tileSize.y))));
       auto occupant = getUnitAtTile(bGrid);
-      if (building->onTurnEnd(occupant.get())) {
-        progressed.insert(building.get());
+      
+      bool isCapturing = occupant && occupant->getTeam() != building->getTeam() && occupant->hasFlag(UnitFlag::Capture);
+      if (isCapturing) {
+          capturingBuildings.push_back(building);
+      } else {
+          building->onTurnEnd(occupant.get());
       }
     }
   }
 
   m_undoStack.clear();
-  m_turnController.endTurn(units);
 
-  if (!progressed.empty()) {
-    m_captureBounceTargets = std::move(progressed);
-    m_captureBounceTimer = kCaptureBounceDuration;
-  } else {
-    m_captureBounceTargets.clear();
-    m_captureBounceTimer = 0.f;
-  }
-
-  if (m_turnController.getCurrentTeam() == Team::Ally) {
-    SoundManager::playMusic("AllyTurn");
-    std::cout << "Ally Turn" << std::endl;
-  } else {
-    std::cout << "Enemy Turn" << std::endl;
-    SoundManager::playMusic("EnemyTurn");
-  }
-  SoundManager::setMusicVolume(20.f);
-
-  Team newTeam = m_turnController.getCurrentTeam();
-  if (m_turnController.getTurnNumber() > 1) {
-    for (const auto& building : buildings) {
-      if (building->getTeam() == newTeam) {
-        if (building->getTypeName() == "LandOilRig") {
-          m_teams[newTeam].money += 100;
-        } else if (building->getTypeName() == "SeaOilRig") {
-          m_teams[newTeam].money += 200;
-        }
+  if (capturingBuildings.empty()) {
+      m_turnController.endTurn(units);
+      if (m_turnController.getCurrentTeam() == Team::Ally) {
+        SoundManager::playMusic("AllyTurn");
+        std::cout << "Ally Turn" << std::endl;
+      } else {
+        std::cout << "Enemy Turn" << std::endl;
+        SoundManager::playMusic("EnemyTurn");
       }
-    }
+      SoundManager::setMusicVolume(20.f);
+
+      if (onTurnEnded) {
+        onTurnEnded();
+      }
+      return;
   }
-}
 
-void MapManager::checkWinCondition() {
-    if (m_gameOver) return;
+  float delay = 0.f;
+  for (auto building : capturingBuildings) {
+      m_pendingActions.push_back({delay, [this, building]() {
+          sf::Vector2i bGrid(
+              static_cast<int>(std::round(building->getPosition().x /
+                                          static_cast<float>(tileSize.x))),
+              static_cast<int>(std::round(building->getPosition().y /
+                                          static_cast<float>(tileSize.y))));
+          auto occupant = getUnitAtTile(bGrid);
+          if (occupant && onCapturePan) {
+              onCapturePan(occupant);
+          }
+          
+          m_captureBounceTargets.clear();
+          m_captureBounceTargets.insert(building.get());
+          m_captureBounceTimer = MapRenderer::kCaptureBounceDuration;
+          
+          if (occupant) {
+              building->onTurnEnd(occupant.get());
+          }
+      }});
+      delay += 1.0f;
+  }
 
-    bool allyHQExists = false;
-    bool enemyHQExists = false;
-    for (const auto& b : buildings) {
-        if (b->getTypeName() == "HQ") {
-            if (b->getTeam() == Team::Ally) allyHQExists = true;
-            if (b->getTeam() == Team::Enemy) enemyHQExists = true;
-        }
-    }
+  m_pendingActions.push_back({delay, [this]() {
+      m_captureBounceTargets.clear();
+      m_captureBounceTimer = 0.f;
+      m_turnController.endTurn(units);
 
-    bool enemyHasUnits = false;
-    bool allyHasUnits = false;
-    for (const auto& u : units) {
-        if (!u->isDead()) {
-            if (u->getTeam() == Team::Enemy) enemyHasUnits = true;
-            if (u->getTeam() == Team::Ally) allyHasUnits = true;
-        }
-    }
+      if (m_turnController.getCurrentTeam() == Team::Ally) {
+        SoundManager::playMusic("AllyTurn");
+        std::cout << "Ally Turn" << std::endl;
+      } else {
+        std::cout << "Enemy Turn" << std::endl;
+        SoundManager::playMusic("EnemyTurn");
+      }
+      SoundManager::setMusicVolume(20.f);
 
-    bool allyWon = false;
-    bool enemyWon = false;
-
-    if (!enemyHQExists || !enemyHasUnits) allyWon = true;
-    if (!allyHQExists || !allyHasUnits) enemyWon = true;
-
-    if (allyWon && !enemyWon) {
-        triggerGameOver(Team::Ally);
-    } else if (enemyWon && !allyWon) {
-        triggerGameOver(Team::Enemy);
-    }
+      if (onTurnEnded) {
+        onTurnEnded();
+      }
+  }});
 }
 
 void MapManager::triggerGameOver(Team winner) {
-    m_gameOver = true;
-    m_winner = winner;
-    Team loser = (winner == Team::Ally) ? Team::Enemy : Team::Ally;
-    for (const auto& b : buildings) {
-        if (b->getTeam() == loser) {
-            spawnEffect("explosion", "default", "Art/Effects/explosion.png", b->getPosition(), 0.f);
-        }
+  m_gameOver = true;
+  m_winner = winner;
+  Team loser = (winner == Team::Ally) ? Team::Enemy : Team::Ally;
+  for (const auto &b : buildings) {
+    if (b->getTeam() == loser) {
+      spawnEffect("explosion", "default", "Art/Effects/explosion.png",
+                  b->getPosition(), 0.f);
     }
+  }
 }
 
 Team MapManager::getCurrentTeam() const {
@@ -529,16 +326,13 @@ void MapManager::requestEndTurn() {
   endTurn();
 }
 
-tgui::Gui *MapManager::getGui() {
-  return selectionController ? &selectionController->getGui() : nullptr;
-}
-
 void MapManager::syncCameraView(const sf::View &gameView) {
   if (selectionController)
     selectionController->syncCameraView(gameView);
 }
 
-void MapManager::setOnOpenFactory(std::function<void(std::shared_ptr<Building>)> cb) {
+void MapManager::setOnOpenFactory(
+    std::function<void(std::shared_ptr<Building>)> cb) {
   if (selectionController)
     selectionController->setOnOpenFactory(std::move(cb));
 }
@@ -606,15 +400,14 @@ void MapManager::spawnDeathEffect(const std::string &setName,
 
 sf::Vector2u MapManager::getTileSize() const { return tileSize; }
 unsigned int MapManager::getMapWidth() const { return mapWidth; }
-unsigned int MapManager::getMapHeight() const {
-  return mapHeight;
-}
+unsigned int MapManager::getMapHeight() const { return mapHeight; }
 
 TerrainType MapManager::getTerrainAt(sf::Vector2i gridPos) const {
   if (gridPos.x < 0 || gridPos.x >= static_cast<int>(mapWidth) ||
       gridPos.y < 0 || gridPos.y >= static_cast<int>(mapHeight))
     return TerrainType::Grass;
-  return mapData[gridPos.x + gridPos.y * static_cast<int>(mapWidth)].getTerrain();
+  return mapData[gridPos.x + gridPos.y * static_cast<int>(mapWidth)]
+      .getTerrain();
 }
 
 bool MapManager::isAnyUnitActing() const {
@@ -652,24 +445,28 @@ std::shared_ptr<Unit> MapManager::getUnitAtTile(sf::Vector2i gridPos) const {
 
 static float getTerrainCost(TerrainType type) {
   switch (type) {
-  case TerrainType::Road: return 0.5f;
-  case TerrainType::Mountain: return 2.0f;
+  case TerrainType::Road:
+    return 0.5f;
+  case TerrainType::Mountain:
+    return 2.0f;
   case TerrainType::Grass:
   case TerrainType::Forest:
   case TerrainType::Water:
-  default: return 1.0f;
+  default:
+    return 1.0f;
   }
 }
 
 std::vector<sf::Vector2i>
-MapManager::getReachableTiles(sf::Vector2i from, float moveRange, Team movingTeam,
+MapManager::getReachableTiles(sf::Vector2i from, float moveRange,
+                              Team movingTeam,
                               MovementCategory category) const {
   std::vector<sf::Vector2i> reachable;
   std::unordered_map<int, float> minCost;
   struct PQNode {
     float cost;
     sf::Vector2i pos;
-    bool operator>(const PQNode& other) const { return cost > other.cost; }
+    bool operator>(const PQNode &other) const { return cost > other.cost; }
   };
   std::priority_queue<PQNode, std::vector<PQNode>, std::greater<PQNode>> pq;
 
@@ -698,7 +495,8 @@ MapManager::getReachableTiles(sf::Vector2i from, float moveRange, Team movingTea
       if (next.x < 0 || next.y < 0 || next.x >= static_cast<int>(mapWidth) ||
           next.y >= static_cast<int>(mapHeight))
         continue;
-      auto terrain = mapData[next.x + next.y * static_cast<int>(mapWidth)].getTerrain();
+      auto terrain =
+          mapData[next.x + next.y * static_cast<int>(mapWidth)].getTerrain();
       if (!canTraverse(terrain, category))
         continue;
       auto occupant = getUnitAtTile(next);
@@ -772,10 +570,13 @@ std::vector<sf::Vector2i> MapManager::findPath(sf::Vector2i start,
       if (!isValid(neighborPos.x, neighborPos.y))
         continue;
       auto occupant = getUnitAtTile(neighborPos);
-      if (occupant != nullptr && occupant->getTeam() != movingTeam && neighborPos != goal)
+      if (occupant != nullptr && occupant->getTeam() != movingTeam &&
+          neighborPos != goal)
         continue;
 
-      auto terrain = mapData[neighborPos.x + neighborPos.y * static_cast<int>(mapWidth)].getTerrain();
+      auto terrain =
+          mapData[neighborPos.x + neighborPos.y * static_cast<int>(mapWidth)]
+              .getTerrain();
       float newGCost = current.gCost + getTerrainCost(terrain);
       int neighborKey =
           neighborPos.x + neighborPos.y * static_cast<int>(mapWidth);
@@ -813,10 +614,12 @@ bool MapManager::loadFromFile(const std::string &mapPath) {
     m_teams[td.team].money = td.startMoney;
   }
   if (m_teams.find(Team::Ally) == m_teams.end()) {
-    m_teams[Team::Ally] = {Team::Ally, "Blue Team", sf::Color::Blue, 1000, 1000};
+    m_teams[Team::Ally] = {Team::Ally, "Blue Team", sf::Color::Blue, 1000,
+                           1000};
   }
   if (m_teams.find(Team::Enemy) == m_teams.end()) {
-    m_teams[Team::Enemy] = {Team::Enemy, "Red Team", sf::Color::Red, 1000, 1000};
+    m_teams[Team::Enemy] = {Team::Enemy, "Red Team", sf::Color::Red, 1000,
+                            1000};
   }
   if (m_teams.find(Team::Neutral) == m_teams.end()) {
     m_teams[Team::Neutral] = {Team::Neutral, "Neutral",
@@ -877,10 +680,10 @@ GameState MapManager::captureGameState() const {
 
   for (const auto &unit : units) {
     auto gridPos = unit->getGridPosition(tileSize);
-    state.units.push_back(
-        {unit->getName(), gridPos.x, gridPos.y, unit->getHealth(),
-         unit->getDamage(), unit->getMoveSpeed(),
-         unit->getTeam(), unit->getFlags(), unit->hasActed()});
+    state.units.push_back({unit->getName(), gridPos.x, gridPos.y,
+                           unit->getHealth(), unit->getDamage(),
+                           unit->getMoveSpeed(), unit->getTeam(),
+                           unit->getFlags(), unit->hasActed()});
   }
   for (const auto &building : buildings) {
     sf::Vector2i gridPos(

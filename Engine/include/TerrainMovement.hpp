@@ -2,9 +2,10 @@
 
 enum class TerrainType { Grass, Water, Mountain, Road, Forest };
 
-enum class MovementCategory { Ground, Infantry, Flying, Naval };
+enum class MovementCategory { Ground, Infantry, Flying, Naval, None };
 
 constexpr bool canTraverse(TerrainType terrain, MovementCategory category) {
+  if (category == MovementCategory::None) return false;
   switch (terrain) {
   case TerrainType::Grass:
     return category != MovementCategory::Naval;

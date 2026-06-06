@@ -27,6 +27,7 @@ struct Effect {
 };
 
 class ENGINE_API MapManager {
+	friend class MapRenderer;
 private:
 	MapRenderer renderer;
 	std::unique_ptr<SelectionController> selectionController;
@@ -57,7 +58,6 @@ private:
     bool m_gameOver = false;
     Team m_winner = Team::Neutral;
 
-	void checkWinCondition();
 	void triggerGameOver(Team winner);
 
 	std::vector<Effect> m_effects;
@@ -108,7 +108,6 @@ public:
 	void requestEndTurn();
 	Team getCurrentTeam() const;
 	TurnController& getTurnController();
-	tgui::Gui* getGui();
 	void syncCameraView(const sf::View& gameView);
 	void setOnOpenFactory(std::function<void(std::shared_ptr<Building>)> cb);
 
@@ -132,10 +131,17 @@ public:
             m_teams[team].money -= amount;
         }
     }
+    void addTeamMoney(Team team, int amount) {
+        if (m_teams.find(team) != m_teams.end()) {
+            m_teams[team].money += amount;
+        }
+    }
     void setOnSelectionChanged(std::function<void(std::shared_ptr<Unit>, std::shared_ptr<Building>, const Tile*)> cb) {
         m_onSelectionChanged = cb;
     }
 	std::function<void(std::shared_ptr<Unit>)> onUnitMoveStart;
+	std::function<void(std::shared_ptr<Unit>)> onCapturePan;
+	std::function<void()> onTurnEnded;
     void notifySelectionChanged(std::shared_ptr<Unit> unit, std::shared_ptr<Building> building, const Tile* tile) {
         if (m_onSelectionChanged) m_onSelectionChanged(unit, building, tile);
     }

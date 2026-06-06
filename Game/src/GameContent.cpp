@@ -6,13 +6,16 @@
 #include "Unit.hpp"
 #include "buildings/Buildings.hpp"
 #include "effects/Effects.hpp"
+#include "units/Barricade.hpp"
 #include "units/Destroyer.hpp"
 #include "units/MissileTank.hpp"
 #include "units/Plane.hpp"
 #include "units/Soldier.hpp"
 #include "units/Tank.hpp"
+#include "units/Turret.hpp"
 #include <SFML/Graphics.hpp>
 #include <algorithm>
+
 
 void GameContent::init() {
   TeamRegistry::setColor(Team::Ally, sf::Color(50, 255, 50));
@@ -24,6 +27,9 @@ void GameContent::init() {
   registerMissileTank();
   registerDestroyer();
   registerPlane();
+  registerTurret();
+  registerBarricade();
+
   registerBuildings();
   registerEffects();
 
@@ -55,9 +61,10 @@ void GameContent::configure(MapManager &mapManager) {
       loaded = true;
     }
     if (!anyActing && mapManager.getCurrentTeam() == Team::Ally) {
+      const bool isInteractable = unit.getIsInteractable();
       const bool showFriendlyOverlay =
-          unit.getTeam() == Team::Ally && !unit.hasActed();
-      const bool showEnemyOverlay = unit.getTeam() == Team::Enemy;
+          unit.getTeam() == Team::Ally && !unit.hasActed() && isInteractable;
+      const bool showEnemyOverlay = unit.getTeam() == Team::Enemy || !isInteractable;
       if (showFriendlyOverlay || showEnemyOverlay) {
         const sf::Texture &overlayTex =
             showEnemyOverlay ? overlayEnemy : overlayFriendly;

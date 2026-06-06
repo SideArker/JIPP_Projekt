@@ -366,7 +366,9 @@ void MapEditorApp::loadSpritePreviews() {
       {"Plane", "Art/Units/Plane/plane_idle.png", {{0, 0}, {32, 32}}},
       {"Destroyer",
        "Art/Units/Destroyer/destroyer_move.png",
-       {{0, 0}, {32, 32}}}};
+       {{0, 0}, {32, 32}}},
+      {"Turret", "Art/Units/Turret/turret.png", {{0, 0}, {32, 32}}},
+      {"Barricade", "Art/Units/Barricade/barricade.png", {{0, 0}, {32, 32}}}};
   for (const auto &info : unitInfos) {
     auto &preview = m_unitPreviews[info.type];
     preview.texture.loadFromFile(info.path);
@@ -377,12 +379,18 @@ void MapEditorApp::loadSpritePreviews() {
 }
 
 int MapEditorApp::buildingCellIndex(const std::string &typeName) const {
-  if (typeName == "HQ") return 0;
-  if (typeName == "Airport") return 1;
-  if (typeName == "Factory") return 2;
-  if (typeName == "VehicleBase") return 3;
-  if (typeName == "LandOilRig") return 4;
-  if (typeName == "Port") return 5;
+  if (typeName == "HQ")
+    return 0;
+  if (typeName == "Airport")
+    return 1;
+  if (typeName == "Factory")
+    return 2;
+  if (typeName == "VehicleBase")
+    return 3;
+  if (typeName == "LandOilRig")
+    return 4;
+  if (typeName == "Port")
+    return 5;
   return 6; // SeaOilRig
 }
 

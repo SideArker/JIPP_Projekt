@@ -20,9 +20,9 @@ void registerDestroyer() {
 
   AnimationSet unitAnimSet;
   unitAnimSet.addDirectionalClips(
-      "idle", AnimationClip::fromRow({0, 0}, {32, 32}, 3, 0.1f, true, true),
-      AnimationClip::fromRow({0, 32}, {32, 32}, 3, 0.1f, true, false),
-      AnimationClip::fromRow({0, 64}, {32, 32}, 3, 0.1f, true, false));
+      "idle", AnimationClip::fromRow({0, 0}, {32, 32}, 1, 1.f, true, true),
+      AnimationClip::fromRow({0, 32}, {32, 32}, 1, 1.f, true, false),
+      AnimationClip::fromRow({0, 64}, {32, 32}, 1, 1.f, true, false));
 
   unitAnimSet.addDirectionalClips(
       "walk", AnimationClip::fromRow({0, 0}, {32, 32}, 3, 0.1f, false, true),

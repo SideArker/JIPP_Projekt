@@ -304,18 +304,18 @@ void ProductionUI::open(std::shared_ptr<Building> factory) {
         buyBtn->setEnabled(false);
       } else {
         buyBtn->onClick([this, uName, data, team, factory]() {
-          auto unit = UnitRegistry::create(uName, team);
-          if (!unit)
-            return;
-          m_mapManager.deductTeamMoney(team, data->cost);
-          const sf::Vector2u ts = m_mapManager.getTileSize();
-          sf::Vector2i bGrid(
-              static_cast<int>(std::round(factory->getPosition().x /
-                                          static_cast<float>(ts.x))),
-              static_cast<int>(std::round(factory->getPosition().y /
-                                          static_cast<float>(ts.y))));
-          m_mapManager.spawnUnit(unit, bGrid.x, bGrid.y);
-          m_turnController.markActed(*unit);
+          auto newUnit = UnitRegistry::create(uName, team);
+          if (newUnit) {
+            newUnit->setActed(true);
+            newUnit->setFadeIn(0.3f);
+            m_mapManager.deductTeamMoney(team, data->cost);
+            const sf::Vector2u ts = m_mapManager.getTileSize();
+            sf::Vector2i bGrid(
+                static_cast<int>(std::round(factory->getPosition().x / static_cast<float>(ts.x))),
+                static_cast<int>(std::round(factory->getPosition().y / static_cast<float>(ts.y))));
+            m_mapManager.spawnUnit(newUnit, bGrid.x, bGrid.y);
+            m_turnController.markActed(*newUnit);
+          }
           close();
         });
       }

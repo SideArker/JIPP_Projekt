@@ -2,6 +2,7 @@
 
 #include "EngineAPI.hpp"
 #include "TerrainMovement.hpp"
+#include "UnitMovement.hpp"
 #include "AnimationManager.hpp"
 #include <SFML/Graphics.hpp>
 #include <memory>
@@ -38,6 +39,7 @@ struct ENGINE_API UnitData {
 	std::string deathEffectTexturePath;
 	std::string deathSoundSet;
 	std::string deathSoundName;
+	bool isInteractable = true;
 };
 
 enum class UnitFlag {
@@ -75,14 +77,12 @@ protected:
 	int maxAttackRange;
 	float hitEffectDelay;
 	MovementCategory movementCategory = MovementCategory::Ground;
+	bool isInteractable;
 
-	std::vector<sf::Vector2i> path;
+	UnitMovement m_movement;
 	sf::Vector2f position = sf::Vector2f(0, 0);
 
 	MoveDirection currentDirection = MoveDirection::Right;
-	float currentSpeed = 0.0f;
-	bool directionReset = true;
-	float startSpeed = 30.0f;
 	float tileSize = 32;
 	bool m_isShooting = false;
 	bool m_shootPending = false;
@@ -90,6 +90,8 @@ protected:
 	bool m_isDead = false;
 	bool m_hasActed = false;
 	std::weak_ptr<Unit> m_pendingTarget;
+	float spawnFadeTimer = 0.f;
+	float m_fadeDuration = 0.f;
 public:
 	Unit(const std::string& name, const std::string& artPath, const std::string& maskPath, const AnimationSet& animSet, Team team, const UnitData& data);
 
@@ -104,7 +106,7 @@ public:
 	int heal(int healAmount);
 
 	void dealDamage(std::shared_ptr<Unit> target, MoveDirection shootDir);
-	bool isActing() const { return !m_isDead && (!path.empty() || m_isShooting || m_shootPending); }
+	bool isActing() const { return !m_isDead && (m_movement.isMoving() || m_isShooting || m_shootPending); }
 	bool canTarget(const Unit& target) const;
 
 	void addFlag(UnitFlag flag) { flags.set(static_cast<std::size_t>(flag)); }
@@ -120,6 +122,7 @@ public:
 
 	float getMoveSpeed() const { return moveSpeed; }
 	MovementCategory getMovementCategory() const { return movementCategory; }
+	bool getIsInteractable() const { return isInteractable; }
 	int   getMinAttackRange()   const { return minAttackRange; }
 	int   getMaxAttackRange()   const { return maxAttackRange; }
 	float getHitEffectDelay()   const { return hitEffectDelay; }
@@ -137,12 +140,15 @@ public:
 	void setHealth(int h) { health = std::clamp(h, 0, maxHealth); }
 	void setDamage(int d) { damage = d; }
 	void setMoveSpeed(float speed) { moveSpeed = speed; }
+	void setIsInteractable(bool interactable) { isInteractable = interactable; }
 
 	void setActed(bool acted) { m_hasActed = acted; }
 
 	bool isDead() const { return m_isDead; }
 	bool hasActed() const { return m_hasActed; }
 	void setFlags(uint8_t f) { flags = std::bitset<static_cast<std::size_t>(UnitFlag::Count)>(f); }
+	void setFadeIn(float duration) { spawnFadeTimer = duration; m_fadeDuration = duration; }
+	float getSpawnFadeAlpha() const { return (m_fadeDuration > 0.f) ? std::clamp(1.f - spawnFadeTimer / m_fadeDuration, 0.f, 1.f) : 1.f; }
 
 	std::function<void(sf::Vector2f, int health)> onDamaged;	
 	std::function<void(std::shared_ptr<Unit>, int)> onAttackStart;

@@ -23,6 +23,22 @@ void CameraController::release() {
 }
 
 void CameraController::update(float dt, const sf::RenderWindow &window) {
+  bool inputW = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W);
+  bool inputS = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S);
+  bool inputA = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A);
+  bool inputD = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D);
+  sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+  sf::Vector2u winSize = window.getSize();
+  float mx = static_cast<float>(mousePos.x);
+  float my = static_cast<float>(mousePos.y);
+  bool mouseScroll = (mx >= 0.f && mx < winSize.x && my >= 0.f && my < winSize.y) &&
+                     (mx < kEdgeThreshold || mx > winSize.x - kEdgeThreshold ||
+                      my < kEdgeThreshold || my > winSize.y - kEdgeThreshold);
+
+  if (inputW || inputS || inputA || inputD || mouseScroll) {
+      release();
+  }
+
   auto tracked = m_trackedUnit.lock();
   if (tracked) {
     sf::Vector2f halfTile(16.f, 16.f);

@@ -27,10 +27,12 @@ private:
   MapRenderer m_mapRenderer;
   sf::Texture m_tilesetTex;
 
-  std::vector<std::string> m_unitTypes = {"Tank", "Soldier", "MissileTank",
-                                          "Plane", "Destroyer"};
-  std::vector<std::string> m_buildingTypes = {"HQ", "Airport", "Factory",
-                                              "VehicleBase", "LandOilRig", "Port", "SeaOilRig"};
+  std::vector<std::string> m_unitTypes = {
+      "Tank",      "Soldier", "MissileTank", "Plane",
+      "Destroyer", "Turret",  "Barricade"};
+  std::vector<std::string> m_buildingTypes = {
+      "HQ",         "Airport", "Factory",  "VehicleBase",
+      "LandOilRig", "Port",    "SeaOilRig"};
 
   EditorTool m_currentTool = EditorTool::Tiles;
   int m_selectedArtId = 1;

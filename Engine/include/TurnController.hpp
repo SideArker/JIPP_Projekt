@@ -5,6 +5,9 @@
 #include <array>
 #include <memory>
 #include <vector>
+#include <optional>
+
+class Building;
 
 class ENGINE_API TurnController {
 public:
@@ -14,6 +17,8 @@ public:
     bool canAct(const Unit& unit) const;
     void markActed(Unit& unit);
     void endTurn(std::vector<std::shared_ptr<Unit>>& units);
+    std::optional<Team> checkWinCondition(const std::vector<std::shared_ptr<Unit>>& units, 
+                                          const std::vector<std::shared_ptr<Building>>& buildings) const;
 
 private:
     std::array<Team, 2> m_turnOrder = { Team::Ally, Team::Enemy };

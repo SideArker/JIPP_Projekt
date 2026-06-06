@@ -1,7 +1,7 @@
 #pragma once
 
-#include <TGUI/TGUI.hpp>
-#include <TGUI/Backend/SFML-Graphics.hpp>
+#include "SelectionState.hpp"
+#include <SFML/Graphics.hpp>
 #include <SFML/Graphics.hpp>
 #include <memory>
 #include <vector>
@@ -18,13 +18,11 @@ public:
     void handleEvent(const sf::Event& event);
     void drawOverlays(sf::RenderTarget& target);
     void drawCursorIcon(sf::RenderTarget& target);
-    void drawGui();
     void clearSelection();
     void selectUnit(std::shared_ptr<Unit> unit);
     void syncCameraView(sf::View gameView);
     void update(float dt);
     void setOnOpenFactory(std::function<void(std::shared_ptr<Building>)> cb) { m_onOpenFactory = std::move(cb); }
-    tgui::Gui& getGui() { return gui; }
     std::shared_ptr<Unit> getSelectedUnit() const { return selectedUnit; }
 
 private:
@@ -33,7 +31,7 @@ private:
 
     std::function<void(std::shared_ptr<Building>)> m_onOpenFactory;
 
-    tgui::Gui gui;
+    SelectionState m_state = SelectionState::Idle;
     sf::RenderWindow& m_window;
     MapManager& mapManager;
     TurnController& m_turnController;
@@ -46,12 +44,15 @@ private:
     sf::Texture m_iconsTexture;
     sf::Texture m_enemyOverlayTexture;
     sf::Texture m_friendlyOverlayTexture;
+    sf::View m_gameView;
     sf::Vector2f m_cursorPos;
+    sf::Vector2f m_screenCursorPos;
     int m_cursorIconCell{-1};
     sf::Vector2i m_preferredApproachDir{0, 0};
     float m_scaleX{1.f};
     float m_scaleY{1.f};
-    std::vector<tgui::Button::Ptr> m_tileButtons;
-    tgui::Label::Ptr m_turnLabel;
+
+    void handleMouseMoved(sf::Vector2i gridPos, sf::Vector2f localPos);
+    void handleMouseClicked(sf::Vector2i gridPos);
 };
 

@@ -1,22 +1,9 @@
 #include "Unit.hpp"
+#include "UnitAnimator.hpp"
 #include "TextureManager.hpp"
 #include "TeamRegistry.hpp"
 #include <iostream>
 #include <cmath>
-
-static const char* dirSuffix(MoveDirection dir) {
-    switch (dir) {
-        case MoveDirection::Left:  return "_left";
-        case MoveDirection::Right: return "_right";
-        case MoveDirection::Down:  return "_down";
-        case MoveDirection::Up:    return "_up";
-    }
-    return "";
-}
-
-static std::string clipName(const std::string& action, MoveDirection dir) {
-    return action + dirSuffix(dir);
-}
 
 Unit::Unit(const std::string& name, const std::string& artPath, const std::string& maskPath,
            const AnimationSet& animSet, Team team,
@@ -25,11 +12,12 @@ Unit::Unit(const std::string& name, const std::string& artPath, const std::strin
       animSet(&animSet), team(team),
       health(data.maxHealth), maxHealth(data.maxHealth), damage(data.damage),
       moveSpeed(data.moveSpeed), minAttackRange(data.minAttackRange), maxAttackRange(data.maxAttackRange),
-      hitEffectDelay(data.hitEffectDelay), movementCategory(data.movementCategory)
+      hitEffectDelay(data.hitEffectDelay), movementCategory(data.movementCategory),
+      isInteractable(data.isInteractable)
 {
     texture = &TextureManager::getTexture(artPath, maskPath, TeamRegistry::getColor(team));
-    const std::string directionalIdle = clipName("idle", currentDirection);
-    const std::string directionalWalk = clipName("walk", currentDirection);
+    const std::string directionalIdle = UnitAnimator::clipName("idle", currentDirection);
+    const std::string directionalWalk = UnitAnimator::clipName("walk", currentDirection);
     if (this->animSet->getClip(directionalIdle)) {
         animState.play(directionalIdle, *this->animSet);
     } else if (this->animSet->getClip("idle")) {
@@ -57,8 +45,8 @@ const sf::Texture& Unit::getCurrentTexture() const {
 
 void Unit::setDirection(MoveDirection dir) {
     currentDirection = dir;
-    const std::string directionalIdle = clipName("idle", currentDirection);
-    const std::string directionalWalk = clipName("walk", currentDirection);
+    const std::string directionalIdle = UnitAnimator::clipName("idle", currentDirection);
+    const std::string directionalWalk = UnitAnimator::clipName("walk", currentDirection);
     if (this->animSet->getClip(directionalIdle)) {
         animState.play(directionalIdle, *this->animSet);
     } else if (this->animSet->getClip("idle")) {
@@ -72,153 +60,32 @@ void Unit::setDirection(MoveDirection dir) {
     }
 }
 
-MoveDirection castMoveDirection(sf::Vector2f& direction)
-{
-    if (std::abs(direction.x) > std::abs(direction.y)) {
-        return direction.x > 0 ? MoveDirection::Right : MoveDirection::Left;
-    }
-    else {
-        return direction.y > 0 ? MoveDirection::Down : MoveDirection::Up;
-    }
-}
-
 void Unit::move(const std::vector<sf::Vector2i>& newPath) {
-
-    currentSpeed = 0.0f;
-    path = newPath;
+    m_movement.startMove(newPath);
 }
 
 void Unit::update(float deltaTime) {
-    if (path.empty()) {
-        // Activate shoot animation once the unit has finished moving
-        if (m_shootPending) {
-            m_shootPending = false;
-            m_isShooting = true;
-            auto target = m_pendingTarget.lock();
+    if (spawnFadeTimer > 0.f) {
+        spawnFadeTimer = std::max(0.f, spawnFadeTimer - deltaTime);
+    }
 
-            if (target && !target->isDead()) {
-                if (onAttackStart)
-                    onAttackStart(target, damage);
-                else
-                    target->takeDamage(damage);
-            }
-
-            m_pendingTarget.reset();
-            currentDirection = m_pendingShootDir;
-            const std::string clip = clipName("shoot", m_pendingShootDir);
-
-           if (!animSet->getClip(clip)) {
-                m_isShooting = false;
-
-                if (onAttackFinished) {
-                    onAttackFinished();
-                    onAttackFinished = nullptr; // Clean up
-                }
-
-            } else {
-                animState.play(clip, *animSet, [this]() { 
-                    m_isShooting = false; 
-
-                    if (onAttackFinished) {
-                        onAttackFinished();
-                        onAttackFinished = nullptr; // Clean up
-                    }
-                    
-                });
-            }
-        }
-        if (m_isShooting) {
-            animState.update(deltaTime);
-            return;
-        }
-        currentSpeed = 0.0f;
-
-        bool isFallbackWalk = false;
-        const std::string directionalIdle = clipName("idle", currentDirection);
-        const std::string directionalWalk = clipName("walk", currentDirection);
-        const AnimationClip* targetIdleClip = animSet->getClip(directionalIdle);
-        if (targetIdleClip) {
-            if (animState.getCurrentClip() != targetIdleClip) {
-                animState.play(directionalIdle, *animSet);
-            }
-        } else if ((targetIdleClip = animSet->getClip("idle")) != nullptr) {
-            if (animState.getCurrentClip() != targetIdleClip) {
-                animState.play("idle", *animSet);
-            }
-        } else if ((targetIdleClip = animSet->getClip(directionalWalk)) != nullptr) {
-            if (animState.getCurrentClip() != targetIdleClip) {
-                animState.play(directionalWalk, *animSet);
-            }
-            isFallbackWalk = true;
-        } else if ((targetIdleClip = animSet->getClip("walk")) != nullptr) {
-            if (animState.getCurrentClip() != targetIdleClip) {
-                animState.play("walk", *animSet);
-            }
-            isFallbackWalk = true;
-        }
-
-        if (isFallbackWalk) {
-            animState.resetToFrameZero();
-        } else {
-            animState.update(deltaTime);
+    if (!m_movement.isMoving()) {
+        UnitAnimator::handleShootAnimation(
+            animState, animSet, 
+            m_shootPending, m_isShooting, currentDirection, m_pendingShootDir, 
+            m_pendingTarget, damage, onAttackStart, onAttackFinished, deltaTime);
+            
+        if (!m_isShooting) {
+            UnitAnimator::handleIdleWalkAnimation(animState, animSet, currentDirection, deltaTime);
         }
         return;
     }
-    float acceleration = 350.0f;
-
-    sf::Vector2i targetGrid = path.front();
-    sf::Vector2f targetPixel(targetGrid.x * tileSize, targetGrid.y * tileSize);
-
-    sf::Vector2f direction = targetPixel - position;
-
-    if (directionReset) {
-        currentDirection = castMoveDirection(direction);
-        directionReset = false;
-        animState.play(clipName("walk", currentDirection), *animSet);
+    
+    if (m_movement.update(position, currentDirection, moveSpeed, tileSize, deltaTime)) {
+        // Animation update is done via play if direction changed, but we should always update dt
+        animState.play(UnitAnimator::clipName("walk", currentDirection), *animSet);
+        animState.update(deltaTime);
     }
-
-    float distance = std::sqrt(direction.x * direction.x + direction.y * direction.y);
-
-	if (currentSpeed == 0.0f) {
-		currentSpeed = startSpeed;
-	}
-
-    float maxSpeed = (moveSpeed * tileSize) * 1.05f;
-    float deceleration = 350.0f;
-
-    // Total remaining distance current segment + all further segments
-    float remainingDistance = distance;
-    for (size_t i = 1; i < path.size(); ++i) {
-        sf::Vector2f from(path[i - 1].x * tileSize, path[i - 1].y * tileSize);
-        sf::Vector2f to(path[i].x * tileSize, path[i].y * tileSize);
-        sf::Vector2f seg = to - from;
-        remainingDistance += std::sqrt(seg.x * seg.x + seg.y * seg.y);
-    }
-
-    // Braking distance needed to decelerate from current speed to startSpeed
-    float brakingDistance = (currentSpeed * currentSpeed - startSpeed * startSpeed) / (2.0f * deceleration);
-
-    if (remainingDistance <= brakingDistance) {
-        currentSpeed -= deceleration * deltaTime;
-        if (currentSpeed < startSpeed) currentSpeed = startSpeed;
-    } else {
-        currentSpeed += acceleration * deltaTime;
-        if (currentSpeed > maxSpeed) currentSpeed = maxSpeed;
-    }
-
-    float moveStep = currentSpeed * deltaTime;
-
-    if (distance <= moveStep) {
-        position = targetPixel;
-        path.erase(path.begin());
-		directionReset = true;
-    }
-    else {
-        sf::Vector2f normalizedDir = direction / distance;
-        position += normalizedDir * moveStep;
-    }
-
-    animState.update(deltaTime);
 }
 
 sf::Vector2i Unit::getGridPosition(sf::Vector2u ts) const {
@@ -248,6 +115,7 @@ void Unit::dealDamage(std::shared_ptr<Unit> target, MoveDirection shootDir) {
 
 bool Unit::canTarget(const Unit& target) const {
     switch (target.getMovementCategory()) {
+        case MovementCategory::None:
         case MovementCategory::Ground:   return hasFlag(UnitFlag::CanAttackGround);
         case MovementCategory::Infantry: return hasFlag(UnitFlag::CanAttackInfantry);
         case MovementCategory::Flying:   return hasFlag(UnitFlag::CanAttackFlying);
