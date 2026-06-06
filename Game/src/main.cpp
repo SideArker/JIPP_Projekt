@@ -54,7 +54,12 @@ bool runGame(sf::RenderWindow &window, const std::string &mapPath,
 
   GameUIManager uiManager(window, mapManager, cameraController);
 
-  AIController aiController;
+  std::map<Team, AIController> aiControllers;
+  for (const auto& [team, data] : mapManager.getTeams()) {
+      if (data.isAi) {
+          aiControllers[team].init(team);
+      }
+  }
   sf::Clock clock;
 
   while (window.isOpen() && !uiManager.shouldQuitToMenu()) {
@@ -80,27 +85,36 @@ bool runGame(sf::RenderWindow &window, const std::string &mapPath,
 
     float deltaTime = clock.restart().asSeconds();
 
-    if (mapManager.getCurrentTeam() == Team::Enemy) {
+    Team currentTeam = mapManager.getCurrentTeam();
+    const TeamData* currentTd = mapManager.getTeamData(currentTeam);
+    bool isAi = currentTd && currentTd->isAi;
+
+    if (isAi) {
+      auto& aiController = aiControllers[currentTeam];
       if (!mapManager.isAnyUnitActing()) {
         aiController.update(deltaTime, mapManager,
                             mapManager.getTurnController(), cameraController);
       }
       if (aiController.isDone() && !mapManager.isAnyUnitActing()) {
         mapManager.endTurn();
+        aiController.reset();
 
         auto &units = mapManager.getUnits();
-        std::vector<std::shared_ptr<Unit>> allies;
+        std::vector<std::shared_ptr<Unit>> nextUnits;
+        Team nextTeam = mapManager.getCurrentTeam();
         for (auto &u : units) {
-          if (!u->isDead() && u->getTeam() == Team::Ally)
-            allies.push_back(u);
+          if (!u->isDead() && u->getTeam() == nextTeam)
+            nextUnits.push_back(u);
         }
-        if (!allies.empty()) {
-          int idx = rand() % allies.size();
-          cameraController.trackUnit(allies[idx]);
+        if (!nextUnits.empty()) {
+          int idx = rand() % nextUnits.size();
+          cameraController.trackUnit(nextUnits[idx]);
         }
       }
     } else {
-      aiController.reset();
+      for (auto& [team, ai] : aiControllers) {
+          if (team != currentTeam) ai.reset();
+      }
     }
 
     mapManager.update(deltaTime);

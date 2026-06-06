@@ -35,6 +35,7 @@ void GameContent::init() {
   SoundManager::registerMusic("MainMenu", "Art/Sound/MainMenu.wav");
   SoundManager::registerMusic("EnemyTurn", "Art/Sound/EnemyTheme.wav");
   SoundManager::registerMusic("AllyTurn", "Art/Sound/AllyTheme.wav");
+  SoundManager::registerMusic("Victory", "Art/Sound/Victory.wav");
   SoundManager::setMusicVolume(20.f);
 }
 
@@ -59,12 +60,14 @@ void GameContent::configure(MapManager &mapManager) {
       (void)healthTex.loadFromFile("Art/Effects/Unit_Health.png");
       loaded = true;
     }
-    if (!anyActing && mapManager.getCurrentTeam() == Team::Ally) {
+    auto currentTd = mapManager.getTeamData(mapManager.getCurrentTeam());
+    bool isCurrentPlayer = currentTd && !currentTd->isAi;
+    if (!anyActing && isCurrentPlayer) {
       const bool isInteractable = unit.getIsInteractable();
       const bool showFriendlyOverlay =
-          unit.getTeam() == Team::Ally && !unit.hasActed() && isInteractable;
+          unit.getTeam() == mapManager.getCurrentTeam() && !unit.hasActed() && isInteractable;
       const bool showEnemyOverlay =
-          unit.getTeam() == Team::Enemy || !isInteractable;
+          unit.getTeam() != mapManager.getCurrentTeam() || !isInteractable;
       if (showFriendlyOverlay || showEnemyOverlay) {
         const sf::Texture &overlayTex =
             showEnemyOverlay ? overlayEnemy : overlayFriendly;

@@ -28,4 +28,6 @@ private:
     GameUIWidgets m_panels;
     std::unique_ptr<ProductionUI> m_productionUI;
     std::map<Team, tgui::Label::Ptr> m_teamMoneyLabels;
+    tgui::Panel::Ptr m_victoryPanel;
+    bool m_victoryPlayed = false;
 };

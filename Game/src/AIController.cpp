@@ -94,7 +94,7 @@ void AIController::reset() {
 void AIController::buildQueue(MapManager &mapManager) {
   m_queue.clear();
   for (const auto &unit : mapManager.getUnits()) {
-    if (!unit->isDead() && unit->getTeam() == Team::Enemy && !unit->hasActed())
+    if (!unit->isDead() && unit->getTeam() == m_myTeam && !unit->hasActed())
       m_queue.push_back(unit);
   }
 }
@@ -152,7 +152,7 @@ void AIController::processNextUnit(MapManager &mapManager, TurnController &tc,
       sf::Vector2u ts = mapManager.getTileSize();
       sf::Vector2i uGrid = gridOf(*unit, ts);
       auto b = mapManager.getBuildingAtTile(uGrid);
-      if (b && b->getTeam() != Team::Enemy) {
+      if (b && b->getTeam() != m_myTeam) {
         tc.markActed(*unit);
         acted = true;
       }
@@ -204,7 +204,7 @@ bool AIController::tryConquerNeutral(Unit &unit, MapManager &mapManager,
       continue;
     sf::Vector2i bGrid = buildingGridOf(*b, ts);
     auto occupant = mapManager.getUnitAtTile(bGrid);
-    if (occupant && occupant->getTeam() == Team::Enemy)
+    if (occupant && occupant->getTeam() == m_myTeam)
       continue;
 
     auto path = mapManager.findPath(uGrid, bGrid, unit.getTeam(),
@@ -246,11 +246,11 @@ bool AIController::tryCapturePlayerBuilding(Unit &unit, MapManager &mapManager,
   size_t bestDist = 99999;
 
   for (const auto &b : mapManager.getBuildings()) {
-    if (b->getTeam() != Team::Ally)
+    if (b->getTeam() == m_myTeam || b->getTeam() == Team::Neutral)
       continue;
     sf::Vector2i bGrid = buildingGridOf(*b, ts);
     auto occupant = mapManager.getUnitAtTile(bGrid);
-    if (occupant && occupant->getTeam() == Team::Enemy)
+    if (occupant && occupant->getTeam() == m_myTeam)
       continue;
 
     auto path = mapManager.findPath(uGrid, bGrid, unit.getTeam(),
@@ -277,7 +277,7 @@ bool AIController::tryBlockProductionBuilding(Unit &unit,
   // Only triggered when no alive enemy capture unit exists
   bool hasConquerUnit = false;
   for (const auto &u : mapManager.getUnits()) {
-    if (!u->isDead() && u->getTeam() == Team::Enemy &&
+    if (!u->isDead() && u->getTeam() == m_myTeam &&
         u->hasFlag(UnitFlag::Capture)) {
       hasConquerUnit = true;
       break;
@@ -302,14 +302,14 @@ bool AIController::tryBlockProductionBuilding(Unit &unit,
   size_t bestDist = 99999;
 
   for (const auto &b : mapManager.getBuildings()) {
-    if (b->getTeam() != Team::Ally)
+    if (b->getTeam() == m_myTeam || b->getTeam() == Team::Neutral)
       continue;
     const std::string &type = b->getTypeName();
     if (type != "Factory" && type != "HQ")
       continue;
     sf::Vector2i bGrid = buildingGridOf(*b, ts);
     auto occupant = mapManager.getUnitAtTile(bGrid);
-    if (occupant && occupant->getTeam() == Team::Enemy)
+    if (occupant && occupant->getTeam() == m_myTeam)
       continue;
 
     auto path = mapManager.findPath(uGrid, bGrid, unit.getTeam(),
@@ -362,7 +362,7 @@ bool AIController::tryAttackUnit(Unit &unit, MapManager &mapManager,
   std::vector<Candidate> candidates;
 
   for (const auto &ally : mapManager.getUnits()) {
-    if (ally->isDead() || ally->getTeam() != Team::Ally)
+    if (ally->isDead() || ally->getTeam() == m_myTeam || ally->getTeam() == Team::Neutral)
       continue;
     if (!unit.canTarget(*ally))
       continue;
@@ -439,7 +439,7 @@ bool AIController::tryMoveTowardPlayer(Unit &unit, MapManager &mapManager,
   const std::shared_ptr<Unit> *nearest = nullptr;
   size_t bestDist = 99999;
   for (const auto &ally : mapManager.getUnits()) {
-    if (ally->isDead() || ally->getTeam() != Team::Ally)
+    if (ally->isDead() || ally->getTeam() == m_myTeam || ally->getTeam() == Team::Neutral)
       continue;
     if (!unit.canTarget(*ally))
       continue;
@@ -474,7 +474,7 @@ void AIController::evaluateProduction(MapManager &mapManager) {
   m_productionQueue.clear();
 
   int currentMoney = 0;
-  auto moneyIt = mapManager.getTeams().find(Team::Enemy);
+  auto moneyIt = mapManager.getTeams().find(m_myTeam);
   if (moneyIt != mapManager.getTeams().end()) {
     currentMoney = moneyIt->second.money;
   }
@@ -485,7 +485,7 @@ void AIController::evaluateProduction(MapManager &mapManager) {
   std::vector<std::shared_ptr<Building>> factories;
 
   for (const auto &b : mapManager.getBuildings()) {
-    if (b->getTeam() == Team::Enemy) {
+    if (b->getTeam() == m_myTeam) {
       const std::string &type = b->getTypeName();
       if (type == "Factory")
         factories.push_back(b);
@@ -543,7 +543,7 @@ void AIController::evaluateProduction(MapManager &mapManager) {
 
   int captureUnits = 0;
   for (const auto &u : mapManager.getUnits()) {
-    if (!u->isDead() && u->getTeam() == Team::Enemy &&
+    if (!u->isDead() && u->getTeam() == m_myTeam &&
         u->hasFlag(UnitFlag::Capture)) {
       captureUnits++;
     }
@@ -551,7 +551,7 @@ void AIController::evaluateProduction(MapManager &mapManager) {
 
   int capturableBuildings = 0;
   for (const auto &b : mapManager.getBuildings()) {
-    if (b->getTeam() != Team::Enemy)
+    if (b->getTeam() != m_myTeam)
       capturableBuildings++;
   }
 
@@ -602,11 +602,11 @@ void AIController::processProduction(MapManager &mapManager, TurnController &tc,
   auto task = m_productionQueue.front();
   m_productionQueue.erase(m_productionQueue.begin());
 
-  auto newUnit = UnitRegistry::create(task.unitName, Team::Enemy);
+  auto newUnit = UnitRegistry::create(task.unitName, m_myTeam);
   if (newUnit) {
     newUnit->setActed(true);
     newUnit->setFadeIn(0.3f);
-    mapManager.deductTeamMoney(Team::Enemy, task.cost);
+    mapManager.deductTeamMoney(m_myTeam, task.cost);
 
     sf::Vector2u ts = mapManager.getTileSize();
     sf::Vector2i gridPos = buildingGridOf(*task.factory, ts);
@@ -622,14 +622,14 @@ bool AIController::isTileBlocking(sf::Vector2i tile, const Unit &unit,
   if (!b)
     return false;
 
-  if (b->getTeam() == Team::Enemy && b->getTypeName() == "Factory") {
+  if (b->getTeam() == m_myTeam && b->getTypeName() == "Factory") {
     return true;
   }
 
-  if (b->getTeam() != Team::Enemy && !unit.hasFlag(UnitFlag::Capture)) {
+  if (b->getTeam() != m_myTeam && !unit.hasFlag(UnitFlag::Capture)) {
     sf::Vector2u ts = mapManager.getTileSize();
     for (const auto &ally : mapManager.getUnits()) {
-      if (!ally->isDead() && ally->getTeam() == Team::Enemy &&
+      if (!ally->isDead() && ally->getTeam() == m_myTeam &&
           ally->hasFlag(UnitFlag::Capture)) {
         sf::Vector2i aGrid = gridOf(*ally, ts);
         int dist = std::abs(tile.x - aGrid.x) + std::abs(tile.y - aGrid.y);

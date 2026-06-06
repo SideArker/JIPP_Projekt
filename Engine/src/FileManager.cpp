@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <fstream>
 
-static constexpr uint32_t FILE_VERSION = 4;
+static constexpr uint32_t FILE_VERSION = 5;
 static constexpr char MAP_MAGIC[4] = {'J', 'M', 'A', 'P'};
 static constexpr char SAVE_MAGIC[4] = {'J', 'S', 'A', 'V'};
 
@@ -79,6 +79,7 @@ static void writeMapBlock(std::ostream &out, const MapFile &map) {
     writeVal(out, td.color.b);
     writeVal(out, td.color.a);
     writeVal(out, static_cast<int32_t>(td.startMoney));
+    writeVal(out, td.isAi);
   }
 }
 
@@ -175,6 +176,11 @@ static bool readMapBlock(std::istream &in, MapFile &map, uint32_t version) {
     if (!readVal(in, money))
       return false;
     td.startMoney = money;
+    if (version >= 5) {
+        if (!readVal(in, td.isAi)) return false;
+    } else {
+        td.isAi = (td.team == Team::Enemy);
+    }
   }
   return true;
 }

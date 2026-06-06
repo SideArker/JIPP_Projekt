@@ -116,6 +116,8 @@ public:
 	void clearUndoStack();
 	bool isUndoStackEmpty() const { return m_undoStack.empty(); }
 
+	Team getWinner() const { return m_winner; }
+
 	void setHitEffect(std::string setName, std::string clipName, std::string texturePath);
 	void setTeamCaptureEffect(std::string texturePath, std::string maskPath);
 	void setUnitRenderCallback(std::function<void(sf::RenderTarget&, const Unit&, bool)> cb);
@@ -126,6 +128,11 @@ public:
 	void setFriendlyOverlayPath(std::string path);
 
     const std::map<Team, TeamData>& getTeams() const { return m_teams; }
+    const TeamData* getTeamData(Team team) const {
+        auto it = m_teams.find(team);
+        if (it != m_teams.end()) return &it->second;
+        return nullptr;
+    }
     void deductTeamMoney(Team team, int amount) {
         if (m_teams.find(team) != m_teams.end()) {
             m_teams[team].money -= amount;

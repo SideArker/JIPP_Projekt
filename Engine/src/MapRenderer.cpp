@@ -167,6 +167,7 @@ void MapRenderer::drawScene(sf::RenderTarget& target, const MapManager& mapManag
   for (const auto &unit : mapManager.units) {
     if (unit->isDead())
       continue;
+
     sf::Sprite unitSprite(unit->getCurrentTexture());
     sf::IntRect rect = unit->getCurrentRect();
     unitSprite.setTextureRect(rect);
@@ -258,43 +259,28 @@ void MapRenderer::drawScene(sf::RenderTarget& target, const MapManager& mapManag
   if (mapManager.selectionController)
     mapManager.selectionController->drawCursorIcon(target);
 }
-
 void MapRenderer::drawUI(sf::RenderWindow &window, const MapManager& mapManager) const {
-  if (mapManager.m_gameOver) {
-    sf::View savedView = window.getView();
-    window.setView(window.getDefaultView());
+  if (!mapManager.m_gameOver) {
+    auto td = mapManager.getTeamData(mapManager.m_turnController.getCurrentTeam());
+    if (td && td->isAi) {
+      sf::View savedView = window.getView();
+      window.setView(window.getDefaultView());
 
-    sf::Text text(mapManager.m_uiFont, mapManager.m_winner == Team::Ally ? "ALLY WON!" : "ENEMY WON!", 60u);
-    text.setFillColor(sf::Color::Yellow);
-    text.setOutlineColor(sf::Color::Black);
-    text.setOutlineThickness(3.f);
+      sf::Text text(mapManager.m_uiFont, "ENEMY TURN", 40u);
 
-    sf::FloatRect bounds = text.getLocalBounds();
-    text.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
-    text.setPosition({window.getSize().x / 2.f, window.getSize().y / 2.f});
+      float alpha = (std::sin(mapManager.m_uiTime * 4.f) + 1.f) * 0.5f * 255.f;
+      sf::Color tcol = td->color;
+      tcol.a = static_cast<std::uint8_t>(alpha);
+      text.setFillColor(tcol);
+      text.setOutlineColor(sf::Color(0, 0, 0, static_cast<std::uint8_t>(alpha)));
+      text.setOutlineThickness(2.f);
 
-    window.draw(text);
-    window.setView(savedView);
-    return;
-  }
+      sf::FloatRect bounds = text.getLocalBounds();
+      text.setOrigin({bounds.size.x / 1.5f, bounds.size.y / 2.f});
+      text.setPosition({window.getSize().x / 2.f, 60.f});
 
-  if (mapManager.m_turnController.getCurrentTeam() == Team::Enemy) {
-    sf::View savedView = window.getView();
-    window.setView(window.getDefaultView());
-
-    sf::Text text(mapManager.m_uiFont, "ENEMY TURN", 40u);
-
-    // oscillating alpha
-    float alpha = (std::sin(mapManager.m_uiTime * 4.f) + 1.f) * 0.5f * 255.f;
-    text.setFillColor(sf::Color(255, 50, 50, static_cast<std::uint8_t>(alpha)));
-    text.setOutlineColor(sf::Color(0, 0, 0, static_cast<std::uint8_t>(alpha)));
-    text.setOutlineThickness(2.f);
-
-    sf::FloatRect bounds = text.getLocalBounds();
-    text.setOrigin({bounds.size.x / 1.5f, bounds.size.y / 2.f});
-    text.setPosition({window.getSize().x / 2.f, 60.f});
-
-    window.draw(text);
-    window.setView(savedView);
+      window.draw(text);
+      window.setView(savedView);
+    }
   }
 }

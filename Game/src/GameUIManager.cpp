@@ -33,7 +33,7 @@ GameUIManager::GameUIManager(sf::RenderWindow& window, MapManager& mapManager, C
         auto &units = mapManager.getUnits();
         std::vector<std::shared_ptr<Unit>> available;
         for (auto &u : units) {
-            if (!u->isDead() && u->getTeam() == Team::Ally && !u->hasActed())
+            if (!u->isDead() && u->getTeam() == mapManager.getCurrentTeam() && !u->hasActed())
                 available.push_back(u);
         }
         if (!available.empty()) {
@@ -124,7 +124,7 @@ GameUIManager::GameUIManager(sf::RenderWindow& window, MapManager& mapManager, C
     };
 
     mapManager.setOnSelectionChanged(
-        [this, infoLabel = m_panels.infoLabel, flagsList = m_panels.flagsList, portrait = m_panels.unitPortrait](
+        [this, &mapManager, infoLabel = m_panels.infoLabel, flagsList = m_panels.flagsList, portrait = m_panels.unitPortrait](
             std::shared_ptr<Unit> unit, std::shared_ptr<Building> building,
             const Tile *tile) {
             flagsList->removeAllWidgets();
@@ -166,12 +166,37 @@ GameUIManager::GameUIManager(sf::RenderWindow& window, MapManager& mapManager, C
             } else if (building) {
                 std::string desc = building->getTypeName() + "\n";
                 desc += building->getDescription() + "\n";
-                desc += "Team: " + (building->getTeam() == Team::Ally ? std::string("Ally") : (building->getTeam() == Team::Enemy ? std::string("Enemy") : std::string("Neutral"))) + "\n";
+                auto bTd = mapManager.getTeamData(building->getTeam());
+                desc += "Team: " + std::string(bTd ? bTd->name : "Neutral") + "\n";
                 infoLabel->setText(desc);
             } else {
                 infoLabel->setText("No selection");
             }
         });
+
+    m_victoryPanel = tgui::Panel::create();
+    m_victoryPanel->setSize(400, 200);
+    m_victoryPanel->setPosition("50% - 200", "50% - 100");
+    m_victoryPanel->getRenderer()->setBackgroundColor(sf::Color(20, 20, 25, 230));
+    m_victoryPanel->getRenderer()->setBorders(2);
+    m_victoryPanel->getRenderer()->setBorderColor(sf::Color::Yellow);
+    m_victoryPanel->setVisible(false);
+    
+    auto vicTitle = tgui::Label::create("VICTORY!");
+    vicTitle->setPosition(0, 30);
+    vicTitle->setSize("100%", 50);
+    vicTitle->setHorizontalAlignment(tgui::Label::HorizontalAlignment::Center);
+    vicTitle->setTextSize(36);
+    vicTitle->getRenderer()->setTextColor(sf::Color::Yellow);
+    m_victoryPanel->add(vicTitle, "Title");
+
+    auto backBtn = tgui::Button::create("Back to Menu");
+    backBtn->setPosition("50% - 100", 120);
+    backBtn->setSize(200, 40);
+    backBtn->onClick([this]() { m_quitToMenu = true; });
+    m_victoryPanel->add(backBtn);
+
+    m_gui.add(m_victoryPanel);
 }
 
 void GameUIManager::handleEvent(const sf::Event& event) {
@@ -179,6 +204,21 @@ void GameUIManager::handleEvent(const sf::Event& event) {
 }
 
 void GameUIManager::update(float dt, MapManager& mapManager) {
+    if (mapManager.isGameOver()) {
+        if (!m_victoryPlayed) {
+            m_victoryPlayed = true;
+            m_victoryPanel->setVisible(true);
+            SoundManager::playMusic("Victory");
+            
+            auto wTd = mapManager.getTeamData(mapManager.getWinner());
+            std::string teamName = wTd ? wTd->name : "Neutral";
+            std::transform(teamName.begin(), teamName.end(), teamName.begin(), ::toupper);
+            m_victoryPanel->get<tgui::Label>("Title")->setText(teamName + " WINS!");
+            m_victoryPanel->moveToFront();
+        }
+        return;
+    }
+
     if (m_productionUI) {
         m_productionUI->update(dt);
     }
@@ -194,15 +234,17 @@ void GameUIManager::update(float dt, MapManager& mapManager) {
     
     bool hasNext = false;
     for (auto &u : mapManager.getUnits()) {
-        if (!u->isDead() && u->getTeam() == Team::Ally && !u->hasActed()) {
+        if (!u->isDead() && u->getTeam() == mapManager.getCurrentTeam() && !u->hasActed()) {
             hasNext = true;
             break;
         }
     }
     m_panels.nextUnitBtn->setEnabled(hasNext && !mapManager.isAnyUnitActing());
 
-    if (mapManager.getCurrentTeam() == Team::Enemy) {
-        m_panels.endTurnBtn->setText("Enemy Turn");
+    auto currentTd = mapManager.getTeamData(mapManager.getCurrentTeam());
+    bool isAi = currentTd && currentTd->isAi;
+    if (isAi) {
+        m_panels.endTurnBtn->setText(currentTd->name + " Turn");
         m_panels.endTurnBtn->setEnabled(false);
     } else {
         m_panels.endTurnBtn->setText("End Turn >>");

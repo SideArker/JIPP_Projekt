@@ -52,8 +52,7 @@ void MapEditorApp::run() {
       }
 
       if (const auto *wheel = event->getIf<sf::Event::MouseWheelScrolled>()) {
-        if (wheel->wheel == sf::Mouse::Wheel::Vertical) {
-          std::cout << m_zoom;
+        if (wheel->wheel == sf::Mouse::Wheel::Vertical && isInMapViewport(wheel->position)) {
           if (wheel->delta > 0)
             m_zoom *= 0.85f;
           else
@@ -777,6 +776,13 @@ void MapEditorApp::rebuildTeamEditor() {
     m_teamEditorPanel->add(rEdit);
     m_teamEditorPanel->add(gEdit);
     m_teamEditorPanel->add(bEdit);
+
+    auto aiCheck = tgui::CheckBox::create();
+    aiCheck->setPosition(260, ty);
+    aiCheck->setText("Is AI");
+    aiCheck->setChecked(td.isAi);
+    aiCheck->onChange([&td](bool c) { td.isAi = c; });
+    m_teamEditorPanel->add(aiCheck);
 
     ty += 34.f;
   }

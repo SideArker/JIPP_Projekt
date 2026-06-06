@@ -9,6 +9,7 @@
 
 class AIController {
 public:
+    void init(Team team) { m_myTeam = team; }
     void update(float dt, MapManager& mapManager, TurnController& tc, CameraController& camera);
     void reset();
     bool isDone() const { return m_started && m_queue.empty() && m_productionEvaluated && m_productionQueue.empty() && m_waitTimer <= 0.f; }
@@ -17,6 +18,7 @@ private:
     std::vector<std::shared_ptr<Unit>> m_queue;
     float m_waitTimer = 0.f;
     bool  m_started   = false;
+    Team  m_myTeam    = Team::Enemy;
 
     static constexpr float ACTION_DELAY = 0.6f;
 

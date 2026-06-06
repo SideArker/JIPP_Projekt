@@ -13,6 +13,7 @@ struct ENGINE_API TeamData {
   sf::Color color = sf::Color::White;
   int startMoney = 1000;
   int money = 0;
+  bool isAi = false;
 };
 
 struct ENGINE_API UnitSpawnData {

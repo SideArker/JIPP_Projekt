@@ -18,10 +18,10 @@ enum class MoveDirection {
 	Right
 };
 
-enum class Team {
-	Ally,
-	Enemy,
-	Neutral
+enum class Team : uint8_t {
+	Ally = 0,
+	Enemy = 1,
+	Neutral = 255
 };
 
 struct ENGINE_API UnitData {

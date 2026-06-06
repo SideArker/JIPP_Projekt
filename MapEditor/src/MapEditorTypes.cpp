@@ -99,6 +99,7 @@ MapFile createDefaultMap() {
     td2.name = "Red Empire";
     td2.color = sf::Color(255, 50, 50);
     td2.startMoney = 1500;
+    td2.isAi = true;
     
     map.teams = {td1, td2};
     return map;

@@ -9,7 +9,14 @@ void TurnController::markActed(Unit& unit) {
     unit.setActed(true);
 }
 
+void TurnController::setTurnOrder(const std::vector<Team>& teams) {
+    m_turnOrder = teams;
+    m_teamIndex = 0;
+    m_turnNumber = 1;
+}
+
 void TurnController::endTurn(std::vector<std::shared_ptr<Unit>>& units) {
+    if (m_turnOrder.empty()) return;
     m_teamIndex = (m_teamIndex + 1) % static_cast<int>(m_turnOrder.size());
     if (m_teamIndex == 0) ++m_turnNumber;
     for (auto& u : units)
@@ -18,32 +25,32 @@ void TurnController::endTurn(std::vector<std::shared_ptr<Unit>>& units) {
 
 std::optional<Team> TurnController::checkWinCondition(const std::vector<std::shared_ptr<Unit>>& units, 
                                                       const std::vector<std::shared_ptr<Building>>& buildings) const {
-    bool allyHQExists = false;
-    bool enemyHQExists = false;
-    for (const auto& b : buildings) {
-        if (b->getTypeName() == "HQ") {
-            if (b->getTeam() == Team::Ally) allyHQExists = true;
-            if (b->getTeam() == Team::Enemy) enemyHQExists = true;
+    std::vector<Team> aliveTeams;
+
+    for (Team t : m_turnOrder) {
+        bool hasHq = false;
+        bool hasUnit = false;
+        for (const auto& b : buildings) {
+            if (b->getTypeName() == "HQ" && b->getTeam() == t) {
+                hasHq = true;
+                break;
+            }
+        }
+        for (const auto& u : units) {
+            if (!u->isDead() && u->getTeam() == t) {
+                hasUnit = true;
+                break;
+            }
+        }
+
+        if (hasHq && hasUnit) {
+            aliveTeams.push_back(t);
         }
     }
 
-    bool enemyHasUnits = false;
-    bool allyHasUnits = false;
-    for (const auto& u : units) {
-        if (!u->isDead()) {
-            if (u->getTeam() == Team::Enemy) enemyHasUnits = true;
-            if (u->getTeam() == Team::Ally) allyHasUnits = true;
-        }
+    if (aliveTeams.size() == 1) {
+        return aliveTeams[0];
     }
-
-    bool allyWon = false;
-    bool enemyWon = false;
-
-    if (!enemyHQExists || !enemyHasUnits) allyWon = true;
-    if (!allyHQExists || !allyHasUnits) enemyWon = true;
-
-    if (allyWon && !enemyWon) return Team::Ally;
-    if (enemyWon && !allyWon) return Team::Enemy;
 
     return std::nullopt;
 }

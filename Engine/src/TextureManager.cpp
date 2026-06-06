@@ -13,9 +13,14 @@ const sf::Texture& TextureManager::getTexture(const std::string& artPath, const 
     CacheKey key{ artPath, maskPath, packed };
     auto [it, inserted] = cache.try_emplace(key);
     if (inserted) {
-        sf::Image image = recolorSpriteMasked(artPath, maskPath, teamColor);
-        if (!it->second.loadFromImage(image))
-            throw std::runtime_error("Failed to load texture: " + artPath);
+        if (maskPath.empty()) {
+            if (!it->second.loadFromFile(artPath))
+                throw std::runtime_error("Failed to load texture: " + artPath);
+        } else {
+            sf::Image image = recolorSpriteMasked(artPath, maskPath, teamColor);
+            if (!it->second.loadFromImage(image))
+                throw std::runtime_error("Failed to load texture: " + artPath);
+        }
     }
     return it->second;
 }

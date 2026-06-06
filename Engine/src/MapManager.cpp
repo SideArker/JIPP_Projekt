@@ -10,6 +10,7 @@
 #include <iostream>
 #include <queue>
 #include <unordered_map>
+#include "TeamRegistry.hpp"
 
 // Core gameplay file that manages the map, units, buildings, and turn logic.
 
@@ -609,22 +610,32 @@ bool MapManager::loadFromFile(const std::string &mapPath) {
   currentMapPath = mapPath;
 
   m_teams.clear();
+  std::vector<Team> order;
   for (const auto &td : mapFile.teams) {
     m_teams[td.team] = td;
     m_teams[td.team].money = td.startMoney;
+    TeamRegistry::setColor(td.team, td.color);
+    if (td.team != Team::Neutral) {
+        order.push_back(td.team);
+    }
   }
   if (m_teams.find(Team::Ally) == m_teams.end()) {
-    m_teams[Team::Ally] = {Team::Ally, "Blue Team", sf::Color::Blue, 1000,
-                           1000};
+    m_teams[Team::Ally] = {Team::Ally, "Blue Team", sf::Color::Blue, 1000, 1000};
+    if (std::find(order.begin(), order.end(), Team::Ally) == order.end()) {
+        order.insert(order.begin(), Team::Ally);
+    }
   }
   if (m_teams.find(Team::Enemy) == m_teams.end()) {
-    m_teams[Team::Enemy] = {Team::Enemy, "Red Team", sf::Color::Red, 1000,
-                            1000};
+    m_teams[Team::Enemy] = {Team::Enemy, "Red Team", sf::Color::Red, 1000, 1000};
+    if (std::find(order.begin(), order.end(), Team::Enemy) == order.end()) {
+        order.push_back(Team::Enemy);
+    }
   }
   if (m_teams.find(Team::Neutral) == m_teams.end()) {
-    m_teams[Team::Neutral] = {Team::Neutral, "Neutral",
-                              sf::Color(128, 128, 128), 0, 0};
+    m_teams[Team::Neutral] = {Team::Neutral, "Neutral", sf::Color(128, 128, 128), 0, 0};
   }
+  
+  m_turnController.setTurnOrder(order);
 
   if (!loadMap(mapFile.tilesetPath, mapFile.tileSize, mapFile.tiles,
                mapFile.width, mapFile.height))
@@ -714,6 +725,33 @@ bool MapManager::restoreGameState(const GameState &state) {
   if (selectionController)
     selectionController->clearSelection();
   currentMapPath = state.mapFilePath;
+
+  m_teams.clear();
+  std::vector<Team> order;
+  for (const auto &td : mapFile.teams) {
+    m_teams[td.team] = td;
+    m_teams[td.team].money = td.startMoney;
+    TeamRegistry::setColor(td.team, td.color);
+    if (td.team != Team::Neutral) {
+        order.push_back(td.team);
+    }
+  }
+  if (m_teams.find(Team::Ally) == m_teams.end()) {
+    m_teams[Team::Ally] = {Team::Ally, "Blue Team", sf::Color::Blue, 1000, 1000};
+    if (std::find(order.begin(), order.end(), Team::Ally) == order.end()) {
+        order.insert(order.begin(), Team::Ally);
+    }
+  }
+  if (m_teams.find(Team::Enemy) == m_teams.end()) {
+    m_teams[Team::Enemy] = {Team::Enemy, "Red Team", sf::Color::Red, 1000, 1000};
+    if (std::find(order.begin(), order.end(), Team::Enemy) == order.end()) {
+        order.push_back(Team::Enemy);
+    }
+  }
+  if (m_teams.find(Team::Neutral) == m_teams.end()) {
+    m_teams[Team::Neutral] = {Team::Neutral, "Neutral", sf::Color(128, 128, 128), 0, 0};
+  }
+  m_turnController.setTurnOrder(order);
 
   if (!loadMap(mapFile.tilesetPath, mapFile.tileSize, mapFile.tiles,
                mapFile.width, mapFile.height))

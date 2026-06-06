@@ -20,8 +20,10 @@ public:
     std::optional<Team> checkWinCondition(const std::vector<std::shared_ptr<Unit>>& units, 
                                           const std::vector<std::shared_ptr<Building>>& buildings) const;
 
+    void setTurnOrder(const std::vector<Team>& teams);
+
 private:
-    std::array<Team, 2> m_turnOrder = { Team::Ally, Team::Enemy };
+    std::vector<Team> m_turnOrder;
     int m_teamIndex  = 0;
     int m_turnNumber = 1;
 };
