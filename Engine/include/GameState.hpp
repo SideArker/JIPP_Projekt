@@ -23,6 +23,8 @@ struct ENGINE_API BuildingSaveData {
   int gridX = 0;
   int gridY = 0;
   Team team = Team::Neutral;
+  int captureProgress = 0;
+  Team captureTeam = Team::Neutral;
 };
 
 struct ENGINE_API GameState {

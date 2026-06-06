@@ -27,6 +27,14 @@ std::optional<Team> TurnController::checkWinCondition(const std::vector<std::sha
                                                       const std::vector<std::shared_ptr<Building>>& buildings) const {
     std::vector<Team> aliveTeams;
 
+    bool mapHasAnyHq = false;
+    for (const auto& b : buildings) {
+        if (b->getTypeName() == "HQ") {
+            mapHasAnyHq = true;
+            break;
+        }
+    }
+
     for (Team t : m_turnOrder) {
         bool hasHq = false;
         bool hasUnit = false;
@@ -43,7 +51,7 @@ std::optional<Team> TurnController::checkWinCondition(const std::vector<std::sha
             }
         }
 
-        if (hasHq && hasUnit) {
+        if (hasUnit && (hasHq || !mapHasAnyHq)) {
             aliveTeams.push_back(t);
         }
     }

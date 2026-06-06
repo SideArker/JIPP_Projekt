@@ -184,6 +184,29 @@ void MapManager::update(float deltaTime) {
   if (!m_gameOver) {
     if (auto winner = m_turnController.checkWinCondition(units, buildings)) {
       triggerGameOver(*winner);
+    } else {
+      bool mapHasAnyHq = false;
+      for (const auto& b : buildings) {
+          if (b->getTypeName() == "HQ") { mapHasAnyHq = true; break; }
+      }
+      bool playerAlive = false;
+      bool hasPlayerTeam = false;
+      for (const auto& [t, data] : m_teams) {
+          if (!data.isAi && t != Team::Neutral) {
+              hasPlayerTeam = true;
+              bool hasHq = false, hasUnit = false;
+              for (const auto& b : buildings) {
+                  if (b->getTypeName() == "HQ" && b->getTeam() == t) { hasHq = true; break; }
+              }
+              for (const auto& u : units) {
+                  if (!u->isDead() && u->getTeam() == t) { hasUnit = true; break; }
+              }
+              if (hasUnit && (hasHq || !mapHasAnyHq)) playerAlive = true;
+          }
+      }
+      if (hasPlayerTeam && !playerAlive) {
+          triggerGameOver(Team::Neutral); // Neutral means defeat
+      }
     }
   }
 
@@ -275,6 +298,7 @@ void MapManager::endTurn() {
           m_captureBounceTargets.clear();
           m_captureBounceTargets.insert(building.get());
           m_captureBounceTimer = MapRenderer::kCaptureBounceDuration;
+          SoundManager::play("GameSound", "CaptureBounce");
           
           if (occupant) {
               building->onTurnEnd(occupant.get());
@@ -496,9 +520,13 @@ MapManager::getReachableTiles(sf::Vector2i from, float moveRange,
       if (next.x < 0 || next.y < 0 || next.x >= static_cast<int>(mapWidth) ||
           next.y >= static_cast<int>(mapHeight))
         continue;
-      auto terrain =
-          mapData[next.x + next.y * static_cast<int>(mapWidth)].getTerrain();
-      if (!canTraverse(terrain, category))
+      const auto &tile = mapData[next.x + next.y * static_cast<int>(mapWidth)];
+      auto terrain = tile.getTerrain();
+      bool traversable = canTraverse(terrain, category);
+      if (category == MovementCategory::Naval && terrain == TerrainType::Grass && tile.getArtId() >= 12 && tile.getArtId() <= 19) {
+          traversable = true;
+      }
+      if (!traversable)
         continue;
       auto occupant = getUnitAtTile(next);
       if (occupant != nullptr && occupant->getTeam() != movingTeam)
@@ -531,8 +559,12 @@ std::vector<sf::Vector2i> MapManager::findPath(sf::Vector2i start,
     if (x < 0 || x >= static_cast<int>(mapWidth) || y < 0 ||
         y >= static_cast<int>(mapHeight))
       return false;
-    return canTraverse(mapData[x + y * static_cast<int>(mapWidth)].getTerrain(),
-                       category);
+    const auto &tile = mapData[x + y * static_cast<int>(mapWidth)];
+    bool traversable = canTraverse(tile.getTerrain(), category);
+    if (category == MovementCategory::Naval && tile.getTerrain() == TerrainType::Grass && tile.getArtId() >= 12 && tile.getArtId() <= 19) {
+        traversable = true;
+    }
+    return traversable;
   };
 
   if (!isValid(start.x, start.y) || !isValid(goal.x, goal.y)) {
@@ -703,7 +735,8 @@ GameState MapManager::captureGameState() const {
         static_cast<int>(std::round(building->getPosition().y /
                                     static_cast<float>(tileSize.y))));
     state.buildings.push_back(
-        {building->getTypeName(), gridPos.x, gridPos.y, building->getTeam()});
+        {building->getTypeName(), gridPos.x, gridPos.y, building->getTeam(),
+         building->getCaptureProgress(), building->getCaptureTeam()});
   }
   return state;
 }
@@ -771,9 +804,12 @@ bool MapManager::restoreGameState(const GameState &state) {
     spawnUnit(unit, unitData.gridX, unitData.gridY);
   }
   for (const auto &bData : state.buildings) {
-    auto building = getBuildingAtTile({bData.gridX, bData.gridY});
-    if (building)
-      building->setTeam(bData.team);
+    auto building = BuildingRegistry::create(bData.typeName, bData.team);
+    if (building) {
+        spawnBuilding(building, bData.gridX, bData.gridY);
+        building->setCaptureProgress(bData.captureProgress);
+        building->setCaptureTeam(bData.captureTeam);
+    }
   }
   return true;
 }

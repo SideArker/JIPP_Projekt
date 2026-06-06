@@ -35,7 +35,12 @@ void GameContent::init() {
   SoundManager::registerMusic("MainMenu", "Art/Sound/MainMenu.wav");
   SoundManager::registerMusic("EnemyTurn", "Art/Sound/EnemyTheme.wav");
   SoundManager::registerMusic("AllyTurn", "Art/Sound/AllyTheme.wav");
-  SoundManager::registerMusic("Victory", "Art/Sound/Victory.wav");
+
+  SoundSet gameSound;
+  gameSound.addSound("Victory", "Art/Sound/Victory.wav")
+      .addSound("Defeat", "Art/Sound/Defeat.wav")
+      .addSound("CaptureBounce", "Art/Sound/capture_sound.wav");
+  SoundManager::registerSet("GameSound", gameSound);
   SoundManager::setMusicVolume(20.f);
 }
 
@@ -65,7 +70,8 @@ void GameContent::configure(MapManager &mapManager) {
     if (!anyActing && isCurrentPlayer) {
       const bool isInteractable = unit.getIsInteractable();
       const bool showFriendlyOverlay =
-          unit.getTeam() == mapManager.getCurrentTeam() && !unit.hasActed() && isInteractable;
+          unit.getTeam() == mapManager.getCurrentTeam() && !unit.hasActed() &&
+          isInteractable;
       const bool showEnemyOverlay =
           unit.getTeam() != mapManager.getCurrentTeam() || !isInteractable;
       if (showFriendlyOverlay || showEnemyOverlay) {

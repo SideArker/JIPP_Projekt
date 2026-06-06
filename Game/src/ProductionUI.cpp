@@ -71,25 +71,37 @@ void ProductionUI::update(float dt) {
     preview.canvas->clear(sf::Color::Transparent);
 
     sf::Sprite sprite(preview.unit->getCurrentTexture());
-    
+
     sf::IntRect rect = preview.unit->getCurrentRect();
     bool flipX = preview.unit->shouldFlipX();
-    
-    const AnimationSet *animSet = AnimationManager::getSet(preview.unit->getName());
+
+    const AnimationSet *animSet =
+        AnimationManager::getSet(preview.unit->getName());
     if (animSet) {
       std::string dirStr = "";
       switch (dirs[preview.dirIndex]) {
-        case MoveDirection::Left:  dirStr = "_left"; break;
-        case MoveDirection::Right: dirStr = "_right"; break;
-        case MoveDirection::Down:  dirStr = "_down"; break;
-        case MoveDirection::Up:    dirStr = "_up"; break;
+      case MoveDirection::Left:
+        dirStr = "_left";
+        break;
+      case MoveDirection::Right:
+        dirStr = "_right";
+        break;
+      case MoveDirection::Down:
+        dirStr = "_down";
+        break;
+      case MoveDirection::Up:
+        dirStr = "_up";
+        break;
       }
-      
-      const AnimationClip* clip = animSet->getClip("idle" + dirStr);
-      if (!clip) clip = animSet->getClip("idle");
-      if (!clip) clip = animSet->getClip("walk" + dirStr);
-      if (!clip) clip = animSet->getClip("walk");
-      
+
+      const AnimationClip *clip = animSet->getClip("idle" + dirStr);
+      if (!clip)
+        clip = animSet->getClip("idle");
+      if (!clip)
+        clip = animSet->getClip("walk" + dirStr);
+      if (!clip)
+        clip = animSet->getClip("walk");
+
       if (clip && !clip->frames.empty()) {
         rect = clip->frames[0];
         flipX = clip->flipX;
@@ -118,14 +130,10 @@ void ProductionUI::update(float dt) {
 void ProductionUI::open(std::shared_ptr<Building> factory) {
   close();
 
+  bool hasInfantry = true;
   bool hasVehicleBase = false;
   bool hasAirport = false;
   bool hasPort = false;
-
-  bool sitsOnWater =
-      m_mapManager.getTerrainAt(sf::Vector2i(factory->getPosition().x / 32,
-                                             factory->getPosition().y / 32)) ==
-      TerrainType::Water;
 
   for (const auto &b : m_mapManager.getBuildings()) {
     if (b->getTeam() == factory->getTeam()) {
@@ -133,9 +141,26 @@ void ProductionUI::open(std::shared_ptr<Building> factory) {
         hasVehicleBase = true;
       if (b->getTypeName() == "Airport")
         hasAirport = true;
-      if (b->getTypeName() == "Port" && sitsOnWater)
+      if (b->getTypeName() == "Port")
         hasPort = true;
     }
+  }
+
+  std::string fType = factory->getTypeName();
+  
+  bool adjacentToWater = false;
+  sf::Vector2i fp = sf::Vector2i(factory->getPosition().x / 32, factory->getPosition().y / 32);
+  const std::vector<sf::Vector2i> dirs = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+  for (auto d : dirs) {
+      if (m_mapManager.getTerrainAt(fp + d) == TerrainType::Water) {
+          adjacentToWater = true;
+          break;
+      }
+  }
+
+  // Restrict Naval spawning strictly to water buildings or buildings adjacent to water
+  if (fType != "Port" && fType != "SeaOilRig" && !((fType == "Factory" || fType == "HQ" || fType == "VehicleBase") && adjacentToWater)) {
+      hasPort = false;
   }
 
   Team team = factory->getTeam();
@@ -144,7 +169,7 @@ void ProductionUI::open(std::shared_ptr<Building> factory) {
   if (moneyIt != m_mapManager.getTeams().end())
     currentMoney = moneyIt->second.money;
 
-  std::vector<Category> categories = {{"Infantry", {}, true},
+  std::vector<Category> categories = {{"Infantry", {}, hasInfantry},
                                       {"Ground", {}, hasVehicleBase},
                                       {"Flying", {}, hasAirport},
                                       {"Naval", {}, hasPort}};
@@ -311,8 +336,10 @@ void ProductionUI::open(std::shared_ptr<Building> factory) {
             m_mapManager.deductTeamMoney(team, data->cost);
             const sf::Vector2u ts = m_mapManager.getTileSize();
             sf::Vector2i bGrid(
-                static_cast<int>(std::round(factory->getPosition().x / static_cast<float>(ts.x))),
-                static_cast<int>(std::round(factory->getPosition().y / static_cast<float>(ts.y))));
+                static_cast<int>(std::round(factory->getPosition().x /
+                                            static_cast<float>(ts.x))),
+                static_cast<int>(std::round(factory->getPosition().y /
+                                            static_cast<float>(ts.y))));
             m_mapManager.spawnUnit(newUnit, bGrid.x, bGrid.y);
             m_turnController.markActed(*newUnit);
           }

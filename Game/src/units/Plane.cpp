@@ -44,7 +44,7 @@ void registerPlane() {
   UnitData data;
   data.maxHealth = 20;
   data.damage = 10;
-  data.moveSpeed = 5;
+  data.moveSpeed = 7;
   data.minAttackRange = 0;
   data.maxAttackRange = 1;
   data.cost = 400;

@@ -177,27 +177,6 @@ void MapEditorApp::updateMapView(float dt) {
 void MapEditorApp::clampMapView() {
   m_mapView.setSize(
       {mapViewportWidth() * m_zoom, mapViewportHeight() * m_zoom});
-
-  const float worldW = static_cast<float>(mapPixelWidth());
-  const float worldH = static_cast<float>(mapPixelHeight());
-  const sf::Vector2f half = m_mapView.getSize() * 0.5f;
-  sf::Vector2f c = m_mapView.getCenter();
-  const float padding =
-      std::max(96.f, static_cast<float>(m_map.tileSize.x * 3));
-
-  if (worldW <= m_mapView.getSize().x) {
-    c.x = std::clamp(c.x, worldW * 0.5f - padding, worldW * 0.5f + padding);
-  } else {
-    c.x = std::clamp(c.x, half.x - padding, worldW - half.x + padding);
-  }
-
-  if (worldH <= m_mapView.getSize().y) {
-    c.y = std::clamp(c.y, worldH * 0.5f - padding, worldH * 0.5f + padding);
-  } else {
-    c.y = std::clamp(c.y, half.y - padding, worldH - half.y + padding);
-  }
-
-  m_mapView.setCenter(c);
 }
 
 void MapEditorApp::refreshStatus(const std::string &message) {
@@ -410,6 +389,7 @@ bool MapEditorApp::loadMap(const std::string &path) {
     m_heightEdit->setText(std::to_string(m_map.height));
   rebuildRenderer();
   rebuildTileList();
+  rebuildTeamEditor();
   clampMapView();
   return true;
 }
@@ -689,6 +669,13 @@ void MapEditorApp::rebuildTeamEditor() {
     for (const auto &td : m_map.teams) {
       m_teamCombo->addItem(td.name, std::to_string(static_cast<int>(td.team)));
     }
+    bool hasNeutral = false;
+    for (const auto &td : m_map.teams) {
+        if (td.team == Team::Neutral) { hasNeutral = true; break; }
+    }
+    if (!hasNeutral) {
+        m_teamCombo->addItem("Neutral", std::to_string(static_cast<int>(Team::Neutral)));
+    }
     if (!m_map.teams.empty()) {
       m_teamCombo->setSelectedItemById(
           std::to_string(static_cast<int>(m_map.teams.front().team)));
@@ -713,11 +700,13 @@ void MapEditorApp::rebuildTeamEditor() {
     nameEdit->setPosition(4, ty);
     nameEdit->setSize("&.w - 20", 22);
     nameEdit->setText(td.name);
-    nameEdit->onTextChange([this, &td](const tgui::String &t) {
-      td.name = t.toStdString();
-      if (m_teamCombo) {
-        m_teamCombo->changeItemById(std::to_string(static_cast<int>(td.team)),
-                                    t);
+    nameEdit->onTextChange([this, i](const tgui::String &t) {
+      if (i < m_map.teams.size()) {
+        m_map.teams[i].name = t.toStdString();
+        if (m_teamCombo) {
+          m_teamCombo->changeItemById(std::to_string(static_cast<int>(m_map.teams[i].team)),
+                                      t);
+        }
       }
     });
     m_teamEditorPanel->add(nameEdit);
@@ -731,9 +720,9 @@ void MapEditorApp::rebuildTeamEditor() {
     cashEdit->setSize(60, 22);
     cashEdit->setText(std::to_string(td.startMoney));
     cashEdit->setInputValidator(tgui::EditBox::Validator::UInt);
-    cashEdit->onTextChange([&td](const tgui::String &t) {
-      if (!t.empty())
-        td.startMoney = std::stoi(t.toStdString());
+    cashEdit->onTextChange([this, i](const tgui::String &t) {
+      if (i < m_map.teams.size() && !t.empty())
+        m_map.teams[i].startMoney = std::stoi(t.toStdString());
     });
     m_teamEditorPanel->add(cashEdit);
 
@@ -758,17 +747,18 @@ void MapEditorApp::rebuildTeamEditor() {
     colorBox->getRenderer()->setBorderColor(sf::Color::White);
     m_teamEditorPanel->add(colorBox);
 
-    auto updateColor = [&td, rEdit, gEdit, bEdit, colorBox]() {
+    auto updateColor = [this, i, rEdit, gEdit, bEdit, colorBox]() {
+      if (i >= m_map.teams.size()) return;
       if (!rEdit->getText().empty())
-        td.color.r =
+        m_map.teams[i].color.r =
             std::clamp(std::stoi(rEdit->getText().toStdString()), 0, 255);
       if (!gEdit->getText().empty())
-        td.color.g =
+        m_map.teams[i].color.g =
             std::clamp(std::stoi(gEdit->getText().toStdString()), 0, 255);
       if (!bEdit->getText().empty())
-        td.color.b =
+        m_map.teams[i].color.b =
             std::clamp(std::stoi(bEdit->getText().toStdString()), 0, 255);
-      colorBox->getRenderer()->setBackgroundColor(td.color);
+      colorBox->getRenderer()->setBackgroundColor(m_map.teams[i].color);
     };
     rEdit->onTextChange(updateColor);
     gEdit->onTextChange(updateColor);
@@ -781,7 +771,9 @@ void MapEditorApp::rebuildTeamEditor() {
     aiCheck->setPosition(260, ty);
     aiCheck->setText("Is AI");
     aiCheck->setChecked(td.isAi);
-    aiCheck->onChange([&td](bool c) { td.isAi = c; });
+    aiCheck->onChange([this, i](bool c) { 
+      if (i < m_map.teams.size()) m_map.teams[i].isAi = c; 
+    });
     m_teamEditorPanel->add(aiCheck);
 
     ty += 34.f;

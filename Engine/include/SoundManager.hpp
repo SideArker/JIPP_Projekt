@@ -23,7 +23,7 @@ public:
     static void play(const std::string& typeName, const std::string& soundName);
 
     static void registerMusic(const std::string& trackName, const std::string& filePath);
-    static void playMusic(const std::string& trackName);
+    static void playMusic(const std::string& trackName, bool loop = true);
     static void stopMusic();
     static void shutdown();
 

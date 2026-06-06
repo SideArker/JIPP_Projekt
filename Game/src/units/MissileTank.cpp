@@ -55,7 +55,7 @@ void registerMissileTank() {
   data.damage = 20;
   data.moveSpeed = 2;
   data.minAttackRange = 2;
-  data.maxAttackRange = 6;
+  data.maxAttackRange = 4;
   data.cost = 500;
   data.hitEffectDelay = 1.1f;
   data.attackDamageDelay = 0.9f;

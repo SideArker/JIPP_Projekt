@@ -49,6 +49,8 @@ public:
 
     void setPosition(sf::Vector2f pos) { position = pos; }
     void setTeam(Team t) { team = t; }
+    void setCaptureProgress(int p) { captureProgress = p; }
+    void setCaptureTeam(Team t) { captureTeam = t; }
 
     const sf::Texture& getTexture() const;
     sf::IntRect getTextureRect() const { return textureRect; }

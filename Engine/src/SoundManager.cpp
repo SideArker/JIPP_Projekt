@@ -57,7 +57,7 @@ void SoundManager::registerMusic(const std::string& trackName, const std::string
     s_musicPaths.emplace(trackName, filePath);
 }
 
-void SoundManager::playMusic(const std::string& trackName) {
+void SoundManager::playMusic(const std::string& trackName, bool loop) {
     std::cout << "Playing music: " << trackName << std::endl;
     if (trackName == s_currentTrack) return;
 
@@ -71,7 +71,7 @@ void SoundManager::playMusic(const std::string& trackName) {
     if (!music->openFromFile(it->second)) return;
 
     s_music = std::move(music);
-    s_music->setLooping(true);
+    s_music->setLooping(loop);
     s_music->setVolume(s_musicVolume);
     s_music->play();
     s_currentTrack = trackName;
