@@ -75,10 +75,11 @@ float getCaptureBounceOffsetY(float remainingTime) {
 				triangles[4].position = sf::Vector2f((i + 1) * tileSize.x, j * tileSize.y);       // Top-Right
 				triangles[5].position = sf::Vector2f((i + 1) * tileSize.x, (j + 1) * tileSize.y); // Bottom-Right
 
-				float tu0 = tu * tileSize.x;
-				float tv0 = tv * tileSize.y;
-				float tu1 = (tu + 1) * tileSize.x;
-				float tv1 = (tv + 1) * tileSize.y;
+				float inset = 0.01f;
+				float tu0 = tu * tileSize.x + inset;
+				float tv0 = tv * tileSize.y + inset;
+				float tu1 = (tu + 1) * tileSize.x - inset;
+				float tv1 = (tv + 1) * tileSize.y - inset;
 
                 sf::Vector2f tl(tu0, tv0);
                 sf::Vector2f tr(tu1, tv0);

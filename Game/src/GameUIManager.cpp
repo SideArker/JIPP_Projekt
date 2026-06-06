@@ -1,6 +1,7 @@
 #include "GameUIManager.hpp"
 #include "SoundManager.hpp"
 #include "SettingsManager.hpp"
+#include <SFML/Window/Context.hpp>
 #include <cstdlib>
 
 GameUIManager::GameUIManager(sf::RenderWindow& window, MapManager& mapManager, CameraController& cameraController)
@@ -67,13 +68,15 @@ GameUIManager::GameUIManager(sf::RenderWindow& window, MapManager& mapManager, C
         s.soundVolume = static_cast<int>(v);
         SettingsManager::save(s);
     });
-    m_panels.fullscreenCheckbox->onChange([&window](bool checked) {
+    m_panels.fullscreenCheckbox->onChange([this, &window](bool checked) {
         Settings s = SettingsManager::load();
         s.fullscreen = checked;
         SettingsManager::save(s);
 
+        sf::Context context;
         auto style = checked ? sf::State::Fullscreen : sf::State::Windowed;
         window.create(sf::VideoMode({1280, 720}), "Map Renderer", style);
+        m_gui.setWindow(window);
     });
 
     m_panels.teamList->removeAllWidgets();
@@ -135,22 +138,25 @@ GameUIManager::GameUIManager(sf::RenderWindow& window, MapManager& mapManager, C
                 } catch (...) {}
 
                 int flagY = 0;
-                if (unit->hasFlag(UnitFlag::Capture)) {
+                auto addFlagUi = [&](const std::string& tooltipText) {
                     auto flagPanel = tgui::Panel::create({"100%", "36px"});
                     flagPanel->setPosition(0, flagY);
+                    flagPanel->getRenderer()->setBackgroundColor(sf::Color::Transparent);
                     tgui::Texture tex("Art/UI/flag.png", tgui::UIntRect(0, 0, 32, 32));
                     auto pic = tgui::Picture::create(tex);
                     pic->setSize("32px", "32px");
                     pic->setPosition("2px", "2px");
+                    auto tooltip = tgui::Label::create(tooltipText);
+                    tooltip->getRenderer()->setBackgroundColor(sf::Color(40, 40, 45, 230));
+                    tooltip->getRenderer()->setTextColor(sf::Color::White);
+                    tooltip->setTextSize(14);
+                    pic->setToolTip(tooltip);
                     flagPanel->add(pic);
-                    auto lbl = tgui::Label::create("Can capture buildings");
-                    lbl->setPosition("40px", "8px");
-                    lbl->getRenderer()->setTextColor(sf::Color(200, 220, 255));
-                    flagPanel->add(lbl);
-                    
                     flagsList->add(flagPanel);
                     flagY += 40;
-                }
+                };
+
+                if (unit->hasFlag(UnitFlag::Capture)) addFlagUi("Can capture buildings");
             } else if (building) {
                 std::string desc = building->getTypeName() + "\n";
                 desc += building->getDescription() + "\n";

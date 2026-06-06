@@ -289,6 +289,7 @@ void SelectionController::handleMouseClicked(sf::Vector2i gridPos) {
   if (!selectedUnit) {
     auto building = mapManager.getBuildingAtTile(gridPos);
     if (building) {
+      mapManager.notifySelectionChanged(nullptr, building, nullptr);
       if (building->getTypeName() == "Factory" &&
           building->getTeam() == m_turnController.getCurrentTeam()) {
         if (!mapManager.getUnitAtTile(gridPos)) {
@@ -297,6 +298,8 @@ void SelectionController::handleMouseClicked(sf::Vector2i gridPos) {
       } else {
         building->onClicked();
       }
+    } else {
+      mapManager.notifySelectionChanged(nullptr, nullptr, nullptr);
     }
     return;
   }
