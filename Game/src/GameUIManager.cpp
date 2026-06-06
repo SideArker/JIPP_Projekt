@@ -51,6 +51,8 @@ GameUIManager::GameUIManager(sf::RenderWindow& window, MapManager& mapManager, C
     
     m_panels.saveGameBtn->onClick([&mapManager]() { mapManager.saveToFile("savegame.sav"); });
     
+    m_panels.quitBtn->onClick([this]() { m_quitToMenu = true; });
+    
     Settings settings = SettingsManager::load();
     m_panels.musicVolSlider->setValue(settings.musicVolume);
     m_panels.soundVolSlider->setValue(settings.soundVolume);
@@ -76,6 +78,10 @@ GameUIManager::GameUIManager(sf::RenderWindow& window, MapManager& mapManager, C
         sf::Context context;
         auto style = checked ? sf::State::Fullscreen : sf::State::Windowed;
         window.create(sf::VideoMode({1280, 720}), "Map Renderer", style);
+        sf::Image icon;
+        if (icon.loadFromFile("Art/ico.png")) {
+            window.setIcon({icon.getSize().x, icon.getSize().y}, icon.getPixelsPtr());
+        }
         m_gui.setWindow(window);
     });
 

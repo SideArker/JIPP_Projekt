@@ -16,7 +16,6 @@
 #include <SFML/Graphics.hpp>
 #include <algorithm>
 
-
 void GameContent::init() {
   TeamRegistry::setColor(Team::Ally, sf::Color(50, 255, 50));
   TeamRegistry::setColor(Team::Enemy, sf::Color(255, 7, 58));
@@ -33,7 +32,7 @@ void GameContent::init() {
   registerBuildings();
   registerEffects();
 
-  SoundManager::registerMusic("MainMenu", "Art/Sound/main_menu.ogg");
+  SoundManager::registerMusic("MainMenu", "Art/Sound/MainMenu.wav");
   SoundManager::registerMusic("EnemyTurn", "Art/Sound/EnemyTheme.wav");
   SoundManager::registerMusic("AllyTurn", "Art/Sound/AllyTheme.wav");
   SoundManager::setMusicVolume(20.f);
@@ -64,7 +63,8 @@ void GameContent::configure(MapManager &mapManager) {
       const bool isInteractable = unit.getIsInteractable();
       const bool showFriendlyOverlay =
           unit.getTeam() == Team::Ally && !unit.hasActed() && isInteractable;
-      const bool showEnemyOverlay = unit.getTeam() == Team::Enemy || !isInteractable;
+      const bool showEnemyOverlay =
+          unit.getTeam() == Team::Enemy || !isInteractable;
       if (showFriendlyOverlay || showEnemyOverlay) {
         const sf::Texture &overlayTex =
             showEnemyOverlay ? overlayEnemy : overlayFriendly;

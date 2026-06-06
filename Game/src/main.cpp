@@ -11,26 +11,28 @@
 #include <memory>
 #include <optional>
 
+#include "MainMenuUI.hpp"
 #include "SettingsManager.hpp"
 
-static constexpr const char *LEVEL1_PATH = "Art/levels/level1.map";
-
-int main() {
-  Settings settings = SettingsManager::load();
-  auto style =
-      settings.fullscreen ? sf::State::Fullscreen : sf::State::Windowed;
-  sf::RenderWindow window(sf::VideoMode({1280, 720}), "Map Renderer", style);
+bool runGame(sf::RenderWindow &window, const std::string &mapPath,
+             bool isSave) {
   sf::View view(sf::FloatRect({0.f, 0.f}, {640.f, 360.f}));
   window.setView(view);
 
-  GameContent::init();
   tgui::Texture::setDefaultSmooth(false);
   tgui::ToolTip::setInitialDelay(std::chrono::milliseconds(0));
 
   MapManager mapManager;
   GameContent::configure(mapManager);
-  if (!mapManager.loadFromFile(LEVEL1_PATH))
-    return -1;
+
+  if (isSave) {
+    if (!mapManager.restoreGameState(mapPath))
+      return false;
+  } else {
+    if (!mapManager.loadFromFile(mapPath))
+      return false;
+  }
+
   mapManager.setupInput(window);
   mapManager.onTurnEnded = [&mapManager]() {
     EconomyManager::processTurnEnd(mapManager);
@@ -55,7 +57,7 @@ int main() {
   AIController aiController;
   sf::Clock clock;
 
-  while (window.isOpen()) {
+  while (window.isOpen() && !uiManager.shouldQuitToMenu()) {
     while (const std::optional event = window.pollEvent()) {
       if (event->is<sf::Event::Closed>()) {
         window.close();
@@ -121,6 +123,39 @@ int main() {
   mapManager.setOnSelectionChanged(nullptr);
   mapManager.setOnOpenFactory(nullptr);
   mapManager.onUnitMoveStart = nullptr;
+
+  return true;
+}
+
+int main() {
+  Settings settings = SettingsManager::load();
+  auto style =
+      settings.fullscreen ? sf::State::Fullscreen : sf::State::Windowed;
+  sf::RenderWindow window(sf::VideoMode({1280, 720}), "Conflict Wars", style);
+
+  sf::Image icon;
+  if (icon.loadFromFile("Art/ico.png")) {
+    window.setIcon({icon.getSize().x, icon.getSize().y}, icon.getPixelsPtr());
+  }
+
+  GameContent::init();
+
+  while (window.isOpen()) {
+    MainMenuResult result = runMainMenu(window);
+
+    if (result.action == MainMenuAction::Quit) {
+      window.close();
+      break;
+    }
+
+    if (result.action == MainMenuAction::PlayChapter) {
+      runGame(window, result.path, false);
+    }
+
+    if (result.action == MainMenuAction::LoadSave) {
+      runGame(window, result.path, true);
+    }
+  }
 
   SoundManager::shutdown();
   TextureManager::clearCache();

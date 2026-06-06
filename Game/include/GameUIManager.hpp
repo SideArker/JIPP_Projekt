@@ -20,8 +20,10 @@ public:
     
     tgui::Gui& getGui() { return m_gui; }
     ProductionUI* getProductionUI() { return m_productionUI.get(); }
+    bool shouldQuitToMenu() const { return m_quitToMenu; }
 
 private:
+    bool m_quitToMenu = false;
     tgui::Gui m_gui;
     GameUIWidgets m_panels;
     std::unique_ptr<ProductionUI> m_productionUI;

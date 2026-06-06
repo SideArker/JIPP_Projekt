@@ -8,6 +8,10 @@ MapEditorApp::MapEditorApp()
                sf::Style::Titlebar | sf::Style::Close),
       m_gui(m_window), m_mapView(sf::FloatRect({0.f, 0.f}, {1200.f, 900.f})) {
   m_window.setFramerateLimit(60);
+  sf::Image icon;
+  if (icon.loadFromFile("Art/ico_editor.png")) {
+      m_window.setIcon({icon.getSize().x, icon.getSize().y}, icon.getPixelsPtr());
+  }
   m_gui.setFont("Art/Fonts/joystixMonospace.ttf");
 
   TeamRegistry::setColor(Team::Ally, sf::Color(50, 255, 50));
