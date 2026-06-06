@@ -1,6 +1,6 @@
 #include "GameUIManager.hpp"
 #include "SoundManager.hpp"
-#include <iostream>
+#include "SettingsManager.hpp"
 #include <cstdlib>
 
 GameUIManager::GameUIManager(sf::RenderWindow& window, MapManager& mapManager, CameraController& cameraController)
@@ -50,8 +50,31 @@ GameUIManager::GameUIManager(sf::RenderWindow& window, MapManager& mapManager, C
     
     m_panels.saveGameBtn->onClick([&mapManager]() { mapManager.saveToFile("savegame.sav"); });
     
-    m_panels.musicVolSlider->onValueChange([](float v) { SoundManager::setMusicVolume(v); });
-    m_panels.soundVolSlider->onValueChange([](float v) { SoundManager::setSFXVolume(v); });
+    Settings settings = SettingsManager::load();
+    m_panels.musicVolSlider->setValue(settings.musicVolume);
+    m_panels.soundVolSlider->setValue(settings.soundVolume);
+    m_panels.fullscreenCheckbox->setChecked(settings.fullscreen);
+
+    m_panels.musicVolSlider->onValueChange([](float v) { 
+        SoundManager::setMusicVolume(v); 
+        Settings s = SettingsManager::load();
+        s.musicVolume = static_cast<int>(v);
+        SettingsManager::save(s);
+    });
+    m_panels.soundVolSlider->onValueChange([](float v) { 
+        SoundManager::setSFXVolume(v); 
+        Settings s = SettingsManager::load();
+        s.soundVolume = static_cast<int>(v);
+        SettingsManager::save(s);
+    });
+    m_panels.fullscreenCheckbox->onChange([&window](bool checked) {
+        Settings s = SettingsManager::load();
+        s.fullscreen = checked;
+        SettingsManager::save(s);
+
+        auto style = checked ? sf::State::Fullscreen : sf::State::Windowed;
+        window.create(sf::VideoMode({1280, 720}), "Map Renderer", style);
+    });
 
     m_panels.teamList->removeAllWidgets();
     int teamY = 0;
@@ -92,34 +115,49 @@ GameUIManager::GameUIManager(sf::RenderWindow& window, MapManager& mapManager, C
     };
 
     mapManager.setOnSelectionChanged(
-        [infoLabel = m_panels.infoLabel, flagsList = m_panels.flagsList](
+        [this, infoLabel = m_panels.infoLabel, flagsList = m_panels.flagsList, portrait = m_panels.unitPortrait](
             std::shared_ptr<Unit> unit, std::shared_ptr<Building> building,
             const Tile *tile) {
             flagsList->removeAllWidgets();
+            portrait->setVisible(false);
             if (unit) {
                 std::string desc = unit->getName() + "\n";
-                desc += "Type: Unit\n";
                 desc += "HP: " + std::to_string(unit->getHealth()) + "/" + std::to_string(unit->getMaxHealth()) + "\n";
-                desc += "Attack: " + std::to_string(unit->getDamage());
+                desc += "Damage: " + std::to_string(unit->getDamage()) + "\n";
+                desc += "Speed: " + std::to_string(unit->getMoveSpeed()) + "\n";
+                desc += "Range: " + std::to_string(unit->getMinAttackRange()) + "-" + std::to_string(unit->getMaxAttackRange()) + "\n";
                 infoLabel->setText(desc);
 
-                int flagY = 10;
+                try {
+                    tgui::Texture tex(unit->getArtPath(), tgui::UIntRect(0, 0, 32, 32));
+                    portrait->getRenderer()->setTexture(tex);
+                    portrait->setVisible(true);
+                } catch (...) {}
+
+                int flagY = 0;
                 if (unit->hasFlag(UnitFlag::Capture)) {
+                    auto flagPanel = tgui::Panel::create({"100%", "36px"});
+                    flagPanel->setPosition(0, flagY);
                     tgui::Texture tex("Art/UI/flag.png", tgui::UIntRect(0, 0, 32, 32));
                     auto pic = tgui::Picture::create(tex);
-                    pic->setPosition(10, flagY);
-                    auto tooltip = tgui::Label::create("Can capture buildings");
-                    tooltip->getRenderer()->setBackgroundColor(sf::Color(40, 40, 45, 230));
-                    tooltip->getRenderer()->setTextColor(sf::Color::White);
-                    tooltip->setTextSize(14);
-                    pic->setToolTip(tooltip);
-                    flagsList->add(pic);
+                    pic->setSize("32px", "32px");
+                    pic->setPosition("2px", "2px");
+                    flagPanel->add(pic);
+                    auto lbl = tgui::Label::create("Can capture buildings");
+                    lbl->setPosition("40px", "8px");
+                    lbl->getRenderer()->setTextColor(sf::Color(200, 220, 255));
+                    flagPanel->add(lbl);
+                    
+                    flagsList->add(flagPanel);
                     flagY += 40;
                 }
             } else if (building) {
-                infoLabel->setText(building->getTypeName() + "\n\nHP: --/--\nAttack: --");
+                std::string desc = building->getTypeName() + "\n";
+                desc += building->getDescription() + "\n";
+                desc += "Team: " + (building->getTeam() == Team::Ally ? std::string("Ally") : (building->getTeam() == Team::Enemy ? std::string("Enemy") : std::string("Neutral"))) + "\n";
+                infoLabel->setText(desc);
             } else {
-                infoLabel->setText("");
+                infoLabel->setText("No selection");
             }
         });
 }

@@ -4,7 +4,7 @@
 
 Building::Building(const std::string& typeName, Team team, const BuildingData& data)
     : typeName(typeName), team(team),
-      texturePath(data.texturePath), maskPath(data.maskPath),
+      texturePath(data.texturePath), maskPath(data.maskPath), description(data.description),
     textureRect(data.textureRect), useTextureRect(data.useTextureRect),
       captureThreshold(data.captureThreshold)
 {}

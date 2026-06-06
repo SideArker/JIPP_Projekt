@@ -10,6 +10,7 @@ struct GameUIWidgets {
 
   tgui::ScrollablePanel::Ptr teamList;
   tgui::Label::Ptr infoLabel;
+  tgui::Picture::Ptr unitPortrait;
   tgui::ScrollablePanel::Ptr flagsList;
 
   tgui::Button::Ptr undoBtn;
@@ -23,6 +24,7 @@ struct GameUIWidgets {
   tgui::Button::Ptr quitBtn;
   tgui::Slider::Ptr musicVolSlider;
   tgui::Slider::Ptr soundVolSlider;
+  tgui::CheckBox::Ptr fullscreenCheckbox;
 };
 
 GameUIWidgets buildGameUI(tgui::Gui &gui);

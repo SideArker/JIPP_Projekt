@@ -9,6 +9,7 @@
 struct ENGINE_API BuildingData {
     std::string texturePath;
     std::string maskPath;
+    std::string description;
     sf::IntRect textureRect = sf::IntRect({0, 0}, {0, 0});
     bool useTextureRect = false;
     int captureThreshold = 3;
@@ -23,6 +24,7 @@ protected:
 private:
     std::string texturePath;
     std::string maskPath;
+    std::string description;
     sf::IntRect textureRect;
     bool useTextureRect;
     int captureThreshold;
@@ -38,6 +40,7 @@ public:
     bool onTurnEnd(const Unit* occupant);
 
     std::string  getTypeName()         const { return typeName; }
+    std::string  getDescription()      const { return description; }
     Team getTeam() const { return team; }
     sf::Vector2f getPosition() const { return position; }
     int getCaptureProgress() const { return captureProgress; }

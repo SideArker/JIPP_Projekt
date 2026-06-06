@@ -1,6 +1,5 @@
 #include "units/Barricade.hpp"
 #include "AnimationManager.hpp"
-#include "SoundManager.hpp"
 #include "Unit.hpp"
 #include "UnitRegistry.hpp"
 #include <SFML/Graphics.hpp>

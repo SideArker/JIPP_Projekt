@@ -38,23 +38,30 @@ static std::shared_ptr<Building> makeBuilding(const std::string& type, const Bui
 
 void registerBuildings() {
     BuildingData hqData = makeSpritesheetBuildingData(0);
+    hqData.description = "Headquarters. Protect it at all costs.";
     BuildingRegistry::registerType("HQ", hqData, [hqData](Team team) { return makeBuilding("HQ", hqData, team); });
 
     BuildingData airportData = makeSpritesheetBuildingData(1);
+    airportData.description = "Produces flying units.";
     BuildingRegistry::registerType("Airport", airportData, [airportData](Team team) { return makeBuilding("Airport", airportData, team); });
 
     BuildingData factoryData = makeSpritesheetBuildingData(2);
+    factoryData.description = "Produces infantry.";
     BuildingRegistry::registerType("Factory", factoryData, [factoryData](Team team) { return makeBuilding("Factory", factoryData, team); });
 
     BuildingData vehicleBaseData = makeSpritesheetBuildingData(3);
+    vehicleBaseData.description = "Produces ground vehicles.";
     BuildingRegistry::registerType("VehicleBase", vehicleBaseData, [vehicleBaseData](Team team) { return makeBuilding("VehicleBase", vehicleBaseData, team); });
 
     BuildingData landOilRigData = makeSpritesheetBuildingData(4);
+    landOilRigData.description = "Provides funds each turn.";
     BuildingRegistry::registerType("LandOilRig", landOilRigData, [landOilRigData](Team team) { return makeBuilding("LandOilRig", landOilRigData, team); });
 
     BuildingData portData = makeSpritesheetBuildingData(5);
+    portData.description = "Produces naval units.";
     BuildingRegistry::registerType("Port", portData, [portData](Team team) { return makeBuilding("Port", portData, team); });
 
     BuildingData seaOilRigData = makeSpritesheetBuildingData(6);
+    seaOilRigData.description = "Provides funds each turn.";
     BuildingRegistry::registerType("SeaOilRig", seaOilRigData, [seaOilRigData](Team team) { return makeBuilding("SeaOilRig", seaOilRigData, team); });
 }

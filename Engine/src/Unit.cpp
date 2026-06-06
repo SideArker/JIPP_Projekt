@@ -2,6 +2,7 @@
 #include "UnitAnimator.hpp"
 #include "TextureManager.hpp"
 #include "TeamRegistry.hpp"
+#include "SoundManager.hpp"
 #include <iostream>
 #include <cmath>
 
@@ -62,6 +63,7 @@ void Unit::setDirection(MoveDirection dir) {
 
 void Unit::move(const std::vector<sf::Vector2i>& newPath) {
     m_movement.startMove(newPath);
+    SoundManager::play(name, "move");
 }
 
 void Unit::update(float deltaTime) {
@@ -70,10 +72,11 @@ void Unit::update(float deltaTime) {
     }
 
     if (!m_movement.isMoving()) {
+        int scaledDamage = static_cast<int>(std::ceil(static_cast<float>(damage) * (static_cast<float>(health) / maxHealth)));
         UnitAnimator::handleShootAnimation(
             animState, animSet, 
             m_shootPending, m_isShooting, currentDirection, m_pendingShootDir, 
-            m_pendingTarget, damage, onAttackStart, onAttackFinished, deltaTime);
+            m_pendingTarget, scaledDamage, onAttackStart, onAttackFinished, deltaTime);
             
         if (!m_isShooting) {
             UnitAnimator::handleIdleWalkAnimation(animState, animSet, currentDirection, deltaTime);

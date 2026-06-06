@@ -81,8 +81,14 @@ GameUIWidgets buildGameUI(tgui::Gui &gui) {
   result.bottomPanel->getRenderer()->setBorderColor(sf::Color(60, 85, 115));
   gui.add(result.bottomPanel);
 
+  result.unitPortrait = tgui::Picture::create();
+  result.unitPortrait->setSize("64px", "64px");
+  result.unitPortrait->setPosition("20px", "20px");
+  result.unitPortrait->setVisible(false);
+  result.bottomPanel->add(result.unitPortrait);
+
   result.infoLabel = tgui::Label::create("");
-  result.infoLabel->setPosition("20px", "20px");
+  result.infoLabel->setPosition("100px", "20px");
   result.infoLabel->getRenderer()->setTextColor(sf::Color(200, 220, 255));
   result.infoLabel->setTextSize(16);
   result.bottomPanel->add(result.infoLabel);
@@ -103,8 +109,8 @@ GameUIWidgets buildGameUI(tgui::Gui &gui) {
 
 tgui::Panel::Ptr buildSettingsPanel(tgui::Gui& gui, GameUIWidgets* outWidgets) {
   auto panel = tgui::Panel::create();
-  panel->setSize("400px", "300px");
-  panel->setPosition("50% - 200px", "50% - 150px");
+  panel->setSize("400px", "320px");
+  panel->setPosition("50% - 200px", "50% - 160px");
   panel->getRenderer()->setBackgroundColor(sf::Color(25, 35, 45, 240));
   panel->getRenderer()->setBorders(tgui::Borders(2));
   panel->getRenderer()->setBorderColor(sf::Color(60, 85, 115));
@@ -138,18 +144,23 @@ tgui::Panel::Ptr buildSettingsPanel(tgui::Gui& gui, GameUIWidgets* outWidgets) {
   soundSlider->setValue(100);
   panel->add(soundSlider);
 
+  panel->add(createLabel("Fullscreen:", "140px"));
+  auto fullscreenCheckbox = tgui::CheckBox::create();
+  fullscreenCheckbox->setPosition("150px", "140px");
+  panel->add(fullscreenCheckbox);
+
   auto saveBtn = tgui::Button::create("Save Game");
-  saveBtn->setPosition("20px", "160px");
+  saveBtn->setPosition("20px", "180px");
   saveBtn->setSize("360px", "40px");
   panel->add(saveBtn);
 
   auto quitBtn = tgui::Button::create("Quit to Title");
-  quitBtn->setPosition("20px", "220px");
+  quitBtn->setPosition("20px", "240px");
   quitBtn->setSize("170px", "40px");
   panel->add(quitBtn);
 
   auto closeBtn = tgui::Button::create("Close");
-  closeBtn->setPosition("210px", "220px");
+  closeBtn->setPosition("210px", "240px");
   closeBtn->setSize("170px", "40px");
   panel->add(closeBtn);
 
@@ -157,6 +168,7 @@ tgui::Panel::Ptr buildSettingsPanel(tgui::Gui& gui, GameUIWidgets* outWidgets) {
       outWidgets->settingsPanel = panel;
       outWidgets->musicVolSlider = musicSlider;
       outWidgets->soundVolSlider = soundSlider;
+      outWidgets->fullscreenCheckbox = fullscreenCheckbox;
       outWidgets->saveGameBtn = saveBtn;
       outWidgets->quitBtn = quitBtn;
       outWidgets->closeSettingsBtn = closeBtn;

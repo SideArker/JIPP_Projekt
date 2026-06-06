@@ -40,7 +40,10 @@ void registerTank() {
   AnimationManager::registerSet(UNIT_NAME, std::move(unitAnimSet));
 
   SoundSet unitSounds;
-  unitSounds.addSound("shoot", "Art/Sound/TankAttack.wav");
+  unitSounds.addSound("shoot", "Art/Sound/TankAttack.wav")
+      .addSound("ready", "Art/Sound/vehicle_ready.wav")
+      .addSound("move", "Art/Sound/vehicle_move.wav");
+  ;
   SoundManager::registerSet(UNIT_NAME, std::move(unitSounds));
 
   UnitData data;

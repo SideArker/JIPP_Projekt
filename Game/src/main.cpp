@@ -1,24 +1,25 @@
 #include "AIController.hpp"
 #include "CameraController.hpp"
 #include "EconomyManager.hpp"
-#include "FileManager.hpp"
 #include "GameContent.hpp"
 #include "GameUIManager.hpp"
-#include "MapFile.hpp"
 #include "MapManager.hpp"
 #include "SoundManager.hpp"
-#include "TerrainMovement.hpp"
 #include "TextureManager.hpp"
 #include "Unit.hpp"
 #include <SFML/Graphics.hpp>
 #include <memory>
 #include <optional>
 
+#include "SettingsManager.hpp"
+
 static constexpr const char *LEVEL1_PATH = "Art/levels/level1.map";
 
 int main() {
-  sf::RenderWindow window(sf::VideoMode({1280, 720}), "Map Renderer",
-                          sf::State::Windowed);
+  Settings settings = SettingsManager::load();
+  auto style =
+      settings.fullscreen ? sf::State::Fullscreen : sf::State::Windowed;
+  sf::RenderWindow window(sf::VideoMode({1280, 720}), "Map Renderer", style);
   sf::View view(sf::FloatRect({0.f, 0.f}, {640.f, 360.f}));
   window.setView(view);
 

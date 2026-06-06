@@ -39,7 +39,9 @@ void registerDestroyer() {
   AnimationManager::registerSet(UNIT_NAME, std::move(unitAnimSet));
 
   SoundSet unitSounds;
-  unitSounds.addSound("shoot", "Art/Sound/SoldierAttack.wav");
+  unitSounds.addSound("shoot", "Art/Sound/destroyer_attack.wav")
+      .addSound("ready", "Art/Sound/destroyer_move.wav")
+      .addSound("move", "Art/Sound/destroyer_move.wav");
   SoundManager::registerSet(UNIT_NAME, std::move(unitSounds));
 
   UnitData data;

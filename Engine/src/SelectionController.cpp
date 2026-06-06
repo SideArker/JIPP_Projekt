@@ -1,23 +1,29 @@
 #include "SelectionController.hpp"
 #include "Building.hpp"
 #include "MapManager.hpp"
+#include "SoundManager.hpp"
 #include "TurnController.hpp"
 #include "Unit.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
 
-static sf::Vector2i computeApproachDir(sf::Vector2f localPos, float btnW, float btnH) {
+static sf::Vector2i computeApproachDir(sf::Vector2f localPos, float btnW,
+                                       float btnH) {
   float rx = localPos.x / btnW;
   float ry = localPos.y / btnH;
 
   const float deadzone = 0.28f;
-  if (rx > deadzone && rx < 1.f - deadzone && ry > deadzone && ry < 1.f - deadzone)
+  if (rx > deadzone && rx < 1.f - deadzone && ry > deadzone &&
+      ry < 1.f - deadzone)
     return {0, 0};
 
-  if (ry < rx && ry < 1.f - rx) return {0, -1};
-  if (ry > rx && ry > 1.f - rx) return {0, 1};
-  if (rx <= ry && rx <= 1.f - ry) return {-1, 0};
+  if (ry < rx && ry < 1.f - rx)
+    return {0, -1};
+  if (ry > rx && ry > 1.f - rx)
+    return {0, 1};
+  if (rx <= ry && rx <= 1.f - ry)
+    return {-1, 0};
   return {1, 0};
 }
 
@@ -35,9 +41,16 @@ SelectionController::SelectionController(
       throw std::runtime_error("Failed to load move arrow texture");
     if (!m_iconsTexture.loadFromFile(iconsPath))
       throw std::runtime_error("Failed to load icons texture");
-    if (!enemyOverlayPath.empty() && !m_enemyOverlayTexture.loadFromFile(enemyOverlayPath))
+    if (!enemyOverlayPath.empty() &&
+        !m_enemyOverlayTexture.loadFromFile(enemyOverlayPath))
       throw std::runtime_error("Failed to load enemy overlay texture");
-    if (!friendlyOverlayPath.empty() && !m_friendlyOverlayTexture.loadFromFile(friendlyOverlayPath))
+
+    if (!m_unit_overlay_enemy.loadFromFile(
+            "Art/Effects/Unit_Overlay_Enemy.png"))
+      throw std::runtime_error("Failed to load enemy overlay texture");
+
+    if (!friendlyOverlayPath.empty() &&
+        !m_friendlyOverlayTexture.loadFromFile(friendlyOverlayPath))
       throw std::runtime_error("Failed to load friendly overlay texture");
   } catch (const std::exception &e) {
     std::cerr << "Error loading overlay texture: " << e.what() << std::endl;
@@ -45,7 +58,8 @@ SelectionController::SelectionController(
 }
 
 void SelectionController::handleEvent(const sf::Event &event) {
-  if (mapManager.isGameOver()) return;
+  if (mapManager.isGameOver())
+    return;
 
   const sf::Vector2u tileSize = mapManager.getTileSize();
   const float tw = static_cast<float>(tileSize.x);
@@ -54,7 +68,8 @@ void SelectionController::handleEvent(const sf::Event &event) {
   if (auto *mm = event.getIf<sf::Event::MouseMoved>()) {
     m_screenCursorPos = sf::Vector2f(static_cast<float>(mm->position.x),
                                      static_cast<float>(mm->position.y));
-    m_cursorPos = m_window.mapPixelToCoords({mm->position.x, mm->position.y}, m_gameView);
+    m_cursorPos =
+        m_window.mapPixelToCoords({mm->position.x, mm->position.y}, m_gameView);
 
     sf::Vector2f worldPos = m_cursorPos;
     int tileX = static_cast<int>(worldPos.x / tw);
@@ -63,7 +78,7 @@ void SelectionController::handleEvent(const sf::Event &event) {
 
     if (tileX >= 0 && tileX < static_cast<int>(mapManager.getMapWidth()) &&
         tileY >= 0 && tileY < static_cast<int>(mapManager.getMapHeight())) {
-      
+
       float localX = worldPos.x - tileX * tw;
       float localY = worldPos.y - tileY * th;
       handleMouseMoved(gridPos, {localX, localY});
@@ -73,7 +88,8 @@ void SelectionController::handleEvent(const sf::Event &event) {
   }
 
   if (const auto *kp = event.getIf<sf::Event::KeyPressed>()) {
-    if ((kp->code == sf::Keyboard::Key::Enter || kp->code == sf::Keyboard::Key::Space) &&
+    if ((kp->code == sf::Keyboard::Key::Enter ||
+         kp->code == sf::Keyboard::Key::Space) &&
         m_turnController.getCurrentTeam() == Team::Ally &&
         !mapManager.isAnyUnitActing()) {
       clearSelection();
@@ -85,7 +101,8 @@ void SelectionController::handleEvent(const sf::Event &event) {
     if (mp->button == sf::Mouse::Button::Right) {
       clearSelection();
     } else if (mp->button == sf::Mouse::Button::Left) {
-      sf::Vector2f worldPos = m_window.mapPixelToCoords({mp->position.x, mp->position.y}, m_gameView);
+      sf::Vector2f worldPos = m_window.mapPixelToCoords(
+          {mp->position.x, mp->position.y}, m_gameView);
       int tileX = static_cast<int>(worldPos.x / tw);
       int tileY = static_cast<int>(worldPos.y / th);
       if (tileX >= 0 && tileX < static_cast<int>(mapManager.getMapWidth()) &&
@@ -96,7 +113,8 @@ void SelectionController::handleEvent(const sf::Event &event) {
   }
 }
 
-void SelectionController::handleMouseMoved(sf::Vector2i gridPos, sf::Vector2f localPos) {
+void SelectionController::handleMouseMoved(sf::Vector2i gridPos,
+                                           sf::Vector2f localPos) {
   if (gridPos.x < 0 || mapManager.isAnyUnitActing() || !selectedUnit) {
     if (!selectedUnit) {
       previewPath.clear();
@@ -109,11 +127,13 @@ void SelectionController::handleMouseMoved(sf::Vector2i gridPos, sf::Vector2f lo
 
   const sf::Vector2u tileSize = mapManager.getTileSize();
   sf::Vector2i unitGrid(
-      static_cast<int>(std::round(selectedUnit->getPosition().x / static_cast<float>(tileSize.x))),
-      static_cast<int>(std::round(selectedUnit->getPosition().y / static_cast<float>(tileSize.y))));
+      static_cast<int>(std::round(selectedUnit->getPosition().x /
+                                  static_cast<float>(tileSize.x))),
+      static_cast<int>(std::round(selectedUnit->getPosition().y /
+                                  static_cast<float>(tileSize.y))));
 
   auto unitAtTile = mapManager.getUnitAtTile(gridPos);
-  
+
   if (unitAtTile && unitAtTile != selectedUnit &&
       unitAtTile->getTeam() != selectedUnit->getTeam() &&
       selectedUnit->canTarget(*unitAtTile)) {
@@ -146,38 +166,46 @@ void SelectionController::handleMouseMoved(sf::Vector2i gridPos, sf::Vector2f lo
 
     hoveredEnemyUnit = unitAtTile;
     m_cursorIconCell = 1;
-    
-    sf::Vector2i newDir = computeApproachDir(localPos, static_cast<float>(tileSize.x), static_cast<float>(tileSize.y));
+
+    sf::Vector2i newDir =
+        computeApproachDir(localPos, static_cast<float>(tileSize.x),
+                           static_cast<float>(tileSize.y));
     if (newDir != m_preferredApproachDir) {
       m_preferredApproachDir = newDir;
       updateAttackPath(gridPos, unitGrid, m_preferredApproachDir);
     } else if (previewPath.empty()) {
-        updateAttackPath(gridPos, unitGrid, m_preferredApproachDir);
+      updateAttackPath(gridPos, unitGrid, m_preferredApproachDir);
     }
     return;
   }
 
   hoveredEnemyUnit = nullptr;
 
-  bool isReachable = std::find(reachableTiles.begin(), reachableTiles.end(), gridPos) != reachableTiles.end();
+  bool isReachable = std::find(reachableTiles.begin(), reachableTiles.end(),
+                               gridPos) != reachableTiles.end();
   if (!isReachable) {
     previewPath.clear();
     m_cursorIconCell = -1;
     return;
   }
-  previewPath = mapManager.findPath(unitGrid, gridPos, selectedUnit->getTeam(), selectedUnit->getMovementCategory());
+  previewPath = mapManager.findPath(unitGrid, gridPos, selectedUnit->getTeam(),
+                                    selectedUnit->getMovementCategory());
   m_cursorIconCell = 0;
 }
 
 void SelectionController::handleMouseClicked(sf::Vector2i gridPos) {
-  if (mapManager.isAnyUnitActing()) return;
+  if (mapManager.isAnyUnitActing())
+    return;
   const sf::Vector2u tileSize = mapManager.getTileSize();
 
   if (hoveredEnemyUnit && selectedUnit) {
     sf::Vector2i attackerGrid(
-        static_cast<int>(std::round(selectedUnit->getPosition().x / static_cast<float>(tileSize.x))),
-        static_cast<int>(std::round(selectedUnit->getPosition().y / static_cast<float>(tileSize.y))));
-    sf::Vector2i attackerEnd = previewPath.empty() ? attackerGrid : previewPath.back();
+        static_cast<int>(std::round(selectedUnit->getPosition().x /
+                                    static_cast<float>(tileSize.x))),
+        static_cast<int>(std::round(selectedUnit->getPosition().y /
+                                    static_cast<float>(tileSize.y))));
+    sf::Vector2i attackerEnd =
+        previewPath.empty() ? attackerGrid : previewPath.back();
 
     int dx = gridPos.x - attackerEnd.x;
     int dy = gridPos.y - attackerEnd.y;
@@ -235,15 +263,21 @@ void SelectionController::handleMouseClicked(sf::Vector2i gridPos) {
 
   auto unitAtTile = mapManager.getUnitAtTile(gridPos);
   if (unitAtTile) {
-    if (unitAtTile->getTeam() == Team::Enemy) return;
-    if (!m_turnController.canAct(*unitAtTile)) return;
-    if (!unitAtTile->getIsInteractable()) return;
-    
+    if (unitAtTile->getTeam() == Team::Enemy)
+      return;
+    if (!m_turnController.canAct(*unitAtTile))
+      return;
+    if (!unitAtTile->getIsInteractable())
+      return;
+
     selectedUnit = unitAtTile;
+    SoundManager::play(selectedUnit->getName(), "ready");
     m_state = SelectionState::UnitSelected;
     sf::Vector2i unitGrid(
-        static_cast<int>(std::round(unitAtTile->getPosition().x / static_cast<float>(tileSize.x))),
-        static_cast<int>(std::round(unitAtTile->getPosition().y / static_cast<float>(tileSize.y))));
+        static_cast<int>(std::round(unitAtTile->getPosition().x /
+                                    static_cast<float>(tileSize.x))),
+        static_cast<int>(std::round(unitAtTile->getPosition().y /
+                                    static_cast<float>(tileSize.y))));
     reachableTiles = mapManager.getReachableTiles(
         unitGrid, unitAtTile->getMoveSpeed(), unitAtTile->getTeam(),
         unitAtTile->getMovementCategory());
@@ -267,11 +301,14 @@ void SelectionController::handleMouseClicked(sf::Vector2i gridPos) {
     return;
   }
 
-  bool isReachable = std::find(reachableTiles.begin(), reachableTiles.end(), gridPos) != reachableTiles.end();
+  bool isReachable = std::find(reachableTiles.begin(), reachableTiles.end(),
+                               gridPos) != reachableTiles.end();
   if (isReachable && !previewPath.empty()) {
     sf::Vector2i unitGrid2(
-        static_cast<int>(std::round(selectedUnit->getPosition().x / static_cast<float>(tileSize.x))),
-        static_cast<int>(std::round(selectedUnit->getPosition().y / static_cast<float>(tileSize.y))));
+        static_cast<int>(std::round(selectedUnit->getPosition().x /
+                                    static_cast<float>(tileSize.x))),
+        static_cast<int>(std::round(selectedUnit->getPosition().y /
+                                    static_cast<float>(tileSize.y))));
     mapManager.pushUndoState(unitGrid2);
     if (mapManager.onUnitMoveStart)
       mapManager.onUnitMoveStart(selectedUnit);
@@ -366,16 +403,22 @@ void SelectionController::drawOverlays(sf::RenderTarget &target) {
         static_cast<int>(std::round(selectedUnit->getPosition().y / th)));
 
     auto dirAngle = [](sf::Vector2i from, sf::Vector2i to) -> float {
-      if (to.x > from.x) return 0.f;
-      if (to.x < from.x) return 180.f;
-      if (to.y > from.y) return 90.f;
+      if (to.x > from.x)
+        return 0.f;
+      if (to.x < from.x)
+        return 180.f;
+      if (to.y > from.y)
+        return 90.f;
       return 270.f;
     };
 
     auto cornerAngle = [](sf::Vector2i inDir, sf::Vector2i outDir) -> float {
-      if ((inDir.x > 0 && outDir.y > 0) || (inDir.y < 0 && outDir.x < 0)) return 0.f;
-      if ((inDir.y > 0 && outDir.x < 0) || (inDir.x > 0 && outDir.y < 0)) return 90.f;
-      if ((inDir.x < 0 && outDir.y < 0) || (inDir.y > 0 && outDir.x > 0)) return 180.f;
+      if ((inDir.x > 0 && outDir.y > 0) || (inDir.y < 0 && outDir.x < 0))
+        return 0.f;
+      if ((inDir.y > 0 && outDir.x < 0) || (inDir.x > 0 && outDir.y < 0))
+        return 90.f;
+      if ((inDir.x < 0 && outDir.y < 0) || (inDir.y > 0 && outDir.x > 0))
+        return 180.f;
       return 270.f;
     };
 
@@ -384,7 +427,8 @@ void SelectionController::drawOverlays(sf::RenderTarget &target) {
 
     arrowSprite.setTextureRect(sf::IntRect({0, 0}, {32, 32}));
     arrowSprite.setRotation(sf::degrees(dirAngle(unitGrid, previewPath[0])));
-    arrowSprite.setPosition({unitGrid.x * tw + tw * 0.5f, unitGrid.y * th + th * 0.5f});
+    arrowSprite.setPosition(
+        {unitGrid.x * tw + tw * 0.5f, unitGrid.y * th + th * 0.5f});
     target.draw(arrowSprite);
 
     for (int i = 0; i < static_cast<int>(previewPath.size()); ++i) {
@@ -424,7 +468,8 @@ void SelectionController::drawOverlays(sf::RenderTarget &target) {
     ghost.setColor(sf::Color(255, 255, 255, 150));
     if (selectedUnit->shouldFlipX()) {
       ghost.setScale({-1.f, 1.f});
-      ghost.setPosition({end.x * tw + static_cast<float>(rect.size.x), end.y * th});
+      ghost.setPosition(
+          {end.x * tw + static_cast<float>(rect.size.x), end.y * th});
     } else {
       ghost.setPosition({end.x * tw, end.y * th});
     }
@@ -442,22 +487,27 @@ void SelectionController::drawOverlays(sf::RenderTarget &target) {
   }
 
   for (const auto &building : mapManager.getBuildings()) {
+    sf::Vector2i bGrid(
+        static_cast<int>(std::round(building->getPosition().x / tw)),
+        static_cast<int>(std::round(building->getPosition().y / th)));
     if (building->getTypeName() == "Factory" &&
         building->getTeam() == m_turnController.getCurrentTeam()) {
-      sf::Vector2i bGrid(
-          static_cast<int>(std::round(building->getPosition().x / tw)),
-          static_cast<int>(std::round(building->getPosition().y / th)));
       if (!mapManager.getUnitAtTile(bGrid)) {
         sf::Sprite friendlyOverlay(m_friendlyOverlayTexture);
         friendlyOverlay.setPosition(sf::Vector2f(bGrid.x * tw, bGrid.y * th));
         target.draw(friendlyOverlay);
       }
+    } else {
+      sf::Sprite enemyOverlay(m_unit_overlay_enemy);
+      enemyOverlay.setPosition(sf::Vector2f(bGrid.x * tw, bGrid.y * th));
+      target.draw(enemyOverlay);
     }
   }
 }
 
 void SelectionController::drawCursorIcon(sf::RenderTarget &target) {
-  if (m_cursorIconCell < 0) return;
+  if (m_cursorIconCell < 0)
+    return;
 
   sf::View savedView = target.getView();
   target.setView(target.getDefaultView());
@@ -481,13 +531,17 @@ void SelectionController::clearSelection() {
 }
 
 void SelectionController::selectUnit(std::shared_ptr<Unit> unit) {
-  if (!unit || unit->isDead() || !m_turnController.canAct(*unit)) return;
+  if (!unit || unit->isDead() || !m_turnController.canAct(*unit))
+    return;
   selectedUnit = unit;
+  SoundManager::play(unit->getName(), "ready");
   m_state = SelectionState::UnitSelected;
   const sf::Vector2u tileSize = mapManager.getTileSize();
   sf::Vector2i unitGrid(
-      static_cast<int>(std::round(unit->getPosition().x / static_cast<float>(tileSize.x))),
-      static_cast<int>(std::round(unit->getPosition().y / static_cast<float>(tileSize.y))));
+      static_cast<int>(
+          std::round(unit->getPosition().x / static_cast<float>(tileSize.x))),
+      static_cast<int>(
+          std::round(unit->getPosition().y / static_cast<float>(tileSize.y))));
   reachableTiles = mapManager.getReachableTiles(unitGrid, unit->getMoveSpeed(),
                                                 unit->getTeam(),
                                                 unit->getMovementCategory());
@@ -500,10 +554,11 @@ void SelectionController::syncCameraView(sf::View gameView) {
   m_gameView = gameView;
 }
 
-void SelectionController::update(float /*dt*/) {
-}
+void SelectionController::update(float /*dt*/) {}
 
-void SelectionController::updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i unitGrid, sf::Vector2i preferredDir) {
+void SelectionController::updateAttackPath(sf::Vector2i enemyGrid,
+                                           sf::Vector2i unitGrid,
+                                           sf::Vector2i preferredDir) {
   previewPath.clear();
 
   int minRange = selectedUnit->getMinAttackRange();
@@ -516,13 +571,17 @@ void SelectionController::updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i 
     return d >= minRange && d <= maxRange;
   };
 
-  if (inRange(unitGrid)) return;
+  if (inRange(unitGrid))
+    return;
 
   if (preferredDir != sf::Vector2i{0, 0}) {
     sf::Vector2i preferred = enemyGrid + preferredDir;
     if (preferred != unitGrid && inRange(preferred) &&
-        std::find(reachableTiles.begin(), reachableTiles.end(), preferred) != reachableTiles.end()) {
-      auto path = mapManager.findPath(unitGrid, preferred, selectedUnit->getTeam(), selectedUnit->getMovementCategory());
+        std::find(reachableTiles.begin(), reachableTiles.end(), preferred) !=
+            reachableTiles.end()) {
+      auto path =
+          mapManager.findPath(unitGrid, preferred, selectedUnit->getTeam(),
+                              selectedUnit->getMovementCategory());
       if (!path.empty()) {
         previewPath = path;
         return;
@@ -532,8 +591,10 @@ void SelectionController::updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i 
 
   std::vector<sf::Vector2i> bestPath;
   for (const auto &tile : reachableTiles) {
-    if (!inRange(tile)) continue;
-    auto path = mapManager.findPath(unitGrid, tile, selectedUnit->getTeam(), selectedUnit->getMovementCategory());
+    if (!inRange(tile))
+      continue;
+    auto path = mapManager.findPath(unitGrid, tile, selectedUnit->getTeam(),
+                                    selectedUnit->getMovementCategory());
     if (!path.empty() && (bestPath.empty() || path.size() < bestPath.size())) {
       bestPath = path;
     }
@@ -542,5 +603,6 @@ void SelectionController::updateAttackPath(sf::Vector2i enemyGrid, sf::Vector2i 
 }
 
 void SelectionController::openFactoryUI(std::shared_ptr<Building> factory) {
-  if (m_onOpenFactory) m_onOpenFactory(factory);
+  if (m_onOpenFactory)
+    m_onOpenFactory(factory);
 }

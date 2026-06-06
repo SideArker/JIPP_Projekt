@@ -29,7 +29,9 @@ void registerSoldier() {
   AnimationManager::registerSet(UNIT_NAME, std::move(unitAnimSet));
 
   SoundSet unitSounds;
-  unitSounds.addSound("shoot", "Art/Sound/SoldierAttack.wav");
+  unitSounds.addSound("shoot", "Art/Sound/SoldierAttack.wav")
+      .addSound("ready", "Art/Sound/unit_ready.wav")
+      .addSound("move", "Art/Sound/unit_move.wav");
   SoundManager::registerSet(UNIT_NAME, std::move(unitSounds));
 
   UnitData data;
